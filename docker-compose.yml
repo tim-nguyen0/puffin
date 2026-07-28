@@ -1,0 +1,27 @@
+services:
+  sim:
+    build:
+      context: ./sim
+      args:
+        PX4_REF: ${PX4_REF}
+        PX4_MSGS_REF: ${PX4_MSGS_REF}
+    env_file: .env
+    ports:
+      - "6080:6080" # noVNC viewport (pixels)
+      - "8000:8000" # API + telemetry websocket (numbers)
+      - "5173:5173" # web
+
+  api:
+    build: ./services/api
+    env_file: .env
+    network_mode: "service:sim"
+    depends_on:
+      - sim
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    network_mode: "service:sim"
+    depends_on:
+      - sim

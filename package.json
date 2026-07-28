@@ -1,0 +1,16 @@
+{
+  "name": "puffin",
+  "private": true,
+  "packageManager": "pnpm@11.17.0",
+  "scripts": {
+    "dev": "pnpm --filter @puffin/web dev",
+    "gen:types": "openapi-typescript packages/contract/openapi.yaml -o packages/api-types/src/index.ts",
+    "typecheck": "pnpm -r typecheck",
+    "lint": "pnpm -r lint",
+    "test": "pnpm -r test"
+  },
+  "devDependencies": {
+    "openapi-typescript": "^7.6.1",
+    "typescript": "^5.8.3"
+  }
+}
