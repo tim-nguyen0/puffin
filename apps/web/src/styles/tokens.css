@@ -1,0 +1,28 @@
+/* Design tokens. The ONLY file allowed to contain raw hex/px; components consume var(--token) exclusively (stylelint enforced). */
+:root {
+  --color-bg: #0e1116;
+  --color-surface: #171c24;
+  --color-border: #2a323e;
+  --color-text: #e6eaf0;
+  --color-text-muted: #8b96a5;
+  --color-accent: #4da3ff;
+  --color-ok: #3ecf8e;
+  --color-warn: #f5b83d;
+  --color-danger: #f06a6a;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 16px;
+  --space-4: 24px;
+  --space-5: 40px;
+
+  --radius-1: 4px;
+  --radius-2: 8px;
+
+  --font-body: "Inter", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --text-sm: 12px;
+  --text-md: 14px;
+  --text-lg: 18px;
+  --text-xl: 24px;
+}

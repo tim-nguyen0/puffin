@@ -1,0 +1,8 @@
+{
+  "extends": ["stylelint-config-standard"],
+  "ignoreFiles": ["src/styles/tokens.css", "dist/**/*"],
+  "rules": {
+    "color-no-hex": true,
+    "unit-disallowed-list": ["px"]
+  }
+}
