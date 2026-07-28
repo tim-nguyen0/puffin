@@ -1,0 +1,297 @@
+openapi: 3.1.0
+info:
+  title: Puffin API
+  version: 0.1.0
+servers:
+  - url: /api
+
+# telemetry is NOT http - it streams on ws://.../ws/telemetry, one
+# TelemetrySample per frame (schema at the bottom)
+
+paths:
+  /health:
+    get:
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Health"
+
+  /sim/status:
+    get:
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SimStatus"
+
+  /sim/start:
+    post:
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Ack"
+
+  /sim/stop:
+    post:
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Ack"
+
+  /procs:
+    get:
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ProcessInfo"
+
+  /vehicle/arm:
+    post:
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Ack"
+
+  /vehicle/disarm:
+    post:
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Ack"
+
+  /vehicle/takeoff:
+    post:
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TakeoffRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Ack"
+
+  /vehicle/land:
+    post:
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Ack"
+
+  /ros/services:
+    get:
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RosService"
+
+  /ros/graph:
+    get:
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RosGraph"
+
+  /ros/lifecycle/{nodeName}:
+    get:
+      parameters:
+        - name: nodeName
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LifecycleState"
+
+  /ros/lifecycle/{nodeName}/transition:
+    post:
+      parameters:
+        - name: nodeName
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TransitionRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Ack"
+
+components:
+  schemas:
+    Health:
+      type: object
+      required: [status, version]
+      properties:
+        status:
+          type: string
+          enum: [ok]
+        version:
+          type: string
+
+    Ack:
+      type: object
+      required: [ok, detail]
+      properties:
+        ok:
+          type: boolean
+        detail:
+          type: string
+
+    ProcessInfo:
+      type: object
+      required: [name, state, uptime_s]
+      properties:
+        name:
+          type: string
+        state:
+          type: string
+          enum: [STOPPED, STARTING, RUNNING, BACKOFF, STOPPING, EXITED, FATAL, UNKNOWN]
+        uptime_s:
+          type: integer
+
+    SimStatus:
+      type: object
+      required: [running, world, processes]
+      properties:
+        running:
+          type: boolean
+        world:
+          type: string
+        processes:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProcessInfo"
+
+    TakeoffRequest:
+      type: object
+      required: [altitude_m]
+      properties:
+        altitude_m:
+          # meters up. api converts to NED (z negative)
+          type: number
+          minimum: 1
+          maximum: 50
+
+    RosService:
+      type: object
+      required: [name, type]
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+
+    RosTopic:
+      type: object
+      required: [name, type]
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+
+    RosGraph:
+      type: object
+      required: [nodes, topics]
+      properties:
+        nodes:
+          type: array
+          items:
+            type: string
+        topics:
+          type: array
+          items:
+            $ref: "#/components/schemas/RosTopic"
+
+    LifecycleState:
+      type: object
+      required: [node, state]
+      properties:
+        node:
+          type: string
+        state:
+          type: string
+          enum: [unconfigured, inactive, active, finalized, unknown]
+
+    TransitionRequest:
+      type: object
+      required: [transition]
+      properties:
+        transition:
+          type: string
+          enum: [configure, activate, deactivate, cleanup, shutdown]
+
+    TelemetrySample:
+      # ws frame. t_us = px4 clock in microseconds, ned z is negative up
+      type: object
+      required: [t_us, armed, mode, ned, battery_v]
+      properties:
+        t_us:
+          type: integer
+        armed:
+          type: boolean
+        mode:
+          type: string
+        ned:
+          type: object
+          required: [x, y, z]
+          properties:
+            x:
+              type: number
+            y:
+              type: number
+            z:
+              type: number
+        battery_v:
+          type: number
