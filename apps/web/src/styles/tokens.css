@@ -25,4 +25,20 @@
   --text-md: 14px;
   --text-lg: 18px;
   --text-xl: 24px;
+
+  /* Figma "Base Palette" variables (names match Figma exactly) */
+  --base-palette-cloud: #f8fafb;
+  --base-palette-blue: #06c;
+  --base-palette-storm: #1c2835;
+  --base-palette-not-quite-gray: #036;
+
+  /* Sidebar (Figma node "Sidebar", 19:6) */
+  --sidebar-width: 260px;
+  --sidebar-gap: 12px;
+  --sidebar-section-gap: 32px;
+  --sidebar-item-radius: 10px;
+  --text-brand: 22px;
+  --icon-sm: 16px;
+  --icon-md: 18px;
+  --icon-lg: 36px;
 }

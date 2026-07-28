@@ -6,23 +6,13 @@ body {
   font-size: var(--text-md);
 }
 
-nav {
+.app-shell {
   display: flex;
-  gap: var(--space-4);
-  padding: var(--space-3) var(--space-4);
-  border-bottom: solid thin var(--color-border);
-  background: var(--color-surface);
-}
-
-nav a {
-  color: var(--color-text-muted);
-  text-decoration: none;
-}
-
-nav a.active {
-  color: var(--color-text);
+  min-height: 100vh;
 }
 
 main {
+  flex: 1;
+  min-width: 0;
   padding: var(--space-4);
 }
