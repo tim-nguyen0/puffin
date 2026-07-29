@@ -6,15 +6,23 @@ services:
         PX4_REF: ${PX4_REF}
         PX4_MSGS_REF: ${PX4_MSGS_REF}
     env_file: .env
+    # donor for api's ipc namespace — default private ipc can't be joined
+    ipc: shareable
     ports:
       - "6080:6080" # noVNC viewport (pixels)
       - "8000:8000" # API + telemetry websocket (numbers)
       - "5173:5173" # web
 
   api:
-    build: ./services/api
+    build:
+      context: ./services/api
+      args:
+        PX4_MSGS_REF: ${PX4_MSGS_REF}
     env_file: .env
     network_mode: "service:sim"
+    # fast dds shims same-host discovery through /dev/shm — without a shared
+    # ipc namespace the api and sim containers never see each other
+    ipc: "service:sim"
     depends_on:
       - sim
 
