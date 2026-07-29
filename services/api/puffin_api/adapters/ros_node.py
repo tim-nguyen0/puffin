@@ -19,6 +19,18 @@ VEHICLE_CMD_NAV_LAND = 21
 VEHICLE_CMD_NAV_TAKEOFF = 22
 VEHICLE_CMD_ARM_DISARM = 400
 
+# VehicleCommandAck.result values (px4_msgs constants) -> (ok, human label).
+VEHICLE_CMD_RESULTS = {
+    0: (True, "accepted"),
+    1: (False, "temporarily rejected"),
+    2: (False, "denied"),
+    3: (False, "unsupported"),
+    4: (False, "failed"),
+    5: (True, "in progress"),
+    6: (False, "cancelled"),
+}
+ACK_TIMEOUT_S = 1.5
+
 LIFECYCLE_CALL_TIMEOUT_S = 3.0
 LIFECYCLE_STATE_LABELS = {"unconfigured", "inactive", "active", "finalized"}
 
@@ -55,6 +67,8 @@ class RosAdapter:
         self._latest: dict[str, Any] = {}
         self._nav_states: dict[int, str] = {}
         self._telemetry_ready = False
+        self._acks: dict[int, Any] = {}
+        self._ack_cond = threading.Condition()
 
     # -- node / executor plumbing ------------------------------------------
 
@@ -185,20 +199,42 @@ class RosAdapter:
 
     # -- vehicle commands ---------------------------------------------------
 
+    def _ensure_cmd_pub(self) -> Any:
+        from px4_msgs.msg import VehicleCommand, VehicleCommandAck
+
+        node = self._ensure_node()
+        with self._init_lock:
+            if self._cmd_pub is None:
+
+                def on_ack(msg: Any) -> None:
+                    with self._ack_cond:
+                        self._acks[int(msg.command)] = msg
+                        self._ack_cond.notify_all()
+
+                for topic in (
+                    "/fmu/out/vehicle_command_ack_v1",
+                    "/fmu/out/vehicle_command_ack",
+                ):
+                    node.create_subscription(VehicleCommandAck, topic, on_ack, fmu_out_qos())
+                # Same profile as the /fmu/out subscriptions: PX4's uXRCE
+                # bridge subscribes /fmu/in/* with it too.
+                self._cmd_pub = node.create_publisher(
+                    VehicleCommand, "/fmu/in/vehicle_command", fmu_out_qos()
+                )
+        return self._cmd_pub
+
     def send_vehicle_command(
         self, command: int, param1: float = 0.0, param7: float = 0.0
     ) -> AdapterResult:
         try:
             from px4_msgs.msg import VehicleCommand
 
-            node = self._ensure_node()
-            with self._init_lock:
-                if self._cmd_pub is None:
-                    # Same profile as the /fmu/out subscriptions: PX4's uXRCE
-                    # bridge subscribes /fmu/in/* with it too.
-                    self._cmd_pub = node.create_publisher(
-                        VehicleCommand, "/fmu/in/vehicle_command", fmu_out_qos()
-                    )
+            pub = self._ensure_cmd_pub()
+            # Drop any previous ack for this command id so the wait below can
+            # only be satisfied by a fresh one. (A TRANSIENT_LOCAL replay of a
+            # pre-restart ack can theoretically race the very first command.)
+            with self._ack_cond:
+                self._acks.pop(command, None)
             msg = VehicleCommand()
             msg.timestamp = self._now_us()
             msg.command = command
@@ -209,10 +245,22 @@ class RosAdapter:
             msg.source_system = 1
             msg.source_component = 1
             msg.from_external = True
-            self._cmd_pub.publish(msg)
+            pub.publish(msg)
+            with self._ack_cond:
+                acked = self._ack_cond.wait_for(
+                    lambda: command in self._acks, timeout=ACK_TIMEOUT_S
+                )
+                ack = self._acks.get(command)
         except Exception as exc:  # noqa: BLE001 - clean {ok, detail} at the boundary
             return AdapterResult(ok=False, detail=f"vehicle_command failed: {exc}")
-        return AdapterResult(ok=True, detail=f"vehicle_command {command} published")
+        if not acked or ack is None:
+            return AdapterResult(
+                ok=False,
+                detail=f"vehicle_command {command} published, no ack from PX4 "
+                f"within {ACK_TIMEOUT_S}s",
+            )
+        ok, label = VEHICLE_CMD_RESULTS.get(int(ack.result), (False, f"result {ack.result}"))
+        return AdapterResult(ok=ok, detail=f"vehicle_command {command} {label}")
 
     def _now_us(self) -> int:
         # px4_msgs timestamps are microseconds from the node clock (gotcha #7).
