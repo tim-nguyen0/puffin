@@ -44,9 +44,11 @@
   --icon-lg: 36px;
 
   --terminal-width: 640px;
+  --terminal-minimized-width: 220px;
   --terminal-height: 280px;
   --terminal-header-height: 40px;
   --terminal-inset: 24px;
   --terminal-dot-size: 8px;
+  --terminal-button-size: 28px;
   --terminal-shadow: 0 12px 32px #0008;
 }
