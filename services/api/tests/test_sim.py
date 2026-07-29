@@ -36,13 +36,13 @@ def test_reset_hits_gz(client: TestClient, fake_gz: FakeGz) -> None:
     assert client.post("/api/sim/reset").json()["ok"] is True
     assert fake_gz.resets == 1
 
-
+#test API endpoint for vehicle pose modification
 def test_set_vehicle_pose(client: TestClient, fake_gz: FakeGz) -> None:
     body = client.post("/api/sim/vehicle/pose", json={"x": 5, "y": 2}).json()
     assert body["ok"] is True
     assert fake_gz.poses == [(5.0, 2.0, 0.3, 0.0)]
 
-
+#test API post rejection when vehicle is armed
 def test_set_vehicle_pose_refused_while_armed(
     client: TestClient, fake_gz: FakeGz, fake_ros: FakeRos
 ) -> None:
@@ -58,7 +58,7 @@ def test_set_vehicle_pose_refused_while_armed(
     assert "disarm" in body["detail"]
     assert fake_gz.poses == []
 
-
+# test drone underground (invalid) pose rejection
 def test_set_vehicle_pose_rejects_underground(client: TestClient) -> None:
     response = client.post("/api/sim/vehicle/pose", json={"x": 0, "y": 0, "z": -1})
     assert response.status_code == 422
