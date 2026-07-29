@@ -112,6 +112,16 @@ class RosAdapter:
                 self._clients[service_name] = client
         return client
 
+    def warmup(self) -> None:
+        # pre-create pubs/subs at startup so dds discovery has converged
+        # before the first user command; best-effort — without rclpy the
+        # first real call will surface the failure cleanly
+        try:
+            self._ensure_cmd_pub()
+            self._ensure_telemetry()
+        except Exception:  # noqa: BLE001 - warmup never fails the app
+            pass
+
     # -- graph --------------------------------------------------------------
 
     def list_services(self) -> AdapterResult:
