@@ -1,4 +1,5 @@
 import { Route, Routes } from "react-router-dom";
+import { FloatingTerminal } from "./components/floating-terminal/FloatingTerminal";
 import { Sidebar } from "./components/sidebar/Sidebar";
 import { DashboardScreen } from "./screens/dashboard/DashboardScreen";
 import { LauncherScreen } from "./screens/launcher/LauncherScreen";
@@ -23,6 +24,7 @@ export function App() {
           ))}
         </Routes>
       </main>
+      <FloatingTerminal />
     </div>
   );
 }
