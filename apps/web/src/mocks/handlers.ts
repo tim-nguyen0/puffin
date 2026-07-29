@@ -28,6 +28,8 @@ export const handlers = [
   ),
   http.post("/api/sim/start", () => HttpResponse.json(ack)),
   http.post("/api/sim/stop", () => HttpResponse.json(ack)),
+  http.post("/api/sim/reset", () => HttpResponse.json(ack)),
+  http.post("/api/sim/vehicle/pose", () => HttpResponse.json(ack)),
   http.get("/api/procs", () => HttpResponse.json(processes)),
   http.post("/api/vehicle/arm", () => HttpResponse.json(ack)),
   http.post("/api/vehicle/disarm", () => HttpResponse.json(ack)),

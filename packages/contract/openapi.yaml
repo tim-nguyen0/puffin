@@ -49,6 +49,32 @@ paths:
               schema:
                 $ref: "#/components/schemas/Ack"
 
+  /sim/reset:
+    post:
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Ack"
+
+  /sim/vehicle/pose:
+    post:
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VehiclePoseRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Ack"
+
   /procs:
     get:
       responses:
@@ -222,6 +248,25 @@ components:
           type: number
           minimum: 1
           maximum: 50
+
+    VehiclePoseRequest:
+      # gz set_pose teleport, world frame (z is meters UP, not NED). the api
+      # refuses this while the vehicle is armed - move a flying drone with
+      # offboard setpoints, not teleports
+      type: object
+      required: [x, y]
+      properties:
+        x:
+          type: number
+        y:
+          type: number
+        z:
+          type: number
+          minimum: 0
+          default: 0.3
+        yaw_deg:
+          type: number
+          default: 0
 
     RosService:
       type: object

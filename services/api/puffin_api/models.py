@@ -39,6 +39,13 @@ class TakeoffRequest(BaseModel):
     altitude_m: float = Field(ge=1, le=50)
 
 
+class VehiclePoseRequest(BaseModel):
+    x: float
+    y: float
+    z: float = Field(default=0.3, ge=0)
+    yaw_deg: float = 0.0
+
+
 class RosService(BaseModel):
     name: str
     type: str

@@ -32,6 +32,7 @@ class FakeRos:
         self.commands: list[tuple[int, float, float]] = []
         self.transitions: list[tuple[str, str]] = []
         self.lifecycle = {"offboard_demo": "inactive"}
+        self.telemetry: dict | None = None
 
     def send_vehicle_command(
         self, command: int, param1: float = 0.0, param7: float = 0.0
@@ -77,7 +78,25 @@ class FakeRos:
         return AdapterResult(ok=True, detail=f"{node_name}: {transition} accepted")
 
     def latest_telemetry(self) -> AdapterResult:
-        return AdapterResult(ok=False, detail="no telemetry received yet")
+        if self.telemetry is None:
+            return AdapterResult(ok=False, detail="no telemetry received yet")
+        return AdapterResult(ok=True, data=self.telemetry)
+
+
+class FakeGz:
+    def __init__(self) -> None:
+        self.resets = 0
+        self.poses: list[tuple[float, float, float, float]] = []
+
+    def reset_world(self) -> AdapterResult:
+        self.resets += 1
+        return AdapterResult(ok=True, detail="world puffin reset")
+
+    def set_vehicle_pose(
+        self, x: float, y: float, z: float = 0.3, yaw_deg: float = 0.0
+    ) -> AdapterResult:
+        self.poses.append((x, y, z, yaw_deg))
+        return AdapterResult(ok=True, detail=f"x500_0 moved to ({x}, {y}, {z})")
 
 
 @pytest.fixture
@@ -91,6 +110,11 @@ def fake_ros() -> FakeRos:
 
 
 @pytest.fixture
-def client(fake_supervisor: FakeSupervisor, fake_ros: FakeRos) -> TestClient:
-    app = create_app(supervisor=fake_supervisor, ros_adapter=fake_ros)
+def fake_gz() -> FakeGz:
+    return FakeGz()
+
+
+@pytest.fixture
+def client(fake_supervisor: FakeSupervisor, fake_ros: FakeRos, fake_gz: FakeGz) -> TestClient:
+    app = create_app(supervisor=fake_supervisor, ros_adapter=fake_ros, gz=fake_gz)
     return TestClient(app)
