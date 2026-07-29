@@ -32,6 +32,11 @@
   --base-palette-storm: #1c2835;
   --base-palette-not-quite-gray: #036;
 
+  /* topbar (figma node "TopBar", 19:41) */
+  --topbar-height: 68px;
+  --btn-h: 36px;
+  --btn-h-sm: 30px;
+
   /* Sidebar (Figma node "Sidebar", 19:6) */
   --sidebar-width: 260px;
   --sidebar-gap: 12px;
