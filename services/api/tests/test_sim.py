@@ -1,6 +1,6 @@
 from fastapi.testclient import TestClient
 
-from tests.conftest import FakeSupervisor
+from tests.conftest import FakeGz, FakeRos, FakeSupervisor
 
 
 def test_sim_status_running_when_all_programs_up(client: TestClient) -> None:
@@ -30,3 +30,35 @@ def test_procs_lists_process_table(client: TestClient) -> None:
     body = client.get("/api/procs").json()
     assert len(body) == 4
     assert body[0] == {"name": "gz-server", "state": "RUNNING", "uptime_s": 120}
+
+
+def test_reset_hits_gz(client: TestClient, fake_gz: FakeGz) -> None:
+    assert client.post("/api/sim/reset").json()["ok"] is True
+    assert fake_gz.resets == 1
+
+
+def test_set_vehicle_pose(client: TestClient, fake_gz: FakeGz) -> None:
+    body = client.post("/api/sim/vehicle/pose", json={"x": 5, "y": 2}).json()
+    assert body["ok"] is True
+    assert fake_gz.poses == [(5.0, 2.0, 0.3, 0.0)]
+
+
+def test_set_vehicle_pose_refused_while_armed(
+    client: TestClient, fake_gz: FakeGz, fake_ros: FakeRos
+) -> None:
+    fake_ros.telemetry = {
+        "t_us": 1,
+        "armed": True,
+        "mode": "offboard",
+        "ned": {"x": 0.0, "y": 0.0, "z": -5.0},
+        "battery_v": 15.8,
+    }
+    body = client.post("/api/sim/vehicle/pose", json={"x": 5, "y": 2}).json()
+    assert body["ok"] is False
+    assert "disarm" in body["detail"]
+    assert fake_gz.poses == []
+
+
+def test_set_vehicle_pose_rejects_underground(client: TestClient) -> None:
+    response = client.post("/api/sim/vehicle/pose", json={"x": 0, "y": 0, "z": -1})
+    assert response.status_code == 422
