@@ -33,8 +33,15 @@ RUN git clone --branch v2.4.3 --depth 1 \
 # PX4 SITL at PX4_REF — binary only. supervisord launches it standalone
 # (PX4_GZ_STANDALONE=1); never `make px4_sitl gz_x500`, which forks a second
 # Gazebo.
+# The fake nuttx-0.0.0 tags: shallow submodules carry no tags, but PX4's
+# version-header script (px_update_git_header.py --validate) requires a
+# nuttx-x.y.z tag even for SITL, which never runs NuttX. Tagging HEAD is
+# cheaper than unshallowing the clone for a cosmetic version string.
 RUN git clone --branch "${PX4_REF}" --depth 1 --recurse-submodules --shallow-submodules \
       https://github.com/PX4/PX4-Autopilot.git /px4 \
+    && for sub in platforms/nuttx/NuttX/nuttx platforms/nuttx/NuttX/apps; do \
+         if [ -d "/px4/${sub}" ]; then git -C "/px4/${sub}" tag nuttx-0.0.0; fi; \
+       done \
     && pip3 install --break-system-packages -r /px4/Tools/setup/requirements.txt \
     && cd /px4 && DONT_RUN=1 make px4_sitl_default
 
