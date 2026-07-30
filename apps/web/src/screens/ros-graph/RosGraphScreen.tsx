@@ -520,60 +520,68 @@ interface ServiceInspectorProps {
 function ServiceInspector({ selected, related, onSelect }: ServiceInspectorProps) {
   return (
     <aside className="service-inspector" aria-label="Selected service details">
-      <div className="inspector-header">
-        <span className="inspector-kicker">Inspector</span>
-        <span className="inspector-status">
-          <span aria-hidden="true" />
-          Discovered
-        </span>
-      </div>
-
       {selected ? (
         <>
-          <div className={`inspector-symbol service-node-${selected.tone}`} aria-hidden="true">
-            S
+          <div className="inspector-header">
+            <span className="inspector-kicker">Selected service</span>
+            <span className="inspector-status">Active</span>
           </div>
-          <h2>{selected.operation}</h2>
-          <p className="inspector-service-name">{selected.name}</p>
+
+          <h2>{selected.name}</h2>
 
           <dl className="inspector-metadata">
             <div>
-              <dt>Provider namespace</dt>
+              <dt>Package</dt>
+              <dd>{selected.typePackage}</dd>
+            </div>
+            <div>
+              <dt>Provider</dt>
               <dd>{selected.namespace}</dd>
             </div>
             <div>
-              <dt>Interface</dt>
+              <dt>Interface type</dt>
               <dd>{selected.type}</dd>
-            </div>
-            <div>
-              <dt>Relationship</dt>
-              <dd>Inferred from discovery</dd>
             </div>
           </dl>
 
           <div className="related-services">
-            <h3>Related services</h3>
+            <h3>Related endpoints</h3>
             {related.length > 0 ? (
               <ul>
-                {related.map((node) => (
+                {related.slice(0, 3).map((node) => (
                   <li key={node.id}>
                     <button type="button" onClick={() => onSelect(node)}>
                       <span>{node.operation}</span>
-                      <small>{node.namespace}</small>
+                      <small>{node.type}</small>
+                      <b>Linked</b>
                     </button>
                   </li>
                 ))}
               </ul>
             ) : (
-              <p>No inferred relationships.</p>
+              <p>No linked endpoints discovered.</p>
             )}
+          </div>
+
+          <div className="inspector-parameters">
+            <h3>Service details</h3>
+            <dl>
+              <div>
+                <dt>operation</dt>
+                <dd>{selected.operation}</dd>
+              </div>
+              <div>
+                <dt>relationship</dt>
+                <dd>inferred</dd>
+              </div>
+            </dl>
           </div>
         </>
       ) : (
         <div className="inspector-empty">
           <span aria-hidden="true">◎</span>
           <h2>Select a service</h2>
-          <p>Choose a node to inspect its provider namespace and interface type.</p>
+          <p>Choose an endpoint in the graph to inspect its discovery details.</p>
         </div>
       )}
     </aside>
@@ -628,57 +636,59 @@ export function RosGraphScreen() {
         </div>
       </header>
 
-      <GraphFilterBar
-        visibility={visibility}
-        onVisibilityChange={setVisibility}
-        search={search}
-        onSearchChange={setSearch}
-        layout={layout}
-        onLayoutChange={setLayout}
-        isRefreshing={isFetching}
-        onRefresh={() => void refetch()}
-      />
+      <div className="graph-setup">
+        <div className="graph-canvas-column">
+          <GraphFilterBar
+            visibility={visibility}
+            onVisibilityChange={setVisibility}
+            search={search}
+            onSearchChange={setSearch}
+            layout={layout}
+            onLayoutChange={setLayout}
+            isRefreshing={isFetching}
+            onRefresh={() => void refetch()}
+          />
 
-      <div className="graph-workspace">
-        <div className="graph-content">
-          {isPending ? <GraphSkeleton /> : null}
-          {isError ? (
-            <div className="graph-message" role="alert">
-              <span aria-hidden="true">!</span>
-              <h2>Discovery is unavailable</h2>
-              <p>Start the ROS bridge or try the service query again.</p>
-              <button type="button" onClick={() => void refetch()}>
-                Try again
-              </button>
+          <div className="graph-workspace">
+            <div className="graph-content">
+              {isPending ? <GraphSkeleton /> : null}
+              {isError ? (
+                <div className="graph-message" role="alert">
+                  <span aria-hidden="true">!</span>
+                  <h2>Discovery is unavailable</h2>
+                  <p>Start the ROS bridge or try the service query again.</p>
+                  <button type="button" onClick={() => void refetch()}>
+                    Try again
+                  </button>
+                </div>
+              ) : null}
+              {!isPending && !isError && graph.nodes.length === 0 ? (
+                <div className="graph-message">
+                  <span aria-hidden="true">◎</span>
+                  <h2>No services discovered</h2>
+                  <p>The graph will populate as ROS 2 service endpoints appear.</p>
+                  <button type="button" onClick={() => void refetch()}>
+                    Scan again
+                  </button>
+                </div>
+              ) : null}
+              {!isPending && !isError && graph.nodes.length > 0 ? (
+                <ServiceGraphViewport
+                  graph={graph}
+                  search={search}
+                  layout={layout}
+                  selectedId={selected?.id ?? null}
+                  onSelect={(node) => setSelectedId(node.id)}
+                />
+              ) : null}
             </div>
-          ) : null}
-          {!isPending && !isError && graph.nodes.length === 0 ? (
-            <div className="graph-message">
-              <span aria-hidden="true">◎</span>
-              <h2>No services discovered</h2>
-              <p>The graph will populate as ROS 2 service endpoints appear.</p>
-              <button type="button" onClick={() => void refetch()}>
-                Scan again
-              </button>
-            </div>
-          ) : null}
-          {!isPending && !isError && graph.nodes.length > 0 ? (
-            <>
-              <ServiceGraphViewport
-                graph={graph}
-                search={search}
-                layout={layout}
-                selectedId={selected?.id ?? null}
-                onSelect={(node) => setSelectedId(node.id)}
-              />
-              <ServiceInspector
-                selected={selected}
-                related={related}
-                onSelect={(node) => setSelectedId(node.id)}
-              />
-            </>
-          ) : null}
+          </div>
         </div>
+        <ServiceInspector
+          selected={selected}
+          related={related}
+          onSelect={(node) => setSelectedId(node.id)}
+        />
       </div>
 
       <GraphStatusBar

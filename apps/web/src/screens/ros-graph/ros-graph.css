@@ -34,15 +34,28 @@
   line-height: 1.55;
 }
 
-.graph-workspace {
-  display: flex;
+.graph-setup {
+  display: grid;
   flex: 1;
   min-height: 0;
-  overflow: hidden;
-  border: var(--graph-border-width) solid var(--color-graph-border);
-  border-radius: var(--graph-card-radius);
-  background: var(--color-graph-bg);
-  box-shadow: var(--graph-card-shadow);
+  grid-template-columns: minmax(0, 1fr) var(--graph-inspector-width);
+  gap: var(--space-3);
+}
+
+.graph-canvas-column,
+.graph-workspace {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.graph-canvas-column {
+  min-height: 0;
+}
+
+.graph-workspace {
+  flex: 1;
+  min-height: 0;
 }
 
 .graph-zoom-controls button:focus-visible,
@@ -93,9 +106,7 @@
 
 .graph-content {
   position: relative;
-  display: grid;
   flex: 1;
-  grid-template-columns: minmax(0, 1fr) var(--graph-inspector-width);
   min-height: var(--graph-viewport-height);
 }
 
@@ -103,7 +114,11 @@
   position: relative;
   min-width: 0;
   min-height: var(--graph-viewport-height);
+  overflow: hidden;
+  border: var(--graph-border-width) solid var(--color-graph-border);
+  border-radius: var(--graph-card-radius);
   background: var(--color-graph-bg);
+  box-shadow: var(--graph-card-shadow);
 }
 
 .service-graph {
@@ -282,20 +297,21 @@
   box-sizing: border-box;
   min-width: 0;
   padding: var(--space-4);
-  border-left: var(--graph-border-width) solid var(--color-graph-border);
-  background: var(--color-graph-surface);
-  color: var(--color-graph-text);
+  border: var(--graph-border-width) solid var(--color-page-border);
+  border-radius: var(--graph-card-radius);
+  background: var(--color-page-surface);
+  color: var(--color-page-text);
 }
 
 .inspector-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: var(--space-5);
+  margin-bottom: var(--space-3);
 }
 
 .inspector-kicker {
-  color: var(--color-graph-muted);
+  color: var(--color-discovery);
   font-size: var(--text-graph-micro);
   font-weight: 700;
   letter-spacing: 0.08em;
@@ -303,65 +319,21 @@
 }
 
 .inspector-status {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  color: var(--color-graph-muted);
-  font-size: var(--text-sm);
-}
-
-.inspector-status span {
-  width: var(--graph-status-size);
-  height: var(--graph-status-size);
-  border-radius: 50%;
-  background: var(--color-discovery);
-}
-
-.inspector-symbol {
-  display: grid;
-  width: var(--graph-inspector-symbol);
-  height: var(--graph-inspector-symbol);
-  margin-bottom: var(--space-3);
-  place-items: center;
-  border: var(--graph-node-border-width) solid currentcolor;
-  border-radius: var(--graph-control-radius);
-  font-family: var(--font-mono);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-1);
+  background: var(--color-discovery-soft);
+  color: var(--color-discovery);
+  font-size: var(--text-graph-micro);
   font-weight: 700;
-}
-
-.inspector-symbol.service-node-cyan {
-  background: var(--color-service-cyan-fill);
-  color: var(--color-service-cyan);
-}
-
-.inspector-symbol.service-node-blue {
-  background: var(--color-service-blue-fill);
-  color: var(--color-service-blue);
-}
-
-.inspector-symbol.service-node-amber {
-  background: var(--color-service-amber-fill);
-  color: var(--color-service-amber);
-}
-
-.inspector-symbol.service-node-violet {
-  background: var(--color-service-violet-fill);
-  color: var(--color-service-violet);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 .service-inspector h2 {
   overflow-wrap: anywhere;
-  margin: 0 0 var(--space-2);
-  font-size: var(--text-xl);
-}
-
-.inspector-service-name {
-  overflow-wrap: anywhere;
   margin: 0 0 var(--space-4);
-  color: var(--color-graph-muted);
-  font-family: var(--font-mono);
-  font-size: var(--text-sm);
-  line-height: 1.5;
+  color: var(--base-palette-not-quite-gray);
+  font-size: var(--text-xl);
 }
 
 .inspector-metadata {
@@ -369,36 +341,36 @@
 }
 
 .inspector-metadata div {
-  padding: var(--space-3) 0;
-  border-top: var(--graph-border-width) solid var(--color-graph-border);
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-2) 0;
+  border-bottom: var(--graph-border-width) solid var(--color-page-border);
 }
 
 .inspector-metadata dt {
-  margin-bottom: var(--space-2);
-  color: var(--color-graph-subtle);
-  font-size: var(--text-graph-micro);
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  color: var(--color-page-muted);
+  font-size: var(--text-sm);
 }
 
 .inspector-metadata dd {
   overflow-wrap: anywhere;
   margin: 0;
-  color: var(--color-graph-text);
+  color: var(--color-page-text);
   font-family: var(--font-mono);
   font-size: var(--text-sm);
-  line-height: 1.5;
+  text-align: right;
 }
 
 .related-services {
-  padding-top: var(--space-3);
-  border-top: var(--graph-border-width) solid var(--color-graph-border);
+  padding-top: var(--space-4);
 }
 
-.related-services h3 {
+.related-services h3,
+.inspector-parameters h3 {
   margin: 0 0 var(--space-3);
-  color: var(--color-graph-muted);
+  color: var(--color-page-text);
   font-size: var(--text-sm);
 }
 
@@ -412,19 +384,20 @@
 }
 
 .related-services button {
+  position: relative;
   width: 100%;
-  padding: var(--space-2) var(--space-3);
-  border: var(--graph-border-width) solid var(--color-graph-border);
+  padding: var(--space-3);
+  border: var(--graph-border-width) solid var(--color-page-border);
   border-radius: var(--graph-control-radius);
-  background: var(--color-graph-bg);
-  color: var(--color-graph-text);
+  background: var(--color-page-surface);
+  color: var(--color-page-text);
   cursor: pointer;
   font: inherit;
   text-align: left;
 }
 
 .related-services button:hover {
-  border-color: var(--color-graph-provider);
+  border-color: var(--color-page-focus);
 }
 
 .related-services button span,
@@ -436,18 +409,63 @@
 }
 
 .related-services button span {
+  padding-right: var(--space-5);
   margin-bottom: var(--space-1);
   font-family: var(--font-mono);
   font-size: var(--text-sm);
 }
 
 .related-services button small {
-  color: var(--color-graph-subtle);
+  padding-right: var(--space-5);
+  color: var(--color-page-muted);
+  font-size: var(--text-graph-micro);
+}
+
+.related-services button b {
+  position: absolute;
+  right: var(--space-3);
+  bottom: var(--space-3);
+  color: var(--color-discovery);
+  font-family: var(--font-mono);
+  font-size: var(--text-graph-micro);
 }
 
 .related-services > p {
-  color: var(--color-graph-subtle);
+  color: var(--color-page-muted);
   font-size: var(--text-sm);
+}
+
+.inspector-parameters {
+  padding-top: var(--space-4);
+}
+
+.inspector-parameters dl {
+  margin: 0;
+  padding: var(--space-3);
+  border: var(--graph-border-width) solid var(--color-page-border);
+  border-radius: var(--graph-control-radius);
+}
+
+.inspector-parameters dl div {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+  font-family: var(--font-mono);
+  font-size: var(--text-graph-micro);
+}
+
+.inspector-parameters dl div + div {
+  margin-top: var(--space-2);
+}
+
+.inspector-parameters dt {
+  color: var(--color-page-muted);
+}
+
+.inspector-parameters dd {
+  margin: 0;
+  color: var(--color-page-text);
+  font-weight: 700;
 }
 
 .inspector-empty {
@@ -465,9 +483,9 @@
   height: var(--graph-empty-symbol);
   margin-bottom: var(--space-3);
   place-items: center;
-  border: var(--graph-border-width) solid var(--color-graph-border);
+  border: var(--graph-border-width) solid var(--color-page-border);
   border-radius: 50%;
-  color: var(--color-graph-subtle);
+  color: var(--color-page-muted);
   font-size: var(--text-xl);
 }
 
@@ -478,14 +496,13 @@
 .inspector-empty p {
   max-width: 14rem;
   margin: 0;
-  color: var(--color-graph-subtle);
+  color: var(--color-page-muted);
   font-size: var(--text-sm);
   line-height: 1.5;
 }
 
 .graph-message,
 .graph-skeleton {
-  grid-column: 1 / -1;
   min-height: var(--graph-viewport-height);
   background: var(--color-graph-bg);
   color: var(--color-graph-text);
@@ -656,7 +673,7 @@
 }
 
 @media (width <= 72rem) {
-  .graph-content {
+  .graph-setup {
     grid-template-columns: minmax(0, 1fr);
   }
 
