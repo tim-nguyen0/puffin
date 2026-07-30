@@ -10,28 +10,102 @@
   color: var(--color-page-text);
 }
 
-.ros-graph-header {
+.graph-top-bar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  min-height: var(--graph-top-bar-height);
+  margin: calc(var(--space-2) * -1) calc(var(--space-2) * -1) var(--graph-page-gap);
+  padding: 0 var(--space-2);
+  border-bottom: var(--graph-border-width) solid var(--color-page-border);
+  background: var(--color-page-surface);
+}
+
+.graph-breadcrumbs ol {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--graph-header-gap);
-  margin-bottom: var(--graph-page-gap);
-}
-
-.screen-eyebrow {
-  margin: 0 0 var(--space-2);
-  color: var(--base-palette-blue);
-  font-size: var(--text-sm);
-  font-weight: 700;
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
-}
-
-.screen-description {
-  max-width: 52rem;
+  align-items: center;
+  gap: var(--space-2);
   margin: 0;
+  padding: 0;
+  list-style: none;
   color: var(--color-page-muted);
-  line-height: 1.55;
+  font-size: var(--text-sm);
+}
+
+.graph-breadcrumbs li + li::before {
+  margin-right: var(--space-2);
+  color: var(--color-page-muted);
+  content: "›";
+}
+
+.graph-breadcrumbs li[aria-current="page"] {
+  color: var(--base-palette-not-quite-gray);
+  font-weight: 700;
+}
+
+.graph-command-controls,
+.graph-top-status {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.graph-command-controls {
+  justify-self: center;
+}
+
+.graph-top-status {
+  justify-self: end;
+  gap: var(--space-3);
+}
+
+.graph-resume-button,
+.graph-command-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: var(--graph-top-control-height);
+  border: var(--graph-border-width) solid var(--color-page-border);
+  border-radius: var(--graph-top-control-radius);
+  background: var(--color-page-surface);
+  color: var(--base-palette-not-quite-gray);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.graph-resume-button {
+  gap: var(--space-2);
+  padding: 0 var(--space-3);
+  border-color: var(--base-palette-blue);
+  background: var(--base-palette-blue);
+  color: var(--color-page-surface);
+}
+
+.graph-resume-button span {
+  font-size: var(--text-md);
+}
+
+.graph-command-button {
+  width: var(--graph-top-control-height);
+  padding: 0;
+  font-size: var(--text-graph-micro);
+}
+
+.graph-stop-button {
+  color: var(--color-danger);
+}
+
+.graph-resume-button:hover,
+.graph-command-button:hover {
+  border-color: var(--color-page-focus);
+}
+
+.graph-resume-button:focus-visible,
+.graph-command-button:focus-visible {
+  outline: var(--graph-control-focus-width) solid var(--color-page-focus);
+  outline-offset: var(--graph-control-focus-offset);
 }
 
 .graph-setup {
@@ -637,35 +711,6 @@
   font-weight: 700;
 }
 
-.graph-status-discovery {
-  display: inline-flex;
-  align-items: center;
-  flex-shrink: 0;
-  gap: var(--space-2);
-  color: var(--color-page-text);
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.graph-status-discovery i {
-  width: var(--graph-status-size);
-  height: var(--graph-status-size);
-  border-radius: 50%;
-  background: var(--color-discovery);
-  box-shadow: 0 0 0 var(--space-1) var(--color-discovery-soft);
-}
-
-.graph-status-discovery i.is-refreshing {
-  animation: discovery-pulse 1.1s ease-in-out infinite;
-}
-
-@keyframes discovery-pulse {
-  50% {
-    opacity: 0.4;
-    transform: scale(0.72);
-  }
-}
-
 @keyframes graph-shimmer {
   50% {
     opacity: 0.45;
@@ -673,6 +718,17 @@
 }
 
 @media (width <= 72rem) {
+  .graph-top-bar {
+    grid-template-columns: minmax(0, 1fr) auto;
+    row-gap: var(--space-2);
+    padding: var(--space-2);
+  }
+
+  .graph-top-status {
+    grid-column: 1 / -1;
+    justify-self: start;
+  }
+
   .graph-setup {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -687,8 +743,13 @@
     padding: 0;
   }
 
-  .ros-graph-header {
-    flex-direction: column;
+  .graph-top-bar {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .graph-command-controls,
+  .graph-top-status {
+    justify-self: start;
   }
 
   .graph-status-bar,
@@ -717,7 +778,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .graph-status-discovery i.is-refreshing,
   .graph-skeleton-node,
   .graph-skeleton-line {
     animation: none;

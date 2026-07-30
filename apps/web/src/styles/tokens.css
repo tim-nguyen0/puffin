@@ -125,7 +125,9 @@
   --color-node-shadow: rgb(0 0 0 / 28%);
   --graph-page-padding: 32px;
   --graph-page-gap: 20px;
-  --graph-header-gap: 24px;
+  --graph-top-bar-height: 52px;
+  --graph-top-control-height: 32px;
+  --graph-top-control-radius: 7px;
   --graph-status-bar-height: 44px;
   --graph-card-radius: 18px;
   --graph-control-radius: 10px;
@@ -139,7 +141,7 @@
   --graph-selected-width: 3px;
   --graph-node-glow: 0 12px 32px rgb(0 0 0 / 32%);
   --graph-card-shadow: 0 14px 40px rgb(20 31 46 / 12%);
-  --graph-status-size: 8px;
+  --status-indicator-size: 8px;
   --graph-empty-symbol: 56px;
   --graph-skeleton-node-width: 178px;
   --graph-skeleton-node-height: 62px;
