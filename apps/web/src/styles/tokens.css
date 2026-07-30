@@ -217,4 +217,25 @@
   --services-command-radius: 9px;
   --services-command-line-height: 1.7;
   --services-command-indent: 26px;
+
+  /* Dashboard pipeline */
+  --dashboard-panel-radius: 16px;
+  --dashboard-panel-header-height: 52px;
+  --dashboard-top-row-min: 360px;
+  --dashboard-bottom-row-min: 300px;
+  --dashboard-viewport-control-height: 52px;
+  --dashboard-viewport-min-height: 180px;
+  --dashboard-grid-line-gap: 48px;
+  --dashboard-drone-size: 42px;
+  --dashboard-rotor-width: 30px;
+  --dashboard-rotor-height: 5px;
+  --dashboard-attitude-size: 108px;
+  --dashboard-attitude-angle: 12deg;
+  --dashboard-horizon-width: 2px;
+  --dashboard-attitude-center: 10px;
+  --dashboard-health-row-height: 30px;
+  --dashboard-health-name-width: 78px;
+  --color-attitude-sky: #4ab2f7;
+  --color-attitude-ground: #337ff0;
+
 }
