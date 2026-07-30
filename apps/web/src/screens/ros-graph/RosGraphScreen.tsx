@@ -110,6 +110,43 @@ function GraphSkeleton() {
   );
 }
 
+interface GraphStatusBarProps {
+  isRefreshing: boolean;
+  services: number;
+  namespaces: number;
+  interfaces: number;
+}
+
+function GraphStatusBar({
+  isRefreshing,
+  services,
+  namespaces,
+  interfaces,
+}: GraphStatusBarProps) {
+  return (
+    <footer className="graph-status-bar" aria-label="ROS 2 graph status" aria-live="polite">
+      <div className="graph-status-metrics">
+        <span>
+          Services <strong>{services}</strong>
+        </span>
+        <span>
+          Namespaces <strong>{namespaces}</strong>
+        </span>
+        <span>
+          Interfaces <strong>{interfaces}</strong>
+        </span>
+        <span>
+          Source <strong>Live ROS discovery</strong>
+        </span>
+      </div>
+      <span className="graph-status-discovery">
+        <i className={isRefreshing ? "is-refreshing" : undefined} aria-hidden="true" />
+        {isRefreshing ? "Refreshing discovery" : "Discovery online"}
+      </span>
+    </footer>
+  );
+}
+
 interface ServiceGraphViewportProps {
   graph: ServiceGraph;
   search: string;
@@ -585,35 +622,11 @@ export function RosGraphScreen() {
       <header className="ros-graph-header">
         <div>
           <p className="screen-eyebrow">ROS 2 / Discovery</p>
-          <h1>Service topology</h1>
           <p className="screen-description">
             Explore discovered service endpoints, provider groups, and shared interfaces.
           </p>
         </div>
-        <div className="graph-health" aria-live="polite">
-          <span className={isFetching ? "is-refreshing" : ""} aria-hidden="true" />
-          {isFetching ? "Refreshing graph" : "Discovery online"}
-        </div>
       </header>
-
-      <div className="graph-stat-row" aria-label="ROS 2 graph summary">
-        <div className="graph-stat">
-          <span>Services</span>
-          <strong>{graph.nodes.length}</strong>
-        </div>
-        <div className="graph-stat">
-          <span>Namespaces</span>
-          <strong>{namespaces}</strong>
-        </div>
-        <div className="graph-stat">
-          <span>Interfaces</span>
-          <strong>{typePackages.length}</strong>
-        </div>
-        <div className="graph-stat graph-stat-wide">
-          <span>Source</span>
-          <strong>Live ROS discovery</strong>
-        </div>
-      </div>
 
       <GraphFilterBar
         visibility={visibility}
@@ -668,10 +681,12 @@ export function RosGraphScreen() {
         </div>
       </div>
 
-      <p className="graph-method-note">
-        Relationships are inferred from service namespaces and interface packages until
-        provider/client edges are exposed by ROS discovery.
-      </p>
+      <GraphStatusBar
+        isRefreshing={isFetching}
+        services={graph.nodes.length}
+        namespaces={namespaces}
+        interfaces={typePackages.length}
+      />
     </section>
   );
 }

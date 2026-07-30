@@ -126,7 +126,7 @@
   --graph-page-padding: 32px;
   --graph-page-gap: 20px;
   --graph-header-gap: 24px;
-  --graph-stat-height: 78px;
+  --graph-status-bar-height: 44px;
   --graph-card-radius: 18px;
   --graph-control-radius: 10px;
   --graph-node-radius: 12px;
@@ -173,8 +173,6 @@
   --graph-toggle-active-shadow: 0 1px 3px rgb(0 51 102 / 28%);
   --graph-visually-hidden-size: 1px;
   --graph-visually-hidden-offset: -1px;
-  --text-graph-display: 34px;
-  --text-graph-stat: 23px;
   --text-graph-node: 14px;
   --text-graph-micro: 10px;
   --text-graph-control: 13px;

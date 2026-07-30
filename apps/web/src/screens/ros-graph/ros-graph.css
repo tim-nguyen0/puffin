@@ -2,6 +2,8 @@
 /* stylelint-disable no-descending-specificity */
 
 .ros-graph-screen {
+  display: flex;
+  flex-direction: column;
   box-sizing: border-box;
   min-height: calc(100vh - (var(--space-4) * 2));
   padding: var(--space-2);
@@ -25,93 +27,17 @@
   text-transform: uppercase;
 }
 
-.ros-graph-header h1 {
-  margin: 0;
-  color: var(--color-page-text);
-  font-size: var(--text-graph-display);
-  letter-spacing: -0.03em;
-  line-height: 1.1;
-}
-
 .screen-description {
   max-width: 52rem;
-  margin: var(--space-2) 0 0;
+  margin: 0;
   color: var(--color-page-muted);
   line-height: 1.55;
 }
 
-.graph-health {
-  display: inline-flex;
-  align-items: center;
-  flex-shrink: 0;
-  gap: var(--space-2);
-  padding: var(--space-2) var(--space-3);
-  border: var(--graph-border-width) solid var(--color-page-border);
-  border-radius: var(--button-radius-pill);
-  background: var(--color-page-surface);
-  box-shadow: 0 var(--space-1) var(--space-3) var(--color-shadow);
-  color: var(--color-page-muted);
-  font-size: var(--text-sm);
-  font-weight: 600;
-}
-
-.graph-health > span {
-  width: var(--graph-status-size);
-  height: var(--graph-status-size);
-  border-radius: 50%;
-  background: var(--color-discovery);
-  box-shadow: 0 0 0 var(--space-1) var(--color-discovery-soft);
-}
-
-.graph-health > span.is-refreshing {
-  animation: discovery-pulse 1.1s ease-in-out infinite;
-}
-
-.graph-stat-row {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr)) minmax(12rem, 1.5fr);
-  overflow: hidden;
-  min-height: var(--graph-stat-height);
-  margin-bottom: var(--graph-page-gap);
-  border: var(--graph-border-width) solid var(--color-page-border);
-  border-radius: var(--graph-card-radius);
-  background: var(--color-page-surface);
-  box-shadow: 0 var(--space-1) var(--space-3) var(--color-shadow);
-}
-
-.graph-stat {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  min-width: 0;
-  padding: var(--space-3) var(--space-4);
-  border-right: var(--graph-border-width) solid var(--color-page-border);
-}
-
-.graph-stat:last-child {
-  border-right: 0;
-}
-
-.graph-stat span {
-  margin-bottom: var(--space-1);
-  color: var(--color-page-muted);
-  font-size: var(--text-sm);
-}
-
-.graph-stat strong {
-  overflow: hidden;
-  font-size: var(--text-graph-stat);
-  line-height: 1;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-
-.graph-stat-wide strong {
-  color: var(--color-discovery);
-  font-size: var(--text-md);
-}
-
 .graph-workspace {
+  display: flex;
+  flex: 1;
+  min-height: 0;
   overflow: hidden;
   border: var(--graph-border-width) solid var(--color-graph-border);
   border-radius: var(--graph-card-radius);
@@ -168,6 +94,7 @@
 .graph-content {
   position: relative;
   display: grid;
+  flex: 1;
   grid-template-columns: minmax(0, 1fr) var(--graph-inspector-width);
   min-height: var(--graph-viewport-height);
 }
@@ -665,10 +592,54 @@
   transform: rotate(-18deg);
 }
 
-.graph-method-note {
-  margin: var(--space-3) var(--space-2) 0;
+.graph-status-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: var(--graph-status-bar-height);
+  gap: var(--space-3);
+  padding: 0 var(--space-2);
+  border-top: var(--graph-border-width) solid var(--color-page-border);
   color: var(--color-page-muted);
   font-size: var(--text-sm);
+}
+
+.graph-status-metrics {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.graph-status-metrics span {
+  white-space: nowrap;
+}
+
+.graph-status-metrics strong {
+  color: var(--base-palette-blue);
+  font-weight: 700;
+}
+
+.graph-status-discovery {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: var(--space-2);
+  color: var(--color-page-text);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.graph-status-discovery i {
+  width: var(--graph-status-size);
+  height: var(--graph-status-size);
+  border-radius: 50%;
+  background: var(--color-discovery);
+  box-shadow: 0 0 0 var(--space-1) var(--color-discovery-soft);
+}
+
+.graph-status-discovery i.is-refreshing {
+  animation: discovery-pulse 1.1s ease-in-out infinite;
 }
 
 @keyframes discovery-pulse {
@@ -703,16 +674,18 @@
     flex-direction: column;
   }
 
-  .graph-stat-row {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .graph-status-bar,
+  .graph-status-metrics {
+    align-items: flex-start;
+    flex-direction: column;
   }
 
-  .graph-stat:nth-child(2) {
-    border-right: 0;
+  .graph-status-bar {
+    padding: var(--space-3) var(--space-2);
   }
 
-  .graph-stat:nth-child(-n + 2) {
-    border-bottom: var(--graph-border-width) solid var(--color-page-border);
+  .graph-status-metrics {
+    gap: var(--space-2);
   }
 
   .graph-viewport,
@@ -727,7 +700,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .graph-health > span.is-refreshing,
+  .graph-status-discovery i.is-refreshing,
   .graph-skeleton-node,
   .graph-skeleton-line {
     animation: none;
