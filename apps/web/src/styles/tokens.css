@@ -31,6 +31,52 @@
   --base-palette-blue: #06c;
   --base-palette-storm: #1c2835;
   --base-palette-not-quite-gray: #036;
+  --color-launch-bg: #fff;
+
+  /* Primary action button */
+  --color-button-primary-hover: #005cb8;
+  --color-button-primary-active: #0052a3;
+  --color-button-focus: #8fc7ff;
+  --button-height-lg: 96px;
+  --button-padding-inline-lg: 28px;
+  --button-radius-pill: 48px;
+  --button-icon-lg: 36px;
+  --button-text-lg: 28px;
+  --button-focus-width: 3px;
+  --button-focus-offset: 3px;
+  --button-active-offset: 1px;
+  --new-simulation-button-width: 508px;
+  --button-shadow: 0 10px 24px rgb(0 102 204 / 28%);
+  --button-shadow-hover: 0 12px 28px rgb(0 102 204 / 34%);
+
+  /* Recent folders */
+  --color-recent-folder: #d3dff3;
+  --color-recent-folder-hover: #c3d3ed;
+  --recent-folders-border-width: 2px;
+  --recent-folders-radius: 40px;
+  --recent-folders-padding-block: 32px;
+  --recent-folders-padding-inline: 28px;
+  --recent-folders-title-offset: 8px;
+  --recent-folders-title-gap: 16px;
+  --recent-folder-gap: 14px;
+  --recent-folder-width: 236px;
+  --recent-folder-height: 54px;
+  --recent-folder-radius: 20px;
+  --recent-folder-padding-inline: 16px;
+  --recent-folder-icon: 24px;
+  --recent-folder-shadow: 0 4px 8px rgb(28 40 53 / 12%);
+  --launcher-preview-width: 1050px;
+
+  /* Brand */
+  --brand-mark-size: 84px;
+  --brand-word-size: 58px;
+  --brand-word-shadow: 0 5px 6px rgb(28 40 53 / 28%);
+  --launcher-button-height: 80px;
+  --launcher-button-padding-inline: 24px;
+  --launcher-button-radius: 40px;
+  --launcher-button-icon: 30px;
+  --launcher-button-text: 24px;
+  --launcher-button-width: 440px;
 
   /* Sidebar (Figma node "Sidebar", 19:6) */
   --sidebar-width: 260px;

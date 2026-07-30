@@ -1,0 +1,87 @@
+.recent-folders {
+  box-sizing: border-box;
+  width: 100%;
+  padding: var(--recent-folders-padding-block) var(--recent-folders-padding-inline);
+  border: var(--recent-folders-border-width) dashed var(--base-palette-storm);
+  border-radius: var(--recent-folders-radius);
+}
+
+.recent-folders-title {
+  margin: 0 0 var(--recent-folders-title-gap) var(--recent-folders-title-offset);
+  color: var(--base-palette-storm);
+  font-size: var(--text-lg);
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.recent-folders-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--recent-folder-gap);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.recent-folders-item {
+  flex: 0 1 var(--recent-folder-width);
+  min-width: 0;
+  max-width: 100%;
+  width: var(--recent-folder-width);
+}
+
+.recent-folder-button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: var(--recent-folder-height);
+  padding: 0 var(--recent-folder-padding-inline);
+  gap: var(--space-3);
+  appearance: none;
+  border: 0;
+  border-radius: var(--recent-folder-radius);
+  background-color: var(--color-recent-folder);
+  box-shadow: var(--recent-folder-shadow);
+  color: var(--base-palette-storm);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--text-lg);
+  font-weight: 600;
+  line-height: 1.2;
+  text-align: left;
+}
+
+.recent-folder-button:focus-visible {
+  outline: var(--button-focus-width) solid var(--color-button-focus);
+  outline-offset: var(--button-focus-offset);
+}
+
+.recent-folder-button:hover {
+  background-color: var(--color-recent-folder-hover);
+}
+
+.recent-folder-button:active {
+  transform: translateY(var(--button-active-offset));
+}
+
+.recent-folder-name {
+  overflow: hidden;
+  min-width: 0;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.recent-folder-icon {
+  display: inline-flex;
+  flex: none;
+  width: var(--recent-folder-icon);
+  height: var(--recent-folder-icon);
+}
+
+.recent-folder-icon svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}

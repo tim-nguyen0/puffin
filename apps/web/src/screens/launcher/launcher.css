@@ -1,0 +1,22 @@
+.launcher-screen {
+  --button-height-lg: var(--launcher-button-height);
+  --button-padding-inline-lg: var(--launcher-button-padding-inline);
+  --button-radius-pill: var(--launcher-button-radius);
+  --button-icon-lg: var(--launcher-button-icon);
+  --button-text-lg: var(--launcher-button-text);
+  --new-simulation-button-width: var(--launcher-button-width);
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-height: 100vh;
+  padding: var(--space-4);
+  gap: var(--space-5);
+  background-color: var(--color-launch-bg);
+}
+
+.launcher-screen .recent-folders {
+  max-width: var(--launcher-preview-width);
+}

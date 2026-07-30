@@ -1,0 +1,21 @@
+.puffin-logo {
+  display: inline-flex;
+  align-items: center;
+  color: var(--base-palette-not-quite-gray);
+}
+
+.puffin-logo-mark {
+  width: var(--brand-mark-size);
+  height: var(--brand-mark-size);
+  object-fit: contain;
+}
+
+.puffin-logo-wordmark {
+  margin-left: calc(var(--space-1) * -1);
+  font-family: ui-rounded, "Arial Rounded MT Bold", var(--font-body);
+  font-size: var(--brand-word-size);
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  line-height: 1;
+  text-shadow: var(--brand-word-shadow);
+}

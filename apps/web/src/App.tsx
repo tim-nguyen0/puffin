@@ -1,4 +1,4 @@
-import { Route, Routes } from "react-router-dom";
+import { Route, Routes, useLocation } from "react-router-dom";
 import { Sidebar } from "./components/sidebar/Sidebar";
 import { DashboardScreen } from "./screens/dashboard/DashboardScreen";
 import { LauncherScreen } from "./screens/launcher/LauncherScreen";
@@ -13,10 +13,13 @@ const SCREENS = [
 ];
 
 export function App() {
+  const { pathname } = useLocation();
+  const isLaunchPage = pathname === "/";
+
   return (
-    <div className="app-shell">
-      <Sidebar />
-      <main>
+    <div className={isLaunchPage ? "launch-app-shell" : "app-shell"}>
+      {!isLaunchPage ? <Sidebar /> : null}
+      <main className={isLaunchPage ? "launch-main" : undefined}>
         <Routes>
           {SCREENS.map((screen) => (
             <Route key={screen.path} path={screen.path} element={screen.element} />

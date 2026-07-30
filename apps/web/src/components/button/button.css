@@ -1,0 +1,73 @@
+.puffin-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  max-width: 100%;
+  min-height: var(--button-height-lg);
+  padding: 0 var(--button-padding-inline-lg);
+  gap: var(--space-3);
+  appearance: none;
+  border: 0;
+  border-radius: var(--button-radius-pill);
+  background-color: var(--base-palette-blue);
+  box-shadow: var(--button-shadow);
+  color: var(--base-palette-cloud);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--button-text-lg);
+  font-weight: 700;
+  line-height: 1.1;
+  text-align: center;
+  text-decoration: none;
+  user-select: none;
+  transition:
+    background-color 150ms ease,
+    box-shadow 150ms ease,
+    transform 100ms ease;
+}
+
+.puffin-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.puffin-button:focus-visible {
+  outline: var(--button-focus-width) solid var(--color-button-focus);
+  outline-offset: var(--button-focus-offset);
+}
+
+.puffin-button:hover:not(:disabled) {
+  background-color: var(--color-button-primary-hover);
+  box-shadow: var(--button-shadow-hover);
+}
+
+.puffin-button:active:not(:disabled) {
+  background-color: var(--color-button-primary-active);
+  box-shadow: var(--button-shadow);
+  transform: translateY(var(--button-active-offset));
+}
+
+.puffin-button-label {
+  overflow: hidden;
+  min-width: 0;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.puffin-button-icon {
+  display: inline-flex;
+  flex: none;
+  width: var(--button-icon-lg);
+  height: var(--button-icon-lg);
+}
+
+.puffin-button-icon svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.new-simulation-button {
+  width: min(100%, var(--new-simulation-button-width));
+}
