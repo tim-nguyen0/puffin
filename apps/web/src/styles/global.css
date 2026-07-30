@@ -24,6 +24,12 @@ main {
   background-color: var(--color-launch-bg);
 }
 
+.immersive-main {
+  min-height: 100vh;
+  padding: 0;
+  background: var(--color-console-bg);
+}
+
 .launch-app-shell {
   min-height: 100vh;
   background-color: var(--color-launch-bg);

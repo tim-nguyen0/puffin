@@ -260,4 +260,28 @@
   --color-console-border: #292c36;
   --color-console-text: #e9edf4;
   --color-console-muted: #7f8492;
+  --color-console-bg: #101117;
+  --color-console-header: #15161d;
+  --color-console-viewport: #070a0d;
+  --color-console-badge: #073044;
+  --color-console-healthy: #073323;
+  --color-console-glow: rgb(7 109 137 / 34%);
+  --console-header-height: 38px;
+  --console-page-padding: 12px;
+  --console-page-gap: 10px;
+  --console-brand-mark: 26px;
+  --console-brand-text: 20px;
+  --console-control-height: 24px;
+  --console-metric-height: 52px;
+  --console-terminal-height: 220px;
+  --console-terminal-toolbar: 28px;
+  --console-terminal-line-height: 1.45;
+  --console-side-width: 305px;
+  --console-telemetry-height: 168px;
+  --console-panel-header-height: 36px;
+  --console-vehicle-ring: 40px;
+  --console-vehicle-center-gap: 15px;
+  --console-service-name: 66px;
+  --console-status-height: 16px;
+  --console-status-text: 8px;
 }
