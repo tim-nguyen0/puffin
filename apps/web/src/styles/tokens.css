@@ -121,6 +121,23 @@
   --color-discovery: #28c98b;
   --color-discovery-soft: #def8ee;
   --color-danger-soft: #fff0f0;
+  --color-danger-strong: #e5242a;
+  --color-danger-strong-hover: #cc1f25;
+  --color-danger-border: #f5c2c5;
+  --color-status-running: #0eb77a;
+  --color-status-running-soft: #e4f8f0;
+  --color-status-armed: #ed9707;
+  --color-status-armed-soft: #fff4dc;
+  --color-status-stopped: #93a4ba;
+  --color-status-stopped-soft: #eaf0f7;
+  --color-services-selected: #f1f7ff;
+  --color-services-selected-border: #94c6ff;
+  --color-services-selected-ring: rgb(148 198 255 / 18%);
+  --color-inspector-kicker: #8a9bb2;
+  --color-command-bg: #0d1726;
+  --color-command-text: #bdc9d8;
+  --color-command-accent: #20d49a;
+  --color-command-link: #5ab5ff;
   --color-shadow: rgb(20 31 46 / 10%);
   --color-node-shadow: rgb(0 0 0 / 28%);
   --graph-page-padding: 32px;
@@ -177,4 +194,27 @@
   --text-graph-node: 14px;
   --text-graph-micro: 10px;
   --text-graph-control: 13px;
+
+  /* ROS 2 nodes and launch services */
+  --services-inspector-width: 380px;
+  --services-row-height: 58px;
+  --services-row-radius: 10px;
+  --services-refresh-height: 32px;
+  --services-action-height: 34px;
+  --services-action-min-width: 54px;
+  --services-control-radius: 8px;
+  --services-node-dot-size: 9px;
+  --services-status-height: 22px;
+  --services-status-padding-inline: 10px;
+  --services-status-radius: 12px;
+  --services-status-dot-size: 6px;
+  --services-status-letter-spacing: 0.3px;
+  --services-selected-ring-width: 1px;
+  --services-kicker-letter-spacing: 1.2px;
+  --services-inspector-title: 21px;
+  --services-lifecycle-indent: 4px;
+  --services-details-label-width: 92px;
+  --services-command-radius: 9px;
+  --services-command-line-height: 1.7;
+  --services-command-indent: 26px;
 }

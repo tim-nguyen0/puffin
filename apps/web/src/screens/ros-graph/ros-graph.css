@@ -10,104 +10,6 @@
   color: var(--color-page-text);
 }
 
-.graph-top-bar {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-  align-items: center;
-  min-height: var(--graph-top-bar-height);
-  margin: calc(var(--space-2) * -1) calc(var(--space-2) * -1) var(--graph-page-gap);
-  padding: 0 var(--space-2);
-  border-bottom: var(--graph-border-width) solid var(--color-page-border);
-  background: var(--color-page-surface);
-}
-
-.graph-breadcrumbs ol {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  color: var(--color-page-muted);
-  font-size: var(--text-sm);
-}
-
-.graph-breadcrumbs li + li::before {
-  margin-right: var(--space-2);
-  color: var(--color-page-muted);
-  content: "›";
-}
-
-.graph-breadcrumbs li[aria-current="page"] {
-  color: var(--base-palette-not-quite-gray);
-  font-weight: 700;
-}
-
-.graph-command-controls,
-.graph-top-status {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-}
-
-.graph-command-controls {
-  justify-self: center;
-}
-
-.graph-top-status {
-  justify-self: end;
-  gap: var(--space-3);
-}
-
-.graph-resume-button,
-.graph-command-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  height: var(--graph-top-control-height);
-  border: var(--graph-border-width) solid var(--color-page-border);
-  border-radius: var(--graph-top-control-radius);
-  background: var(--color-page-surface);
-  color: var(--base-palette-not-quite-gray);
-  cursor: pointer;
-  font: inherit;
-  font-size: var(--text-sm);
-  font-weight: 600;
-}
-
-.graph-resume-button {
-  gap: var(--space-2);
-  padding: 0 var(--space-3);
-  border-color: var(--base-palette-blue);
-  background: var(--base-palette-blue);
-  color: var(--color-page-surface);
-}
-
-.graph-resume-button span {
-  font-size: var(--text-md);
-}
-
-.graph-command-button {
-  width: var(--graph-top-control-height);
-  padding: 0;
-  font-size: var(--text-graph-micro);
-}
-
-.graph-stop-button {
-  color: var(--color-danger);
-}
-
-.graph-resume-button:hover,
-.graph-command-button:hover {
-  border-color: var(--color-page-focus);
-}
-
-.graph-resume-button:focus-visible,
-.graph-command-button:focus-visible {
-  outline: var(--graph-control-focus-width) solid var(--color-page-focus);
-  outline-offset: var(--graph-control-focus-offset);
-}
-
 .graph-setup {
   display: grid;
   flex: 1;
@@ -718,17 +620,6 @@
 }
 
 @media (width <= 72rem) {
-  .graph-top-bar {
-    grid-template-columns: minmax(0, 1fr) auto;
-    row-gap: var(--space-2);
-    padding: var(--space-2);
-  }
-
-  .graph-top-status {
-    grid-column: 1 / -1;
-    justify-self: start;
-  }
-
   .graph-setup {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -741,15 +632,6 @@
 @media (width <= 54rem) {
   .ros-graph-screen {
     padding: 0;
-  }
-
-  .graph-top-bar {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .graph-command-controls,
-  .graph-top-status {
-    justify-self: start;
   }
 
   .graph-status-bar,

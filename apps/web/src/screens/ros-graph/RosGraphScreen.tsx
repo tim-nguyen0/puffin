@@ -21,6 +21,7 @@ import {
   type GraphVisibility,
 } from "../../components/graph-filter";
 import { StatusIndicator } from "../../components/status-indicator";
+import { WorkspaceHeader } from "../../components/workspace-header";
 import { api } from "../../lib/api";
 import {
   buildServiceGraph,
@@ -155,39 +156,6 @@ function GraphStatusBar({
         isRefreshing={isRefreshing}
       />
     </footer>
-  );
-}
-
-function GraphTopBar() {
-  return (
-    <header className="graph-top-bar">
-      <nav className="graph-breadcrumbs" aria-label="Breadcrumb">
-        <ol>
-          <li>rospackage-4</li>
-          <li aria-current="page">ROS2 Graph</li>
-        </ol>
-      </nav>
-      <div className="graph-command-controls" aria-label="Simulation controls">
-        <button type="button" className="graph-resume-button">
-          <span aria-hidden="true">▷</span>
-          Resume
-        </button>
-        <button type="button" className="graph-command-button" aria-label="Pause simulation">
-          <span aria-hidden="true">Ⅱ</span>
-        </button>
-        <button
-          type="button"
-          className="graph-command-button graph-stop-button"
-          aria-label="Stop simulation"
-        >
-          <span aria-hidden="true">■</span>
-        </button>
-      </div>
-      <div className="graph-top-status" aria-label="Simulation status">
-        <StatusIndicator label="Gazebo Connected" />
-        <StatusIndicator label="PX4 SITL Active" />
-      </div>
-    </header>
   );
 }
 
@@ -674,7 +642,7 @@ export function RosGraphScreen() {
 
   return (
     <section className="ros-graph-screen">
-      <GraphTopBar />
+      <WorkspaceHeader pageLabel="ROS2 Graph" />
 
       <div className="graph-setup">
         <div className="graph-canvas-column">
