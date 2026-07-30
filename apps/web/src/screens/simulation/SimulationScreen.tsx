@@ -2,6 +2,7 @@ import { useState } from "react";
 import { DashboardPanel } from "../../components/dashboard-panel";
 import { MetricCard } from "../../components/metric-card";
 import { StatusTag } from "../../components/status-tag";
+import { TerminalConsole } from "../../components/terminal-console";
 import "./simulation.css";
 
 const METRICS = [
@@ -111,30 +112,21 @@ function MissionPanel() {
 
 function TerminalPanel() {
   return (
-    <DashboardPanel
+    <TerminalConsole
       className="terminal-panel"
-      title="〉_ Terminal"
-      headerAction={
-        <div className="terminal-tabs" aria-label="Terminal tabs">
-          <b>docker compose</b><span>px4 pxh</span><span>ros2</span><span>gazebo</span><em>● running</em>
-        </div>
-      }
-    >
-      <div className="simulation-terminal">
-        <code>
-          <span><b>$</b> docker compose up</span>
-          <span>[+] Running 7/7</span>
-          <span>✓ gz-server · <b>Started</b> · headless physics · gz sim -s · DART</span>
-          <span>✓ px4 · <b>Started</b> · SITL · PX4_GZ_STANDALONE=1 · lockstep</span>
-          <span>✓ dds-agent · <b>Started</b> · uORB ↔ ROS 2 · uXRCE-DDS</span>
-          <span>✓ ros · <b>Started</b> · autonomy nodes · bind-mount</span>
-          <span>✓ vnc · <b>Started</b> · Xvfb + gz sim -g + noVNC (pixels)</span>
-          <span>✓ api · <b>Started</b> · MAVSDK + telemetry ws (numbers)</span>
-          <span>✓ web · <b>Started</b> · nginx single-origin · :80</span>
-          <span className="terminal-prompt"><b>puffin@sim:~</b>$ ros2 topic echo /fmu/out/vehicle_status▋</span>
-        </code>
-      </div>
-    </DashboardPanel>
+      lines={[
+        <><b>$</b> docker compose up</>,
+        <>[+] Running 7/7</>,
+        <>✓ gz-server · <b>Started</b> · headless physics · gz sim -s · DART</>,
+        <>✓ px4 · <b>Started</b> · SITL · PX4_GZ_STANDALONE=1 · lockstep</>,
+        <>✓ dds-agent · <b>Started</b> · uORB ↔ ROS 2 · uXRCE-DDS</>,
+        <>✓ ros · <b>Started</b> · autonomy nodes · bind-mount</>,
+        <>✓ vnc · <b>Started</b> · Xvfb + gz sim -g + noVNC (pixels)</>,
+        <>✓ api · <b>Started</b> · MAVSDK + telemetry ws (numbers)</>,
+        <>✓ web · <b>Started</b> · nginx single-origin · :80</>,
+      ]}
+      prompt={<><b>puffin@sim:~</b>$ ros2 topic echo /fmu/out/vehicle_status▋</>}
+    />
   );
 }
 
