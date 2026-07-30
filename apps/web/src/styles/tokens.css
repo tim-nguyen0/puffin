@@ -254,4 +254,10 @@
   --simulation-terminal-line-height: 1.55;
   --simulation-primary-mobile-height: 640px;
   --color-simulation-glow: rgb(15 104 161 / 42%);
+
+  /* Immersive console surfaces */
+  --color-console-surface: #171820;
+  --color-console-border: #292c36;
+  --color-console-text: #e9edf4;
+  --color-console-muted: #7f8492;
 }

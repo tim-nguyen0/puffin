@@ -42,3 +42,26 @@
   font-family: var(--font-mono);
   font-weight: 500;
 }
+
+.metric-card-dark {
+  border-color: var(--color-console-border);
+  background: var(--color-console-surface);
+}
+
+.metric-card-dark header {
+  color: var(--color-console-muted);
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+}
+
+.metric-card-dark strong {
+  color: var(--color-console-text);
+}
+
+.metric-card strong.metric-card-value-blue {
+  color: var(--color-command-link);
+}
+
+.metric-card strong.metric-card-value-green {
+  color: var(--color-command-accent);
+}
