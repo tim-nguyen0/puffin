@@ -238,4 +238,20 @@
   --color-attitude-sky: #4ab2f7;
   --color-attitude-ground: #337ff0;
 
+  /* Simulation operations screen */
+  --simulation-screen-min-height: 680px;
+  --simulation-card-radius: 12px;
+  --simulation-metric-height: 70px;
+  --simulation-metric-value-size: 22px;
+  --simulation-side-width: 310px;
+  --simulation-terminal-min-height: 180px;
+  --simulation-telemetry-min-height: 210px;
+  --simulation-terminal-header-height: 36px;
+  --simulation-mission-row-height: 30px;
+  --simulation-service-strip-height: 40px;
+  --simulation-vehicle-ring: 42px;
+  --simulation-vehicle-center-gap: 16px;
+  --simulation-terminal-line-height: 1.55;
+  --simulation-primary-mobile-height: 640px;
+  --color-simulation-glow: rgb(15 104 161 / 42%);
 }

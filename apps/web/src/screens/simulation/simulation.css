@@ -1,0 +1,353 @@
+/* Repeated element selectors are intentionally grouped by simulation module. */
+/* stylelint-disable no-descending-specificity */
+
+.simulation-screen {
+  display: flex;
+  height: calc(100vh - (var(--space-4) * 2));
+  min-height: var(--simulation-screen-min-height);
+  box-sizing: border-box;
+  flex-direction: column;
+  gap: var(--space-3);
+  color: var(--color-page-text);
+}
+
+.simulation-metrics {
+  display: grid;
+  min-height: var(--simulation-metric-height);
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.simulation-layout {
+  display: grid;
+  min-height: 0;
+  flex: 1;
+  grid-template-columns: minmax(0, 2.35fr) minmax(var(--simulation-side-width), 1fr);
+  gap: var(--space-3);
+}
+
+.simulation-primary,
+.simulation-secondary {
+  display: grid;
+  min-height: 0;
+  gap: var(--space-3);
+}
+
+.simulation-primary {
+  grid-template-rows: minmax(0, 1.55fr) minmax(var(--simulation-terminal-min-height), 1fr);
+}
+
+.simulation-secondary {
+  grid-template-rows: minmax(var(--simulation-telemetry-min-height), 1fr) auto;
+}
+
+.simulation-viewport-panel,
+.terminal-panel {
+  border-radius: var(--simulation-card-radius);
+}
+
+.simulation-viewport-actions,
+.simulation-view-modes,
+.terminal-tabs {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.novnc-tag,
+.mission-panel > .dashboard-panel-header code {
+  padding: var(--space-2);
+  border-radius: var(--radius-2);
+  background: var(--color-services-selected);
+  color: var(--base-palette-blue);
+  font-family: var(--font-mono);
+  font-size: var(--text-graph-micro);
+}
+
+.novnc-tag i {
+  display: inline-block;
+  width: var(--services-status-dot-size);
+  height: var(--services-status-dot-size);
+  margin-right: var(--space-1);
+  border-radius: 50%;
+  background: var(--color-accent);
+}
+
+.simulation-view-modes button {
+  padding: var(--space-2) var(--space-3);
+  border: 0;
+  border-radius: var(--radius-2);
+  background: var(--color-page-control);
+  color: var(--color-page-muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--text-graph-micro);
+}
+
+.simulation-view-modes button.is-active {
+  background: var(--base-palette-blue);
+  color: var(--color-page-surface);
+}
+
+.simulation-viewport {
+  position: relative;
+  height: 100%;
+  min-height: 0;
+  background:
+    radial-gradient(circle at 50% 55%, var(--color-simulation-glow), transparent 42%),
+    var(--color-command-bg);
+}
+
+.simulation-vehicle {
+  position: absolute;
+  top: 53%;
+  left: 50%;
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  gap: var(--space-3);
+  transform: translate(-50%, -50%);
+}
+
+.simulation-vehicle span {
+  width: var(--simulation-vehicle-ring);
+  height: var(--simulation-vehicle-ring);
+  box-sizing: border-box;
+  border: var(--graph-control-focus-width) solid var(--color-service-cyan);
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 var(--simulation-vehicle-center-gap) var(--color-command-bg);
+  background: var(--color-accent);
+}
+
+.simulation-vehicle code {
+  color: var(--color-command-link);
+  font-size: var(--text-graph-micro);
+  white-space: nowrap;
+}
+
+.flight-telemetry-panel > .dashboard-panel-header code {
+  color: var(--color-inspector-kicker);
+  font-size: var(--text-graph-micro);
+}
+
+.simulation-telemetry-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0 var(--space-3) var(--space-3);
+}
+
+.simulation-telemetry-list div {
+  display: grid;
+  align-items: center;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.simulation-telemetry-list dt,
+.simulation-telemetry-list dd {
+  font-size: var(--text-sm);
+}
+
+.simulation-telemetry-list dt {
+  color: var(--color-page-muted);
+}
+
+.simulation-telemetry-list dd {
+  margin: 0;
+  color: var(--base-palette-not-quite-gray);
+  font-weight: 700;
+}
+
+.simulation-telemetry-list dd.is-healthy {
+  color: var(--color-status-running);
+}
+
+.flight-mode-value {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.flight-mode-value b {
+  color: var(--base-palette-blue);
+}
+
+.mission-steps {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0 var(--space-3) var(--space-3);
+  list-style: none;
+}
+
+.mission-steps li {
+  display: grid;
+  min-height: var(--simulation-mission-row-height);
+  box-sizing: border-box;
+  align-items: center;
+  padding: 0 var(--space-3);
+  border: var(--graph-border-width) solid var(--color-page-border);
+  border-radius: var(--radius-2);
+  background: var(--color-page-control);
+  grid-template-columns: var(--services-status-dot-size) auto minmax(0, 1fr) auto;
+  gap: var(--space-2);
+}
+
+.mission-steps i,
+.simulation-service-strip i {
+  width: var(--services-status-dot-size);
+  height: var(--services-status-dot-size);
+  border-radius: 50%;
+  background: var(--color-status-stopped);
+}
+
+.mission-steps li.is-reached i,
+.mission-steps li.is-reached span {
+  background: var(--color-status-running);
+  color: var(--color-status-running);
+}
+
+.mission-steps li.is-active i {
+  background: var(--base-palette-blue);
+}
+
+.mission-steps li.is-active span {
+  color: var(--base-palette-blue);
+}
+
+.mission-steps strong,
+.mission-steps code,
+.mission-steps span {
+  font-size: var(--text-graph-micro);
+}
+
+.mission-steps code,
+.mission-steps span {
+  color: var(--color-inspector-kicker);
+}
+
+.terminal-panel > .dashboard-panel-header {
+  min-height: var(--simulation-terminal-header-height);
+  padding-block: var(--space-2);
+}
+
+.terminal-tabs b,
+.terminal-tabs span {
+  padding: var(--space-2);
+  border-radius: var(--radius-1);
+  background: var(--color-page-control);
+  color: var(--color-inspector-kicker);
+  font-family: var(--font-mono);
+  font-size: var(--text-graph-micro);
+  font-style: normal;
+  font-weight: 500;
+}
+
+.terminal-tabs b {
+  background: var(--base-palette-blue);
+  color: var(--color-page-surface);
+}
+
+.terminal-tabs em {
+  margin-left: var(--space-3);
+  color: var(--color-status-running);
+  font-family: var(--font-mono);
+  font-size: var(--text-graph-micro);
+  font-style: normal;
+}
+
+.simulation-terminal {
+  height: 100%;
+  box-sizing: border-box;
+  padding: var(--space-3);
+  background: var(--color-command-bg);
+}
+
+.simulation-terminal code {
+  display: flex;
+  height: 100%;
+  flex-direction: column;
+  color: var(--color-graph-muted);
+  font-size: var(--text-graph-micro);
+  line-height: var(--simulation-terminal-line-height);
+}
+
+.simulation-terminal code > span:first-child b,
+.simulation-terminal code span b {
+  color: var(--color-command-accent);
+  font-weight: 500;
+}
+
+.terminal-prompt {
+  margin: auto calc(var(--space-3) * -1) calc(var(--space-3) * -1);
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-graph-bg);
+  color: var(--color-command-text);
+}
+
+.simulation-service-strip {
+  display: flex;
+  min-height: var(--simulation-service-strip-height);
+  box-sizing: border-box;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0 var(--space-3);
+  border: var(--graph-border-width) solid var(--color-page-border);
+  border-radius: var(--simulation-card-radius);
+  background: var(--color-page-surface);
+}
+
+.simulation-service-strip strong {
+  margin-right: var(--space-2);
+  color: var(--base-palette-not-quite-gray);
+  font-size: var(--text-graph-micro);
+}
+
+.simulation-service-strip span,
+.simulation-service-strip b {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-2);
+  background: var(--color-page-control);
+  color: var(--color-page-muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-graph-micro);
+  font-weight: 500;
+}
+
+.simulation-service-strip span i,
+.simulation-service-strip b i {
+  background: var(--color-status-running);
+}
+
+.simulation-service-strip b {
+  background: var(--color-discovery-soft);
+  color: var(--color-status-running);
+}
+
+@media (width <= 74rem) {
+  .simulation-screen {
+    height: auto;
+  }
+
+  .simulation-metrics {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .simulation-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .simulation-primary {
+    min-height: var(--simulation-primary-mobile-height);
+  }
+
+  .simulation-service-strip {
+    flex-wrap: wrap;
+    padding-block: var(--space-2);
+  }
+}

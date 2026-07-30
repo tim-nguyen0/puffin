@@ -4,10 +4,12 @@ import { DashboardScreen } from "./screens/dashboard/DashboardScreen";
 import { LauncherScreen } from "./screens/launcher/LauncherScreen";
 import { RosGraphScreen } from "./screens/ros-graph/RosGraphScreen";
 import { RosServicesScreen } from "./screens/ros-services/RosServicesScreen";
+import { SimulationScreen } from "./screens/simulation/SimulationScreen";
 
 const SCREENS = [
   { path: "/", element: <LauncherScreen /> },
   { path: "/dashboard", element: <DashboardScreen /> },
+  { path: "/simulation", element: <SimulationScreen /> },
   { path: "/ros-services", element: <RosServicesScreen /> },
   { path: "/ros-graph", element: <RosGraphScreen /> },
 ];

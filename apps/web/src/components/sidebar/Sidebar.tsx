@@ -20,7 +20,7 @@ type NavItem = {
 // they render disabled until their screens ship.
 const NAV_ITEMS: NavItem[] = [
   { label: "Dashboard", icon: circleX, path: "/dashboard" },
-  { label: "Simulation", icon: cpu, path: null },
+  { label: "Simulation", icon: cpu, path: "/simulation" },
   { label: "Vehicles", icon: <AppIcon name="vehicle" />, path: null },
   { label: "World Editor", icon: <AppIcon name="globe" />, path: null },
   { label: "Sensors", icon: <AppIcon name="sensors" />, path: null },
