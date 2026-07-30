@@ -61,6 +61,16 @@ function endpointNode(
     : endpoint;
 }
 
+function stableUnit(value: string, salt: number): number {
+  let hash = 2166136261 ^ salt;
+
+  for (let index = 0; index < value.length; index += 1) {
+    hash = Math.imul(hash ^ value.charCodeAt(index), 16777619);
+  }
+
+  return (hash >>> 0) / 4294967295;
+}
+
 function createHierarchicalNodes(
   sourceNodes: ServiceGraphNode[],
   size: GraphSize,
@@ -234,14 +244,11 @@ function ServiceGraphViewport({
       return;
     }
 
-    const simulationNodes = graph.nodes.map((node, index) => {
-      const angle = (index / Math.max(graph.nodes.length, 1)) * Math.PI * 2;
-      const orbit = Math.min(size.width, size.height) * 0.28;
-
+    const simulationNodes = graph.nodes.map((node) => {
       return {
         ...node,
-        x: size.width / 2 + Math.cos(angle) * orbit,
-        y: size.height / 2 + Math.sin(angle) * orbit,
+        x: NODE_WIDTH / 2 + stableUnit(node.id, 17) * (size.width - NODE_WIDTH),
+        y: NODE_HEIGHT + stableUnit(node.id, 53) * (size.height - NODE_HEIGHT * 2),
       };
     });
 
@@ -250,13 +257,19 @@ function ServiceGraphViewport({
         "link",
         forceLink<ServiceGraphNode, ServiceGraphLink>(simulationLinks)
           .id((node) => node.id)
-          .distance((link) => (link.kind === "provider" ? 150 : 260))
-          .strength((link) => (link.kind === "provider" ? 0.8 : 0.24)),
+          .distance((link) => (link.kind === "provider" ? 205 : 330))
+          .strength((link) => (link.kind === "provider" ? 0.55 : 0.12)),
       )
-      .force("charge", forceManyBody().strength(-900))
+      .force(
+        "charge",
+        forceManyBody()
+          .strength(-1500)
+          .distanceMax(Math.max(size.width, size.height) * 1.15),
+      )
       .force("center", forceCenter(size.width / 2, size.height / 2))
-      .force("collision", forceCollide<ServiceGraphNode>().radius(NODE_WIDTH * 0.66))
-      .alphaDecay(0.035);
+      .force("collision", forceCollide<ServiceGraphNode>().radius(NODE_WIDTH * 0.52))
+      .velocityDecay(0.46)
+      .alphaDecay(0.018);
 
     const render = () => {
       for (const node of simulationNodes) {
