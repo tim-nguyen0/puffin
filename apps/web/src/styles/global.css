@@ -11,6 +11,13 @@ body {
   min-height: 100vh;
 }
 
+.workspace {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
 main {
   flex: 1;
   min-width: 0;

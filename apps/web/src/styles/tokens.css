@@ -79,6 +79,11 @@
   --launcher-button-text: 24px;
   --launcher-button-width: 440px;
 
+  /* topbar (figma node "TopBar", 19:41) */
+  --topbar-height: 68px;
+  --btn-h: 36px;
+  --btn-h-sm: 30px;
+
   /* Sidebar (Figma node "Sidebar", 19:6) */
   --sidebar-width: 260px;
   --sidebar-gap: 12px;

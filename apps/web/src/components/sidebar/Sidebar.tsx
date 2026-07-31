@@ -10,8 +10,6 @@ import "./sidebar.css";
 
 type NavItem = { label: string; icon: string; path: string | null };
 
-// Items without a route exist in the design but are out of scope this week;
-// they render disabled until their screens ship.
 const NAV_ITEMS: NavItem[] = [
   { label: "Dashboard", icon: circleX, path: "/dashboard" },
   { label: "Simulation", icon: cpu, path: null },

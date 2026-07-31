@@ -1,6 +1,7 @@
 import { Route, Routes, useLocation } from "react-router-dom";
 import { FloatingTerminal } from "./components/floating-terminal/FloatingTerminal";
 import { Sidebar } from "./components/sidebar/Sidebar";
+import { TopBar } from "./components/topbar/TopBar";
 import { DashboardScreen } from "./screens/dashboard/DashboardScreen";
 import { LauncherScreen } from "./screens/launcher/LauncherScreen";
 import { RosGraphScreen } from "./screens/ros-graph/RosGraphScreen";
@@ -18,16 +19,18 @@ export function App() {
   const isLaunchPage = pathname === "/";
 
   return (
-    <div className={isLaunchPage ? "launch-app-shell" : "app-shell"}>
-      {!isLaunchPage ? <Sidebar /> : null}
-      <main className={isLaunchPage ? "launch-main" : undefined}>
-        <Routes>
-          {SCREENS.map((screen) => (
-            <Route key={screen.path} path={screen.path} element={screen.element} />
-          ))}
-        </Routes>
-      </main>
-      <FloatingTerminal />
+    <div className="app-shell">
+      <Sidebar />
+      <div className="workspace">
+        <TopBar />
+        <main>
+          <Routes>
+            {SCREENS.map((screen) => (
+              <Route key={screen.path} path={screen.path} element={screen.element} />
+            ))}
+          </Routes>
+        </main>
+      </div>
     </div>
   );
 }
