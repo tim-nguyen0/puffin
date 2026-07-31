@@ -234,7 +234,13 @@ class RosAdapter:
         return self._cmd_pub
 
     def send_vehicle_command(
-        self, command: int, param1: float = 0.0, param7: float = 0.0
+        self,
+        command: int,
+        param1: float = 0.0,
+        param4: float = 0.0,
+        param5: float = 0.0,
+        param6: float = 0.0,
+        param7: float = 0.0,
     ) -> AdapterResult:
         try:
             from px4_msgs.msg import VehicleCommand
@@ -249,6 +255,9 @@ class RosAdapter:
             msg.timestamp = self._now_us()
             msg.command = command
             msg.param1 = float(param1)
+            msg.param4 = float(param4)
+            msg.param5 = float(param5)
+            msg.param6 = float(param6)
             msg.param7 = float(param7)
             msg.target_system = 1
             msg.target_component = 1
@@ -289,7 +298,14 @@ class RosAdapter:
             amsl = float(local_position.ref_alt) + float(altitude_m)
         except Exception as exc:  # noqa: BLE001 - clean {ok, detail} at the boundary
             return AdapterResult(ok=False, detail=f"takeoff failed: {exc}")
-        return self.send_vehicle_command(VEHICLE_CMD_NAV_TAKEOFF, param7=amsl)
+        # yaw/lat/lon must be nan ("use current") per mavlink convention.
+        # zeros aim the takeoff waypoint at lat 0, lon 0 and the navigator
+        # parks in READY_FOR_TAKEOFF until the too-slow-to-takeoff timer
+        # disarms the vehicle.
+        nan = float("nan")
+        return self.send_vehicle_command(
+            VEHICLE_CMD_NAV_TAKEOFF, param4=nan, param5=nan, param6=nan, param7=amsl
+        )
 
     def _now_us(self) -> int:
         # px4_msgs timestamps are microseconds from the node clock (gotcha #7).
