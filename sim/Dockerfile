@@ -45,11 +45,15 @@ RUN git clone --branch "${PX4_REF}" --depth 1 --recurse-submodules --shallow-sub
     && pip3 install --break-system-packages -r /px4/Tools/setup/requirements.txt \
     && cd /px4 && DONT_RUN=1 make px4_sitl_default
 
-# px4_msgs at PX4_MSGS_REF (same PX4 release as PX4_REF — gotcha #2). The
-# offboard_demo package will be COPY'd into /ros_ws/src here once it exists.
+# px4_msgs at PX4_MSGS_REF (same PX4 release as PX4_REF — gotcha #2).
 RUN git clone --branch "${PX4_MSGS_REF}" --depth 1 \
       https://github.com/PX4/px4_msgs.git /ros_ws/src/px4_msgs \
     && bash -c "source /opt/ros/jazzy/setup.bash && cd /ros_ws && colcon build --symlink-install"
+
+# offboard_demo last: demo edits rebuild only this layer, never px4_msgs
+COPY offboard_demo/ /ros_ws/src/offboard_demo/
+RUN bash -c "source /opt/ros/jazzy/setup.bash && cd /ros_ws \
+      && colcon build --symlink-install --packages-select offboard_demo"
 
 COPY supervisord.conf /etc/supervisor/conf.d/puffin.conf
 COPY worlds/ /worlds/

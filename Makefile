@@ -19,3 +19,5 @@ doctor:
 	-docker compose exec sim gz topic -l
 	@echo "--- ros topics ---"
 	-docker compose exec sim bash -lc "source /opt/ros/jazzy/setup.bash && ros2 topic list"
+	@echo "--- offboard_demo lifecycle ---"
+	-docker compose exec sim bash -lc "source /ros_ws/install/setup.bash && ros2 lifecycle get /offboard_demo"
