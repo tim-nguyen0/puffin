@@ -1,15 +1,28 @@
 .settings-screen {
-  padding: var(--space-4);
-  max-width: 480px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-2) var(--space-4) var(--space-4);
+  max-width: 30rem; /* was 480px */
   color: var(--color-text);
 }
 
 .settings-section {
-  margin-top: var(--space-4);
-  padding: var(--space-3);
+  padding: var(--space-4);
   background: var(--color-surface);
   border: var(--border-width) solid var(--color-border);
   border-radius: var(--radius-2);
+}
+
+
+.settings-screen h1 {
+  margin-top: 0;
+  margin-bottom: var(--space-3);
+}
+
+.settings-section h2 {
+  margin-top: 0;
+  margin-bottom: var(--space-2);
 }
 
 .settings-field {
@@ -57,11 +70,16 @@
 
 .settings-save-button {
   min-height: auto;
-  padding: var(--space-2) var(--space-4);
-  font-size: var(--text-md);
-  margin-top: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--text-lg);
+  align-self: flex-start;
 }
 
 .settings-save-button .puffin-button-label {
   white-space: normal;
+}
+
+.settings-system-section {
+  padding: var(--space-3);
+  margin-top: var(--space-2);
 }
