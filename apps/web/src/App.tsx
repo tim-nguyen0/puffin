@@ -1,4 +1,5 @@
-import { Route, Routes } from "react-router-dom";
+import { Route, Routes, useLocation } from "react-router-dom";
+import { FloatingTerminal } from "./components/floating-terminal/FloatingTerminal";
 import { Sidebar } from "./components/sidebar/Sidebar";
 import { TopBar } from "./components/topbar/TopBar";
 import { DashboardScreen } from "./screens/dashboard/DashboardScreen";
@@ -14,6 +15,9 @@ const SCREENS = [
 ];
 
 export function App() {
+  const { pathname } = useLocation();
+  const isLaunchPage = pathname === "/";
+
   return (
     <div className="app-shell">
       <Sidebar />
