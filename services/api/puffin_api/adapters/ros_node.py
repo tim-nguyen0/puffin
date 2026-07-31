@@ -272,6 +272,25 @@ class RosAdapter:
         ok, label = VEHICLE_CMD_RESULTS.get(int(ack.result), (False, f"result {ack.result}"))
         return AdapterResult(ok=ok, detail=f"vehicle_command {command} {label}")
 
+    def nav_takeoff(self, altitude_m: float) -> AdapterResult:
+        # NAV_TAKEOFF param7 is altitude AMSL, not height above ground. the
+        # world declares its elevation (408 m in puffin.sdf), so a raw "5"
+        # lands below the floor and px4's navigator ignores the command with
+        # "Already higher than takeoff altitude". resolve against the ekf
+        # reference altitude instead.
+        try:
+            self._ensure_telemetry()
+            with self._data_lock:
+                local_position = self._latest.get("local_position")
+            if local_position is None:
+                return AdapterResult(
+                    ok=False, detail="no local position yet; cannot resolve takeoff altitude"
+                )
+            amsl = float(local_position.ref_alt) + float(altitude_m)
+        except Exception as exc:  # noqa: BLE001 - clean {ok, detail} at the boundary
+            return AdapterResult(ok=False, detail=f"takeoff failed: {exc}")
+        return self.send_vehicle_command(VEHICLE_CMD_NAV_TAKEOFF, param7=amsl)
+
     def _now_us(self) -> int:
         # px4_msgs timestamps are microseconds from the node clock (gotcha #7).
         return int(self._node.get_clock().now().nanoseconds // 1000)

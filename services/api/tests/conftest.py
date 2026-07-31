@@ -30,6 +30,7 @@ class FakeSupervisor:
 class FakeRos:
     def __init__(self) -> None:
         self.commands: list[tuple[int, float, float]] = []
+        self.takeoffs: list[float] = []
         self.transitions: list[tuple[str, str]] = []
         self.lifecycle = {"offboard_demo": "inactive"}
         self.telemetry: dict | None = None
@@ -39,6 +40,10 @@ class FakeRos:
     ) -> AdapterResult:
         self.commands.append((command, param1, param7))
         return AdapterResult(ok=True, detail=f"vehicle_command {command} published")
+
+    def nav_takeoff(self, altitude_m: float) -> AdapterResult:
+        self.takeoffs.append(altitude_m)
+        return AdapterResult(ok=True, detail="vehicle_command 22 published")
 
     def list_services(self) -> AdapterResult:
         return AdapterResult(

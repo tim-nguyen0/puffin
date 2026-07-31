@@ -5,7 +5,6 @@ from fastapi import APIRouter, Depends
 from ..adapters.ros_node import (
     VEHICLE_CMD_ARM_DISARM,
     VEHICLE_CMD_NAV_LAND,
-    VEHICLE_CMD_NAV_TAKEOFF,
     RosAdapter,
 )
 from ..deps import get_ros
@@ -30,7 +29,8 @@ def disarm(ros: Ros) -> Ack:
 
 @router.post("/vehicle/takeoff")
 def takeoff(body: TakeoffRequest, ros: Ros) -> Ack:
-    result = ros.send_vehicle_command(VEHICLE_CMD_NAV_TAKEOFF, param7=body.altitude_m)
+    # altitude_m is meters above ground; the adapter resolves it to AMSL
+    result = ros.nav_takeoff(body.altitude_m)
     return Ack(ok=result.ok, detail=result.detail)
 
 
