@@ -102,7 +102,7 @@ export function SettingsScreen() {
       ) : null}
       {saved ? <p className="settings-success">Saved.</p> : null}
 
-      <Button onClick={handleSave}>Save changes</Button>
+      <Button className="settings-save-button" onClick={handleSave}>Save changes</Button>
 
       <section className="settings-section">
         <h2>System</h2>

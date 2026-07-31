@@ -54,3 +54,14 @@
 .settings-system-info dt {
   color: var(--color-text-muted);
 }
+
+.settings-save-button {
+  min-height: auto;
+  padding: var(--space-2) var(--space-4);
+  font-size: var(--text-md);
+  margin-top: var(--space-2);
+}
+
+.settings-save-button .puffin-button-label {
+  white-space: normal;
+}
