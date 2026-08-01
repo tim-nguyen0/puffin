@@ -1,25 +1,10 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
-import { Button } from "../../components/button";
+import { useQuery } from "@tanstack/react-query";
 import { api } from "../../lib/api";
+import { NodeCard } from "./NodeCard";
+import { lifecycleNodeNames } from "./lifecycleNodes";
 import "./ros-services.css";
 
-const DEMO_NODE = "/offboard_demo";
-const TRANSITIONS = ["configure", "activate", "deactivate", "cleanup", "shutdown"] as const;
-
-// the ros 2 lifecycle state machine; unknown states leave everything
-// enabled and let the api answer
-const VALID_TRANSITIONS: Record<string, readonly (typeof TRANSITIONS)[number][]> = {
-  unconfigured: ["configure", "shutdown"],
-  inactive: ["activate", "cleanup", "shutdown"],
-  active: ["deactivate", "shutdown"],
-  finalized: [],
-};
-
 export function RosServicesScreen() {
-  const queryClient = useQueryClient();
-  const [actionError, setActionError] = useState<string | null>(null);
-
   const services = useQuery({
     queryKey: ["ros-services"],
     queryFn: async () => {
@@ -27,41 +12,34 @@ export function RosServicesScreen() {
       if (error) throw new Error("Failed to fetch services");
       return data;
     },
+    refetchInterval: 5000,
   });
 
-  const lifecycle = useQuery({
-  queryKey: ["ros-lifecycle", DEMO_NODE],
-  queryFn: async () => {
-    const { data, error } = await api.GET("/ros/lifecycle/{nodeName}", {
-      params: { path: { nodeName: DEMO_NODE } },
-    });
-    if (error) throw new Error("Failed to fetch lifecycle state");
-    return data;
-  },
-  refetchInterval: 5000,
-});
-
-  const transition = useMutation({
-  mutationFn: async (name: (typeof TRANSITIONS)[number]) => {
-    const { data, error } = await api.POST("/ros/lifecycle/{nodeName}/transition", {
-      params: { path: { nodeName: DEMO_NODE } },
-      body: { transition: name },
-    });
-    if (error || !data.ok) throw new Error(data?.detail ?? "Transition failed");
-    return data;
-  },
-  onSuccess: () => queryClient.invalidateQueries({ queryKey: ["ros-lifecycle", DEMO_NODE] }),
-  onError: (err) => setActionError(err instanceof Error ? err.message : "Transition failed"),
-});
+  const nodes = lifecycleNodeNames(services.data ?? []);
 
   return (
     <div className="ros-services-screen">
       <h1>ROS Services</h1>
 
       <section className="ros-services-section">
+        <h2>Lifecycle Nodes</h2>
+        {services.isLoading ? <p>Loading nodes…</p> : null}
+        {services.isError ? <p className="ros-services-error">Could not reach the API.</p> : null}
+        {services.data && nodes.length === 0 ? (
+          <p className="ros-services-empty">No lifecycle nodes found.</p>
+        ) : null}
+        {nodes.length > 0 ? (
+          <div className="node-card-grid">
+            {nodes.map((name) => (
+              <NodeCard key={name} nodeName={name} />
+            ))}
+          </div>
+        ) : null}
+      </section>
+
+      <section className="ros-services-section">
         <h2>Available Services</h2>
         {services.isLoading ? <p>Loading services…</p> : null}
-        {services.isError ? <p className="ros-services-error">Could not reach the API.</p> : null}
         {services.data && services.data.length === 0 ? (
           <p className="ros-services-empty">No services reported.</p>
         ) : null}
@@ -74,43 +52,6 @@ export function RosServicesScreen() {
               </li>
             ))}
           </ul>
-        ) : null}
-      </section>
-
-      <section className="ros-services-section">
-        <h2>Offboard Demo Lifecycle</h2>
-        {lifecycle.isLoading ? <p>Loading lifecycle state…</p> : null}
-        {lifecycle.isError ? <p className="ros-services-error">Could not reach the API.</p> : null}
-        {lifecycle.data ? (
-          <p className="ros-lifecycle-state">
-            Node <strong>{lifecycle.data.node}</strong> is currently{" "}
-            <strong>{lifecycle.data.state}</strong>
-          </p>
-        ) : null}
-        <div className="ros-lifecycle-actions">
-          {TRANSITIONS.map((name) => {
-            const allowed = lifecycle.data
-              ? (VALID_TRANSITIONS[lifecycle.data.state]?.includes(name) ?? true)
-              : true;
-            return (
-              <Button
-                key={name}
-                onClick={() => {
-                  setActionError(null);
-                  transition.mutate(name);
-                }}
-                disabled={transition.isPending || !allowed}
-                title={allowed ? undefined : `not valid from ${lifecycle.data?.state}`}
-              >
-                {name}
-              </Button>
-            );
-          })}
-        </div>
-        {actionError ? (
-          <p className="ros-services-error" role="alert">
-            {actionError}
-          </p>
         ) : null}
       </section>
     </div>
