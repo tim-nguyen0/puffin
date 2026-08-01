@@ -2,6 +2,10 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
+
+  /* a window, not a hero: novnc stays legible well below the 1280x720 it
+     renders at, and the full-size view is one click away */
+  max-width: var(--sim-viewport-max-width);
 }
 
 .sim-viewport-frame {

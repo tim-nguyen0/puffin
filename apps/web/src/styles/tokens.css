@@ -97,7 +97,7 @@
   --icon-lg: 36px;
 
   /* Dashboard grid */
-  --dashboard-card-min-width: 320px;
+  --sim-viewport-max-width: 560px;
 
   --terminal-width: 640px;
   --terminal-minimized-width: 220px;
