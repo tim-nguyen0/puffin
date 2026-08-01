@@ -163,7 +163,7 @@ export function DashboardScreen() {
         </div>
       </section>
 
-      <section className="dashboard-section">
+      <section className="dashboard-section dashboard-section-wide">
         <h2>Simulation View</h2>
         <SimViewport />
       </section>

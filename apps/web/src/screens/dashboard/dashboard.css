@@ -1,15 +1,23 @@
 .dashboard-screen {
-  display: flex;
-  flex-direction: column;
+  /* cards fill rightwards while there is room, then wrap */
+  display: grid;
+  grid-template-columns: repeat(
+    auto-fit,
+    minmax(min(100%, var(--dashboard-card-min-width)), 1fr)
+  );
   gap: var(--space-4);
   padding: var(--space-2) var(--space-4) var(--space-4);
-  max-width: var(--screen-content-max-width);
   color: var(--color-text);
 }
 
 .dashboard-screen h1 {
+  grid-column: 1 / -1;
   margin-top: 0;
   margin-bottom: var(--space-3);
+}
+
+.dashboard-section-wide {
+  grid-column: 1 / -1;
 }
 
 .dashboard-section {
