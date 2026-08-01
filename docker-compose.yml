@@ -19,12 +19,16 @@ services:
       args:
         PX4_MSGS_REF: ${PX4_MSGS_REF}
     env_file: .env
+    environment:
+      - PUFFIN_DB_PATH=/data/puffin.db
     network_mode: "service:sim"
     # fast dds shims same-host discovery through /dev/shm — without a shared
     # ipc namespace the api and sim containers never see each other
     ipc: "service:sim"
     depends_on:
       - sim
+    volumes:
+      - puffin-db-data:/data
 
   web:
     build:
@@ -33,3 +37,6 @@ services:
     network_mode: "service:sim"
     depends_on:
       - sim
+
+volumes:
+  puffin-db-data:
