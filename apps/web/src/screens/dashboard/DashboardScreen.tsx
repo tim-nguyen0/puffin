@@ -143,6 +143,14 @@ export function DashboardScreen() {
     land.isPending ||
     takeoff.isPending;
 
+  // an active offboard node owns the vehicle - manual control comes back
+  // when it's deactivated. land stays live as the escape hatch: NAV_LAND
+  // overrides offboard.
+  const offboardActive = latest?.mode === "offboard";
+  const manualLockTitle = offboardActive
+    ? "offboard node in control - deactivate it on the ROS Services screen"
+    : undefined;
+
   return (
     <div className="dashboard-screen">
       <h1>Dashboard</h1>
@@ -215,13 +223,25 @@ export function DashboardScreen() {
       <section className="dashboard-section">
         <h2>Vehicle Controls</h2>
         <div className="dashboard-actions">
-          <Button onClick={() => runAction(arm.mutate)} disabled={anyPending}>
+          <Button
+            onClick={() => runAction(arm.mutate)}
+            disabled={anyPending || offboardActive}
+            title={manualLockTitle}
+          >
             Arm
           </Button>
-          <Button onClick={() => runAction(disarm.mutate)} disabled={anyPending}>
+          <Button
+            onClick={() => runAction(disarm.mutate)}
+            disabled={anyPending || offboardActive}
+            title={manualLockTitle}
+          >
             Disarm
           </Button>
-          <Button onClick={() => runAction(land.mutate)} disabled={anyPending}>
+          <Button
+            onClick={() => runAction(land.mutate)}
+            disabled={anyPending}
+            title={offboardActive ? "overrides offboard and lands" : undefined}
+          >
             Land
           </Button>
         </div>
@@ -236,7 +256,11 @@ export function DashboardScreen() {
           />
         </label>
         <div className="dashboard-actions">
-          <Button onClick={handleTakeoff} disabled={anyPending}>
+          <Button
+            onClick={handleTakeoff}
+            disabled={anyPending || offboardActive}
+            title={manualLockTitle}
+          >
             Takeoff
           </Button>
         </div>
@@ -251,6 +275,11 @@ export function DashboardScreen() {
             {latest ? (latest.armed ? "Armed" : "Disarmed") : "No telemetry"}
           </span>
           <span className="dashboard-status-chip">Mode: {latest?.mode ?? "—"}</span>
+          {offboardActive ? (
+            <span className="dashboard-status-chip dashboard-warn">
+              offboard node in control - manual controls locked
+            </span>
+          ) : null}
           {lastCommand ? (
             <span
               className={`dashboard-status-chip ${lastCommand.ok ? "dashboard-ok" : "dashboard-error"}`}
