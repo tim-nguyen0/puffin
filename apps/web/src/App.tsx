@@ -33,6 +33,7 @@ export function App() {
           </Routes>
         </main>
       </div>
+      <FloatingTerminal />
     </div>
   );
 }
