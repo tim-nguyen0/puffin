@@ -9,6 +9,53 @@ servers:
 # TelemetrySample per frame (schema at the bottom)
 
 paths:
+  /auth/signup:
+    post:
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SignupRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TokenResponse"
+        "409":
+          description: Email already registered
+
+  /auth/login:
+    post:
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TokenResponse"
+        "401":
+          description: Invalid email or password
+
+  /auth/me:
+    get:
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserOut"
+        "401":
+          description: Not authenticated
   /health:
     get:
       responses:
@@ -196,13 +243,43 @@ paths:
 components:
   schemas:
     Health:
+    SignupRequest:
       type: object
-      required: [status, version]
+      required: [email, password]
       properties:
-        status:
+        email:
           type: string
-          enum: [ok]
-        version:
+        password:
+          type: string
+          minLength: 8
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+
+    TokenResponse:
+      type: object
+      required: [token, user_id, email]
+      properties:
+        token:
+          type: string
+        user_id:
+          type: integer
+        email:
+          type: string
+
+    UserOut:
+      type: object
+      required: [id, email]
+      properties:
+        id:
+          type: integer
+        email:
           type: string
 
     Ack:
