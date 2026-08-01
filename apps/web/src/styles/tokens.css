@@ -50,6 +50,7 @@
   --button-shadow: 0 10px 24px rgb(0 102 204 / 28%);
   --button-shadow-hover: 0 12px 28px rgb(0 102 204 / 34%);
   --settings-max-width: 30rem;
+  --screen-content-max-width: 40rem;
 
   /* Recent folders */
   --color-recent-folder: #d3dff3;
