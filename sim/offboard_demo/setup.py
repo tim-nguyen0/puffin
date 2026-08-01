@@ -17,6 +17,7 @@ setup(
     entry_points={
         "console_scripts": [
             "offboard_demo_node = offboard_demo.node:main",
+            "teleop_node = offboard_demo.teleop:main",
             "dummy_flight = offboard_demo.dummy_flight:main",
         ],
     },
