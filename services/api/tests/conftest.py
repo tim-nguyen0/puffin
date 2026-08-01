@@ -2,6 +2,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from puffin_api.adapters import AdapterResult
+from puffin_api.db import Database
 from puffin_api.main import create_app
 
 
@@ -115,6 +116,13 @@ def fake_gz() -> FakeGz:
 
 
 @pytest.fixture
-def client(fake_supervisor: FakeSupervisor, fake_ros: FakeRos, fake_gz: FakeGz) -> TestClient:
-    app = create_app(supervisor=fake_supervisor, ros_adapter=fake_ros, gz=fake_gz)
+def fake_db() -> Database:
+    return Database(":memory:")
+
+
+@pytest.fixture
+def client(
+    fake_supervisor: FakeSupervisor, fake_ros: FakeRos, fake_gz: FakeGz, fake_db: Database
+) -> TestClient:
+    app = create_app(supervisor=fake_supervisor, ros_adapter=fake_ros, gz=fake_gz, db=fake_db)
     return TestClient(app)
