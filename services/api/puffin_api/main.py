@@ -1,3 +1,4 @@
+import os
 import threading
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -8,7 +9,8 @@ from .adapters.compose import ComposeAdapter
 from .adapters.gz import GzAdapter
 from .adapters.ros_node import RosAdapter
 from .adapters.supervisor import SupervisorAdapter
-from .domains import ros, sim, system, telemetry, vehicle
+from .db import Database
+from .domains import auth, ros, sim, system, telemetry, vehicle
 
 
 @asynccontextmanager
@@ -24,13 +26,15 @@ def create_app(
     ros_adapter: RosAdapter | None = None,
     compose: ComposeAdapter | None = None,
     gz: GzAdapter | None = None,
+    db: Database | None = None,
 ) -> FastAPI:
     app = FastAPI(title="Puffin API", version="0.1.0", lifespan=_lifespan)
     app.state.supervisor = supervisor or SupervisorAdapter()
     app.state.ros = ros_adapter or RosAdapter()
     app.state.compose = compose or ComposeAdapter()
     app.state.gz = gz or GzAdapter()
-    for router in (system.router, sim.router, vehicle.router, ros.router):
+    app.state.db = db or Database(os.environ.get("PUFFIN_DB_PATH", "puffin.db"))
+    for router in (auth.router, system.router, sim.router, vehicle.router, ros.router):
         app.include_router(router, prefix="/api")
     app.include_router(telemetry.router)
     return app

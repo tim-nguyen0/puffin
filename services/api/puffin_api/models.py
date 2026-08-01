@@ -18,6 +18,27 @@ class Health(BaseModel):
     version: str
 
 
+class SignupRequest(BaseModel):
+    email: str
+    password: str = Field(min_length=8)
+
+
+class LoginRequest(BaseModel):
+    email: str
+    password: str
+
+
+class TokenResponse(BaseModel):
+    token: str
+    user_id: int
+    email: str
+
+
+class UserOut(BaseModel):
+    id: int
+    email: str
+
+
 class Ack(BaseModel):
     ok: bool
     detail: str
