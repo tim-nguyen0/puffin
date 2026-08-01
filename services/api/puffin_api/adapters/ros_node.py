@@ -135,19 +135,30 @@ class RosAdapter:
         )
 
     def graph(self) -> AdapterResult:
+        def endpoint_nodes(infos: Any) -> list[str]:
+            # bare dds participants (the uxrce agent) still carry a node name
+            return sorted({f"{i.node_namespace.rstrip('/')}/{i.node_name}" for i in infos})
+
         try:
             node = self._ensure_node()
             node_names = node.get_node_names_and_namespaces()
-            topic_names = node.get_topic_names_and_types()
+            topics = [
+                {
+                    "name": name,
+                    "type": types[0],
+                    "publishers": endpoint_nodes(node.get_publishers_info_by_topic(name)),
+                    "subscribers": endpoint_nodes(node.get_subscriptions_info_by_topic(name)),
+                }
+                for name, types in node.get_topic_names_and_types()
+                if types
+            ]
         except Exception as exc:  # noqa: BLE001 - clean {ok, detail} at the boundary
             return AdapterResult(ok=False, detail=f"ros graph unavailable: {exc}")
         return AdapterResult(
             ok=True,
             data={
                 "nodes": [f"{ns.rstrip('/')}/{name}" for name, ns in node_names],
-                "topics": [
-                    {"name": name, "type": types[0]} for name, types in topic_names if types
-                ],
+                "topics": topics,
             },
         )
 

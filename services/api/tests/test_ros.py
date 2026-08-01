@@ -12,7 +12,10 @@ def test_list_services(client: TestClient) -> None:
 def test_graph(client: TestClient) -> None:
     body = client.get("/api/ros/graph").json()
     assert "/offboard_demo" in body["nodes"]
-    assert body["topics"][0]["name"] == "/fmu/out/vehicle_status_v1"
+    topic = body["topics"][0]
+    assert topic["name"] == "/fmu/out/vehicle_status_v1"
+    assert topic["publishers"] == ["/px4_xrce_agent"]
+    assert topic["subscribers"] == ["/puffin_api"]
 
 
 def test_lifecycle_state(client: TestClient) -> None:
