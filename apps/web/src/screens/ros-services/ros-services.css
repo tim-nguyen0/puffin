@@ -59,20 +59,54 @@
   color: var(--color-text-muted);
 }
 
-.ros-lifecycle-state {
-  margin-top: 0;
-  font-size: var(--text-sm);
+.node-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--dashboard-card-min-width)), 1fr));
+  gap: var(--space-3);
 }
 
-.ros-lifecycle-actions {
+.node-card {
+  padding: var(--space-3);
+  background: var(--color-bg);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-1);
+}
+
+.node-card-header {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-2);
+}
+
+.node-card-name {
+  font-family: var(--font-mono);
+  font-size: var(--text-md);
+}
+
+.node-card-state {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.node-card-state-active {
+  color: var(--color-ok);
+}
+
+.node-card-state-unconfigured,
+.node-card-state-unknown {
+  color: var(--color-warn);
+}
+
+.node-card-actions {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2);
-  margin-top: var(--space-3);
 }
 
-.ros-lifecycle-actions .puffin-button {
+.node-card-actions .puffin-button {
   min-height: auto;
-  padding: var(--space-2) var(--space-3);
-  font-size: var(--text-md);
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--text-sm);
 }
