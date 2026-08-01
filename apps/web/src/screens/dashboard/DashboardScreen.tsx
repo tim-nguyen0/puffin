@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { Button } from "../../components/button";
+import { TeleopPad } from "../../components/teleop";
 import { SimViewport } from "../../components/sim-viewport";
 import { api } from "../../lib/api";
 import { useSettingsStore } from "../../lib/settingsStore";
@@ -221,7 +222,7 @@ export function DashboardScreen() {
       </section>
 
       <section className="dashboard-section">
-        <h2>Vehicle Controls</h2>
+        <h2>Control Panel</h2>
         <div className="dashboard-actions">
           <Button
             onClick={() => runAction(arm.mutate)}
@@ -269,6 +270,7 @@ export function DashboardScreen() {
             {actionError}
           </p>
         ) : null}
+        <TeleopPad />
         <div className="dashboard-vehicle-status">
           <span className="dashboard-status-chip">
             <span className={`dashboard-status-dot ${latest?.armed ? "is-armed" : ""}`} />
