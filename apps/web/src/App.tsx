@@ -1,12 +1,16 @@
-import { SettingsScreen } from "./screens/settings/SettingsScreen";
-import { Route, Routes, useLocation } from "react-router-dom";
+import { useEffect, type ReactNode } from "react";
+import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { FloatingTerminal } from "./components/floating-terminal/FloatingTerminal";
 import { Sidebar } from "./components/sidebar/Sidebar";
 import { TopBar } from "./components/topbar/TopBar";
+import { useAuthStore } from "./lib/authStore";
+import { LoginScreen } from "./screens/auth/LoginScreen";
+import { SignupScreen } from "./screens/auth/SignupScreen";
 import { DashboardScreen } from "./screens/dashboard/DashboardScreen";
 import { LauncherScreen } from "./screens/launcher/LauncherScreen";
 import { RosGraphScreen } from "./screens/ros-graph/RosGraphScreen";
 import { RosServicesScreen } from "./screens/ros-services/RosServicesScreen";
+import { SettingsScreen } from "./screens/settings/SettingsScreen";
 
 const SCREENS = [
   { path: "/", element: <LauncherScreen /> },
@@ -16,9 +20,16 @@ const SCREENS = [
   { path: "/settings", element: <SettingsScreen /> },
 ];
 
-export function App() {
+function RequireAuth({ children }: { children: ReactNode }) {
+  const { token, user, initialized } = useAuthStore();
+
+  if (!initialized) return <p>Loading account...</p>;
+  if (!token || !user) return <Navigate to="/login" replace />;
+  return children;
+}
+
+function AppShell() {
   const { pathname } = useLocation();
-  // the launcher is a full-page screen: no sidebar, no topbar, light bg
   const isLaunchPage = pathname === "/";
 
   return (
@@ -36,5 +47,21 @@ export function App() {
       </div>
       <FloatingTerminal />
     </div>
+  );
+}
+
+export function App() {
+  const restore = useAuthStore((state) => state.restore);
+
+  useEffect(() => {
+    void restore();
+  }, [restore]);
+
+  return (
+    <Routes>
+      <Route path="/login" element={<LoginScreen />} />
+      <Route path="/signup" element={<SignupScreen />} />
+      <Route path="*" element={<RequireAuth><AppShell /></RequireAuth>} />
+    </Routes>
   );
 }

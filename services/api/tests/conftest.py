@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -122,6 +124,16 @@ def fake_gz() -> FakeGz:
 
 
 @pytest.fixture
-def client(fake_supervisor: FakeSupervisor, fake_ros: FakeRos, fake_gz: FakeGz) -> TestClient:
-    app = create_app(supervisor=fake_supervisor, ros_adapter=fake_ros, gz=fake_gz)
+def client(
+    fake_supervisor: FakeSupervisor,
+    fake_ros: FakeRos,
+    fake_gz: FakeGz,
+    tmp_path: Path,
+) -> TestClient:
+    app = create_app(
+        supervisor=fake_supervisor,
+        ros_adapter=fake_ros,
+        gz=fake_gz,
+        db_path=str(tmp_path / "test.db"),
+    )
     return TestClient(app)

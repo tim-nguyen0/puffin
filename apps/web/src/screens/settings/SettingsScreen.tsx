@@ -1,19 +1,28 @@
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "../../components/button";
 import { api } from "../../lib/api";
-import { useSettingsStore } from "../../lib/settingsStore";
+import { useAuthStore } from "../../lib/authStore";
+import { type Units, useSettingsStore } from "../../lib/settingsStore";
 import "./settings.css";
 
 export function SettingsScreen() {
-  const { units, telemetryHistoryLimit, wsUrl, apiBaseUrl, setUnits, setTelemetryHistoryLimit, setWsUrl, setApiBaseUrl } =
+  const token = useAuthStore((state) => state.token);
+  const { units, telemetryHistoryLimit, wsUrl, apiBaseUrl, loading, error: loadError, save } =
     useSettingsStore();
-
+  const [draftUnits, setDraftUnits] = useState<Units>(units);
   const [draftLimit, setDraftLimit] = useState(String(telemetryHistoryLimit));
   const [draftWsUrl, setDraftWsUrl] = useState(wsUrl);
   const [draftApiBaseUrl, setDraftApiBaseUrl] = useState(apiBaseUrl);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    setDraftUnits(units);
+    setDraftLimit(String(telemetryHistoryLimit));
+    setDraftWsUrl(wsUrl);
+    setDraftApiBaseUrl(apiBaseUrl);
+  }, [units, telemetryHistoryLimit, wsUrl, apiBaseUrl]);
 
   const health = useQuery({
     queryKey: ["health"],
@@ -24,7 +33,7 @@ export function SettingsScreen() {
     },
   });
 
-  function handleSave() {
+  async function handleSave() {
     const parsedLimit = Number(draftLimit);
     if (!Number.isFinite(parsedLimit) || parsedLimit < 10 || parsedLimit > 5000) {
       setError("Telemetry history length must be between 10 and 5000 samples.");
@@ -36,11 +45,21 @@ export function SettingsScreen() {
       setSaved(false);
       return;
     }
+    if (!token) return;
+
     setError(null);
-    setTelemetryHistoryLimit(parsedLimit);
-    setWsUrl(draftWsUrl.trim());
-    setApiBaseUrl(draftApiBaseUrl.trim());
-    setSaved(true);
+    setSaved(false);
+    try {
+      await save(token, {
+        units: draftUnits,
+        telemetry_history_limit: parsedLimit,
+        ws_url: draftWsUrl.trim(),
+        api_base_url: draftApiBaseUrl.trim(),
+      });
+      setSaved(true);
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : "Could not save settings");
+    }
   }
 
   return (
@@ -51,7 +70,13 @@ export function SettingsScreen() {
         <h2>Display</h2>
         <label className="settings-field">
           Units
-          <select value={units} onChange={(e) => setUnits(e.target.value as "metric" | "imperial")}>
+          <select
+            value={draftUnits}
+            onChange={(event) => {
+              setDraftUnits(event.target.value as Units);
+              setSaved(false);
+            }}
+          >
             <option value="metric">Metric (m/s)</option>
             <option value="imperial">Imperial (ft/s)</option>
           </select>
@@ -61,8 +86,8 @@ export function SettingsScreen() {
           <input
             type="number"
             value={draftLimit}
-            onChange={(e) => {
-              setDraftLimit(e.target.value);
+            onChange={(event) => {
+              setDraftLimit(event.target.value);
               setSaved(false);
             }}
           />
@@ -76,8 +101,8 @@ export function SettingsScreen() {
           <input
             type="text"
             value={draftWsUrl}
-            onChange={(e) => {
-              setDraftWsUrl(e.target.value);
+            onChange={(event) => {
+              setDraftWsUrl(event.target.value);
               setSaved(false);
             }}
           />
@@ -87,26 +112,24 @@ export function SettingsScreen() {
           <input
             type="text"
             value={draftApiBaseUrl}
-            onChange={(e) => {
-              setDraftApiBaseUrl(e.target.value);
+            onChange={(event) => {
+              setDraftApiBaseUrl(event.target.value);
               setSaved(false);
             }}
           />
         </label>
       </section>
 
-      {error ? (
-        <p className="settings-error" role="alert">
-          {error}
-        </p>
-      ) : null}
+      {error || loadError ? <p className="settings-error" role="alert">{error ?? loadError}</p> : null}
       {saved ? <p className="settings-success">Saved.</p> : null}
 
-      <Button className="settings-save-button" onClick={handleSave}>Save changes</Button>
+      <Button className="settings-save-button" onClick={handleSave} disabled={loading}>
+        {loading ? "Saving..." : "Save changes"}
+      </Button>
 
       <section className="settings-section settings-system-section">
         <h2>System</h2>
-        {health.isLoading ? <p>Checking API status…</p> : null}
+        {health.isLoading ? <p>Checking API status...</p> : null}
         {health.isError ? <p className="settings-error">Could not reach the API.</p> : null}
         {health.data ? (
           <dl className="settings-system-info">

@@ -1,4 +1,4 @@
-import { Link, NavLink } from "react-router-dom";
+import { Link, NavLink, useNavigate } from "react-router-dom";
 import circleX from "./assets/circle-x.svg";
 import cpu from "./assets/cpu.svg";
 import gitBranch from "./assets/git-branch.svg";
@@ -6,6 +6,7 @@ import packageIcon from "./assets/package.svg";
 import puffinLogo from "./assets/puffin-logo.png";
 import ros2Services from "./assets/ros2-services.svg";
 import settings from "./assets/settings.svg";
+import { useAuthStore } from "../../lib/authStore";
 import "./sidebar.css";
 
 type NavItem = { label: string; icon: string; path: string | null };
@@ -19,6 +20,14 @@ const NAV_ITEMS: NavItem[] = [
 ];
 
 export function Sidebar() {
+  const navigate = useNavigate();
+  const { user, logout } = useAuthStore();
+
+  async function handleLogout() {
+    await logout();
+    navigate("/login");
+  }
+
   return (
     <aside className="sidebar">
       <div className="sidebar-top">
@@ -47,9 +56,13 @@ export function Sidebar() {
           )}
         </nav>
       </div>
-      <div className="sidebar-workspace">
-        <img src={packageIcon} alt="" className="sidebar-workspace-icon" />
-        <span className="sidebar-workspace-name">rospackage-4</span>
+      <div className="sidebar-footer">
+        <span className="sidebar-user">{user?.email}</span>
+        <button type="button" className="sidebar-logout" onClick={handleLogout}>Log out</button>
+        <div className="sidebar-workspace">
+          <img src={packageIcon} alt="" className="sidebar-workspace-icon" />
+          <span className="sidebar-workspace-name">rospackage-4</span>
+        </div>
       </div>
     </aside>
   );
