@@ -12,7 +12,7 @@ export function NewSimulationButton({ className, ...props }: NewSimulationButton
 
   return (
     <Button {...props} className={classes} endIcon={<DroneIcon />}>
-      New Simulation Environment
+      Enter Dashboard
     </Button>
   );
 }
