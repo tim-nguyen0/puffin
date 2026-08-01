@@ -85,6 +85,9 @@ export const handlers = [
       telemetry_history_limit: 600,
       ws_url: "/ws/telemetry",
       api_base_url: "/api",
+      terminal_x: 0,
+      terminal_y: 0,
+      terminal_minimized: false,
     };
     const token = crypto.randomUUID();
     mockAccounts.set(email, { user, password: body.password, settings });

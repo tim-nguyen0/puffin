@@ -306,7 +306,16 @@ components:
 
     UserSettings:
       type: object
-      required: [units, telemetry_history_limit, ws_url, api_base_url]
+      required:
+        [
+          units,
+          telemetry_history_limit,
+          ws_url,
+          api_base_url,
+          terminal_x,
+          terminal_y,
+          terminal_minimized,
+        ]
       properties:
         units:
           type: string
@@ -319,6 +328,13 @@ components:
           type: string
         api_base_url:
           type: string
+        # floating terminal layout - css px offset from its default anchor
+        terminal_x:
+          type: number
+        terminal_y:
+          type: number
+        terminal_minimized:
+          type: boolean
 
     Health:
       type: object
