@@ -1,5 +1,4 @@
 import { Link, NavLink, useNavigate } from "react-router-dom";
-import circleX from "./assets/circle-x.svg";
 import cpu from "./assets/cpu.svg";
 import gitBranch from "./assets/git-branch.svg";
 import packageIcon from "./assets/package.svg";
@@ -12,9 +11,8 @@ import "./sidebar.css";
 type NavItem = { label: string; icon: string; path: string | null };
 
 const NAV_ITEMS: NavItem[] = [
-  { label: "Dashboard", icon: circleX, path: "/dashboard" },
-  { label: "Simulation", icon: cpu, path: null },
-  { label: "ROS2 Services", icon: ros2Services, path: "/ros-services" },
+  { label: "Simulation", icon: cpu, path: "/dashboard" },
+  { label: "ROS Nodes", icon: ros2Services, path: "/ros-services" },
   { label: "ROS2 Graph", icon: gitBranch, path: "/ros-graph" },
   { label: "Settings", icon: settings, path: "/settings" },
 ];

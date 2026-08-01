@@ -3,6 +3,8 @@ import { Terminal } from "@xterm/xterm";
 import "@xterm/xterm/css/xterm.css";
 import { useEffect, useRef, useState } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
+import { useAuthStore } from "../../lib/authStore";
+import { useSettingsStore } from "../../lib/settingsStore";
 import "./floating-terminal.css";
 import {
   terminalInputMessage,
@@ -19,9 +21,16 @@ export function FloatingTerminal() {
     terminalX: 0,
     terminalY: 0,
   });
-  const [position, setPosition] = useState({ x: 0, y: 0 });
+  // settings are loaded before the shell mounts, so the saved layout is
+  // already in the store here
+  const [position, setPosition] = useState(() => ({
+    x: useSettingsStore.getState().terminalX,
+    y: useSettingsStore.getState().terminalY,
+  }));
   const [dragging, setDragging] = useState(false);
-  const [minimized, setMinimized] = useState(false);
+  const [minimized, setMinimized] = useState(
+    () => useSettingsStore.getState().terminalMinimized,
+  );
   const [connectionStatus, setConnectionStatus] = useState<
     "connecting" | "connected" | "disconnected"
   >("connecting");
@@ -117,11 +126,21 @@ export function FloatingTerminal() {
     });
   }
 
+  function persistLayout(x: number, y: number, min: boolean) {
+    const token = useAuthStore.getState().token;
+    if (!token) return;
+    useSettingsStore
+      .getState()
+      .saveTerminalLayout(token, { x, y, minimized: min })
+      .catch(() => undefined);
+  }
+
   function stopDragging(event: ReactPointerEvent<HTMLDivElement>) {
     if (!dragging) return;
 
     event.currentTarget.releasePointerCapture(event.pointerId);
     setDragging(false);
+    persistLayout(position.x, position.y, minimized);
   }
 
   return (
@@ -149,7 +168,11 @@ export function FloatingTerminal() {
         <button
           className="terminal-minimize"
           type="button"
-          onClick={() => setMinimized(!minimized)}
+          onClick={() => {
+            const next = !minimized;
+            setMinimized(next);
+            persistLayout(position.x, position.y, next);
+          }}
           aria-label={minimized ? "Restore terminal" : "Minimize terminal"}
           aria-expanded={!minimized}
         >

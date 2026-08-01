@@ -9,10 +9,17 @@ interface SettingsState {
   telemetryHistoryLimit: number;
   wsUrl: string;
   apiBaseUrl: string;
+  terminalX: number;
+  terminalY: number;
+  terminalMinimized: boolean;
   loading: boolean;
   error: string | null;
   load: (token: string) => Promise<void>;
   save: (token: string, settings: ApiSettings) => Promise<void>;
+  saveTerminalLayout: (
+    token: string,
+    layout: { x: number; y: number; minimized: boolean },
+  ) => Promise<void>;
   reset: () => void;
 }
 
@@ -25,6 +32,9 @@ const defaults = {
   telemetryHistoryLimit: 600,
   wsUrl: DEFAULT_WS_URL,
   apiBaseUrl: DEFAULT_API_BASE_URL,
+  terminalX: 0,
+  terminalY: 0,
+  terminalMinimized: false,
 };
 
 function fromApi(settings: ApiSettings) {
@@ -36,6 +46,9 @@ function fromApi(settings: ApiSettings) {
     telemetryHistoryLimit: settings.telemetry_history_limit,
     wsUrl,
     apiBaseUrl: settings.api_base_url,
+    terminalX: settings.terminal_x,
+    terminalY: settings.terminal_y,
+    terminalMinimized: settings.terminal_minimized,
   };
 }
 
@@ -80,6 +93,18 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     }
     const saved = await response.json() as ApiSettings;
     set({ ...fromApi(saved), loading: false, error: null });
+  },
+  saveTerminalLayout: async (token, layout) => {
+    const state = get();
+    await state.save(token, {
+      units: state.units,
+      telemetry_history_limit: state.telemetryHistoryLimit,
+      ws_url: state.wsUrl,
+      api_base_url: state.apiBaseUrl,
+      terminal_x: layout.x,
+      terminal_y: layout.y,
+      terminal_minimized: layout.minimized,
+    });
   },
   reset: () => set({ ...defaults, loading: false, error: null }),
 }));
