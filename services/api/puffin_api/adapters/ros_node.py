@@ -136,8 +136,17 @@ class RosAdapter:
 
     def graph(self) -> AdapterResult:
         def endpoint_nodes(infos: Any) -> list[str]:
-            # bare dds participants (the uxrce agent) still carry a node name
-            return sorted({f"{i.node_namespace.rstrip('/')}/{i.node_name}" for i in infos})
+            # fastdds registers bare (non-ros) participants under a
+            # placeholder; the only one in this stack is the uxrce agent
+            # bridging px4, so label it as such instead of
+            # _CREATED_BY_BARE_DDS_APP_/_CREATED_BY_BARE_DDS_APP_
+            names = set()
+            for info in infos:
+                if info.node_name == "_CREATED_BY_BARE_DDS_APP_":
+                    names.add("/px4_xrce_agent")
+                else:
+                    names.add(f"{info.node_namespace.rstrip('/')}/{info.node_name}")
+            return sorted(names)
 
         try:
             node = self._ensure_node()
