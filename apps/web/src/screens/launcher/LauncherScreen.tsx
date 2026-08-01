@@ -1,3 +1,4 @@
+import { useNavigate } from "react-router-dom";
 import { NewSimulationButton } from "../../components/button";
 import { PuffinLogo } from "../../components/puffin-logo";
 import { RecentFolders } from "../../components/recent-folders";
@@ -10,10 +11,13 @@ const RECENT_FOLDERS = [
 ];
 
 export function LauncherScreen() {
+  const navigate = useNavigate();
+
   return (
     <section className="launcher-screen" aria-label="Puffin launch page">
       <PuffinLogo />
-      <NewSimulationButton />
+      {/* placeholder until session creation exists - straight to the dashboard */}
+      <NewSimulationButton onClick={() => navigate("/dashboard")} />
       <RecentFolders folders={RECENT_FOLDERS} />
     </section>
   );
