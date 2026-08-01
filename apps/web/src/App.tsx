@@ -18,14 +18,15 @@ const SCREENS = [
 
 export function App() {
   const { pathname } = useLocation();
+  // the launcher is a full-page screen: no sidebar, no topbar, light bg
   const isLaunchPage = pathname === "/";
 
   return (
-    <div className="app-shell">
-      <Sidebar />
+    <div className={isLaunchPage ? "app-shell launch-app-shell" : "app-shell"}>
+      {!isLaunchPage && <Sidebar />}
       <div className="workspace">
-        <TopBar />
-        <main>
+        {!isLaunchPage && <TopBar />}
+        <main className={isLaunchPage ? "launch-main" : undefined}>
           <Routes>
             {SCREENS.map((screen) => (
               <Route key={screen.path} path={screen.path} element={screen.element} />
