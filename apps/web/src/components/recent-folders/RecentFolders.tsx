@@ -31,6 +31,8 @@ export function RecentFolders({
               className="recent-folder-button"
               type="button"
               onClick={onFolderSelect ? () => onFolderSelect(folder) : undefined}
+              disabled={!onFolderSelect}
+              title={onFolderSelect ? undefined : "Not available yet"}
             >
               <span className="recent-folder-name">{folder.name}</span>
               <span className="recent-folder-icon" aria-hidden="true">
