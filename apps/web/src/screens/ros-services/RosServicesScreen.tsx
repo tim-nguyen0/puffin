@@ -7,6 +7,15 @@ import "./ros-services.css";
 const DEMO_NODE = "/offboard_demo";
 const TRANSITIONS = ["configure", "activate", "deactivate", "cleanup", "shutdown"] as const;
 
+// the ros 2 lifecycle state machine; unknown states leave everything
+// enabled and let the api answer
+const VALID_TRANSITIONS: Record<string, readonly (typeof TRANSITIONS)[number][]> = {
+  unconfigured: ["configure", "shutdown"],
+  inactive: ["activate", "cleanup", "shutdown"],
+  active: ["deactivate", "shutdown"],
+  finalized: [],
+};
+
 export function RosServicesScreen() {
   const queryClient = useQueryClient();
   const [actionError, setActionError] = useState<string | null>(null);
@@ -29,6 +38,7 @@ export function RosServicesScreen() {
     if (error) throw new Error("Failed to fetch lifecycle state");
     return data;
   },
+  refetchInterval: 5000,
 });
 
   const transition = useMutation({
@@ -78,18 +88,24 @@ export function RosServicesScreen() {
           </p>
         ) : null}
         <div className="ros-lifecycle-actions">
-          {TRANSITIONS.map((name) => (
-            <Button
-              key={name}
-              onClick={() => {
-                setActionError(null);
-                transition.mutate(name);
-              }}
-              disabled={transition.isPending}
-            >
-              {name}
-            </Button>
-          ))}
+          {TRANSITIONS.map((name) => {
+            const allowed = lifecycle.data
+              ? (VALID_TRANSITIONS[lifecycle.data.state]?.includes(name) ?? true)
+              : true;
+            return (
+              <Button
+                key={name}
+                onClick={() => {
+                  setActionError(null);
+                  transition.mutate(name);
+                }}
+                disabled={transition.isPending || !allowed}
+                title={allowed ? undefined : `not valid from ${lifecycle.data?.state}`}
+              >
+                {name}
+              </Button>
+            );
+          })}
         </div>
         {actionError ? (
           <p className="ros-services-error" role="alert">
