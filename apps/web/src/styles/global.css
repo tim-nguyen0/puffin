@@ -24,13 +24,3 @@ main {
   padding: var(--space-4);
 }
 
-.launch-main {
-  min-height: 100vh;
-  padding: 0;
-  background-color: var(--color-launch-bg);
-}
-
-.launch-app-shell {
-  min-height: 100vh;
-  background-color: var(--color-launch-bg);
-}
