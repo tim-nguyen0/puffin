@@ -10,7 +10,7 @@ from .adapters.ros_node import RosAdapter
 from .adapters.supervisor import SupervisorAdapter
 from .adapters.terminal import PtySession
 from .db import default_db_path, init_db
-from .domains import auth, ros, settings, sim, system, telemetry, terminal, vehicle
+from .domains import auth, ros, settings, sim, system, telemetry, teleop, terminal, vehicle
 
 
 @asynccontextmanager
@@ -48,6 +48,7 @@ def create_app(
     for router in api_routers:
         app.include_router(router, prefix="/api")
     app.include_router(telemetry.router)
+    app.include_router(teleop.router)
     app.include_router(terminal.router)
     return app
 
