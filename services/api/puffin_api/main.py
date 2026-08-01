@@ -9,7 +9,8 @@ from .adapters.gz import GzAdapter
 from .adapters.ros_node import RosAdapter
 from .adapters.supervisor import SupervisorAdapter
 from .adapters.terminal import PtySession
-from .domains import ros, sim, system, telemetry, terminal, vehicle
+from .db import default_db_path, init_db
+from .domains import auth, ros, settings, sim, system, telemetry, terminal, vehicle
 
 
 @asynccontextmanager
@@ -26,6 +27,7 @@ def create_app(
     compose: ComposeAdapter | None = None,
     gz: GzAdapter | None = None,
     terminal_factory: type[PtySession] | None = None,
+    db_path: str | None = None,
 ) -> FastAPI:
     app = FastAPI(title="Puffin API", version="0.1.0", lifespan=_lifespan)
     app.state.supervisor = supervisor or SupervisorAdapter()
@@ -33,7 +35,17 @@ def create_app(
     app.state.compose = compose or ComposeAdapter()
     app.state.gz = gz or GzAdapter()
     app.state.terminal_factory = terminal_factory or PtySession
-    for router in (system.router, sim.router, vehicle.router, ros.router):
+    app.state.db_path = db_path or default_db_path()
+    init_db(app.state.db_path)
+    api_routers = (
+        system.router,
+        sim.router,
+        vehicle.router,
+        ros.router,
+        auth.router,
+        settings.router,
+    )
+    for router in api_routers:
         app.include_router(router, prefix="/api")
     app.include_router(telemetry.router)
     app.include_router(terminal.router)

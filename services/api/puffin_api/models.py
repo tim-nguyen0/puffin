@@ -84,3 +84,34 @@ class TelemetrySample(BaseModel):
     mode: str
     ned: NedPosition
     battery_v: float
+
+
+class SignupRequest(BaseModel):
+    email: str = Field(min_length=3, max_length=254)
+    password: str = Field(min_length=8, max_length=128)
+
+
+class LoginRequest(BaseModel):
+    email: str
+    password: str
+
+
+class User(BaseModel):
+    id: str
+    email: str
+
+
+class AuthResponse(BaseModel):
+    token: str
+    user: User
+
+
+class UserSettings(BaseModel):
+    units: Literal["metric", "imperial"]
+    telemetry_history_limit: int = Field(ge=10, le=5000)
+    ws_url: str = Field(min_length=1, max_length=500)
+    api_base_url: str = Field(min_length=1, max_length=500)
+
+
+class UserSettingsUpdate(UserSettings):
+    pass

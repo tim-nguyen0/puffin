@@ -15,7 +15,110 @@ const processes: Schemas["ProcessInfo"][] = [
   { name: "px4", state: "RUNNING", uptime_s: 507 },
 ];
 
+type MockAccount = {
+  user: Schemas["User"];
+  password: string;
+  settings: Schemas["UserSettings"];
+};
+
+const MOCK_STATE_KEY = "puffin-mock-auth";
+
+function loadMockState() {
+  try {
+    const saved = JSON.parse(window.localStorage.getItem(MOCK_STATE_KEY) ?? "{}") as {
+      accounts?: [string, MockAccount][];
+      tokens?: [string, string][];
+    };
+    return {
+      accounts: new Map(saved.accounts ?? []),
+      tokens: new Map(saved.tokens ?? []),
+    };
+  } catch {
+    return {
+      accounts: new Map<string, MockAccount>(),
+      tokens: new Map<string, string>(),
+    };
+  }
+}
+
+const mockState = loadMockState();
+const mockAccounts = mockState.accounts;
+const mockTokens = mockState.tokens;
+
+function saveMockState() {
+  window.localStorage.setItem(MOCK_STATE_KEY, JSON.stringify({
+    accounts: Array.from(mockAccounts.entries()),
+    tokens: Array.from(mockTokens.entries()),
+  }));
+}
+
+function emailForRequest(request: Request): string | null {
+  const header = request.headers.get("Authorization");
+  if (!header?.startsWith("Bearer ")) return null;
+  return mockTokens.get(header.slice(7)) ?? null;
+}
+
+function unauthorized() {
+  return HttpResponse.json({ detail: "Not authenticated" }, { status: 401 });
+}
+
 export const handlers = [
+  http.post("/api/auth/signup", async ({ request }) => {
+    const body = await request.json() as Schemas["SignupRequest"];
+    const email = body.email.trim().toLowerCase();
+    if (mockAccounts.has(email)) {
+      return HttpResponse.json({ detail: "Account already exists" }, { status: 409 });
+    }
+    const user = { id: crypto.randomUUID(), email };
+    const settings: Schemas["UserSettings"] = {
+      units: "metric",
+      telemetry_history_limit: 600,
+      ws_url: "/ws/telemetry",
+      api_base_url: "/api",
+    };
+    const token = crypto.randomUUID();
+    mockAccounts.set(email, { user, password: body.password, settings });
+    mockTokens.set(token, email);
+    saveMockState();
+    return HttpResponse.json({ token, user } satisfies Schemas["AuthResponse"], { status: 201 });
+  }),
+  http.post("/api/auth/login", async ({ request }) => {
+    const body = await request.json() as Schemas["LoginRequest"];
+    const email = body.email.trim().toLowerCase();
+    const account = mockAccounts.get(email);
+    if (!account || account.password !== body.password) {
+      return HttpResponse.json({ detail: "Incorrect email or password" }, { status: 401 });
+    }
+    const token = crypto.randomUUID();
+    mockTokens.set(token, email);
+    saveMockState();
+    return HttpResponse.json({ token, user: account.user } satisfies Schemas["AuthResponse"]);
+  }),
+  http.get("/api/auth/me", ({ request }) => {
+    const email = emailForRequest(request);
+    if (!email) return unauthorized();
+    return HttpResponse.json(mockAccounts.get(email)!.user);
+  }),
+  http.post("/api/auth/logout", ({ request }) => {
+    const header = request.headers.get("Authorization");
+    if (!header?.startsWith("Bearer ")) return unauthorized();
+    mockTokens.delete(header.slice(7));
+    saveMockState();
+    return new HttpResponse(null, { status: 204 });
+  }),
+  http.get("/api/settings", ({ request }) => {
+    const email = emailForRequest(request);
+    if (!email) return unauthorized();
+    return HttpResponse.json(mockAccounts.get(email)!.settings);
+  }),
+  http.put("/api/settings", async ({ request }) => {
+    const email = emailForRequest(request);
+    if (!email) return unauthorized();
+    const settings = await request.json() as Schemas["UserSettings"];
+    mockAccounts.get(email)!.settings = settings;
+    saveMockState();
+    return HttpResponse.json(settings);
+  }),
   http.get("/api/health", () =>
     HttpResponse.json({ status: "ok", version: "0.1.0" } satisfies Schemas["Health"]),
   ),
