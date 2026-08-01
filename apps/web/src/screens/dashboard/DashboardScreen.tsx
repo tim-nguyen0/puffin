@@ -169,11 +169,6 @@ export function DashboardScreen() {
         </div>
       </section>
 
-      <section className="dashboard-section dashboard-section-wide">
-        <h2>Simulation View</h2>
-        <SimViewport />
-      </section>
-
       <section className="dashboard-section">
         <h2>Live Telemetry</h2>
         <p>
@@ -234,6 +229,11 @@ export function DashboardScreen() {
             {actionError}
           </p>
         ) : null}
+      </section>
+
+      <section className="dashboard-section">
+        <h2>Simulation View</h2>
+        <SimViewport />
       </section>
     </div>
   );
