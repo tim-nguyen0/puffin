@@ -105,6 +105,10 @@ def main() -> None:
 
         def on_shutdown(self, state: Any) -> TransitionCallbackReturn:
             self._destroy_timer()
+            # exit once the transition completes: supervisord respawns the
+            # node fresh (configure -> inactive), so a ui "kill" is a clean
+            # restart instead of a dead finalized node
+            self.create_timer(0.5, rclpy.shutdown)
             return TransitionCallbackReturn.SUCCESS
 
         def _destroy_timer(self) -> None:

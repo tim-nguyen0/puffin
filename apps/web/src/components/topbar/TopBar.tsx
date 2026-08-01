@@ -5,8 +5,8 @@ import "./topbar.css";
 
 const SCREEN_LABELS: Record<string, string> = {
   "/": "Launcher",
-  "/dashboard": "Simulation Pipeline",
-  "/ros-services": "ROS 2 Services",
+  "/dashboard": "Simulation",
+  "/ros-services": "ROS Nodes",
   "/ros-graph": "ROS2 Graph",
 };
 
