@@ -107,3 +107,32 @@
   color: var(--color-text);
   font-size: var(--text-md);
 }
+
+.dashboard-vehicle-status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: center;
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: var(--border-width) solid var(--color-border);
+  font-size: var(--text-sm);
+}
+
+.dashboard-status-chip {
+  display: flex;
+  gap: var(--space-1);
+  align-items: center;
+  color: var(--color-text-muted);
+}
+
+.dashboard-status-dot {
+  width: var(--space-2);
+  height: var(--space-2);
+  border-radius: 50%;
+  background: var(--color-text-muted);
+}
+
+.dashboard-status-dot.is-armed {
+  background: var(--color-ok);
+}

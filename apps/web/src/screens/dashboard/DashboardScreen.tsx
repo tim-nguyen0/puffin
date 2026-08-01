@@ -17,6 +17,11 @@ export function DashboardScreen() {
   const lengthUnit = units === "imperial" ? "ft" : "m";
   const [altitude, setAltitude] = useState("10");
   const [actionError, setActionError] = useState<string | null>(null);
+  const [lastCommand, setLastCommand] = useState<{
+    label: string;
+    ok: boolean;
+    detail: string;
+  } | null>(null);
 
   useEffect(() => {
     connectTelemetry();
@@ -36,6 +41,17 @@ export function DashboardScreen() {
   const invalidateSimStatus = () => queryClient.invalidateQueries({ queryKey: ["sim-status"] });
   const onCommandError = (err: unknown) =>
     setActionError(err instanceof Error ? err.message : "Command failed");
+  // vehicle commands report their px4 ack (or rejection) in the status strip
+  const vehicleResult = (label: string) => ({
+    onSuccess: (data: { detail?: string | null }) =>
+      setLastCommand({ label, ok: true, detail: data.detail ?? "accepted" }),
+    onError: (err: unknown) =>
+      setLastCommand({
+        label,
+        ok: false,
+        detail: err instanceof Error ? err.message : "Command failed",
+      }),
+  });
 
   const startSim = useMutation({
     mutationFn: async () => {
@@ -73,7 +89,7 @@ export function DashboardScreen() {
       if (error || !data.ok) throw new Error(data?.detail ?? "Arm failed");
       return data;
     },
-    onError: onCommandError,
+    ...vehicleResult("arm"),
   });
 
   const disarm = useMutation({
@@ -82,7 +98,7 @@ export function DashboardScreen() {
       if (error || !data.ok) throw new Error(data?.detail ?? "Disarm failed");
       return data;
     },
-    onError: onCommandError,
+    ...vehicleResult("disarm"),
   });
 
   const land = useMutation({
@@ -91,7 +107,7 @@ export function DashboardScreen() {
       if (error || !data.ok) throw new Error(data?.detail ?? "Land failed");
       return data;
     },
-    onError: onCommandError,
+    ...vehicleResult("land"),
   });
 
   const takeoff = useMutation({
@@ -100,7 +116,7 @@ export function DashboardScreen() {
       if (error || !data.ok) throw new Error(data?.detail ?? "Takeoff failed");
       return data;
     },
-    onError: onCommandError,
+    ...vehicleResult("takeoff"),
   });
 
   function handleTakeoff() {
@@ -229,6 +245,21 @@ export function DashboardScreen() {
             {actionError}
           </p>
         ) : null}
+        <div className="dashboard-vehicle-status">
+          <span className="dashboard-status-chip">
+            <span className={`dashboard-status-dot ${latest?.armed ? "is-armed" : ""}`} />
+            {latest ? (latest.armed ? "Armed" : "Disarmed") : "No telemetry"}
+          </span>
+          <span className="dashboard-status-chip">Mode: {latest?.mode ?? "—"}</span>
+          {lastCommand ? (
+            <span
+              className={`dashboard-status-chip ${lastCommand.ok ? "dashboard-ok" : "dashboard-error"}`}
+              role="status"
+            >
+              {lastCommand.label}: {lastCommand.detail}
+            </span>
+          ) : null}
+        </div>
       </section>
 
       <section className="dashboard-section">
