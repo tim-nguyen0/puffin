@@ -1,0 +1,60 @@
+.ros-graph-screen {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-2) var(--space-4) var(--space-4);
+  max-width: var(--screen-content-max-width);
+  color: var(--color-text);
+}
+
+.ros-graph-screen h1 {
+  margin-top: 0;
+  margin-bottom: var(--space-3);
+}
+
+.ros-graph-section {
+  padding: var(--space-4);
+  background: var(--color-surface);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-2);
+}
+
+.ros-graph-section h2 {
+  margin-top: 0;
+  margin-bottom: var(--space-2);
+}
+
+.ros-graph-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--text-sm);
+}
+
+.ros-graph-list li {
+  display: flex;
+  justify-content: space-between;
+  padding: var(--space-2) 0;
+  border-bottom: var(--border-width) solid var(--color-border);
+}
+
+.ros-graph-list li:last-child {
+  border-bottom: none;
+}
+
+.ros-topic-type {
+  color: var(--color-text-muted);
+}
+
+.ros-graph-empty,
+.ros-graph-error {
+  font-size: var(--text-sm);
+}
+
+.ros-graph-error {
+  color: var(--color-danger);
+}
+
+.ros-graph-empty {
+  color: var(--color-text-muted);
+}
