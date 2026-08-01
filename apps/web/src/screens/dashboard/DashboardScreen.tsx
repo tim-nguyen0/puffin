@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { Button } from "../../components/button";
+import { SimViewport } from "../../components/sim-viewport";
 import { api } from "../../lib/api";
 import { connectTelemetry, disconnectTelemetry, useTelemetryStore } from "../../lib/telemetryStore";
 import "./dashboard.css";
@@ -160,6 +161,11 @@ export function DashboardScreen() {
             Reset
           </Button>
         </div>
+      </section>
+
+      <section className="dashboard-section">
+        <h2>Simulation View</h2>
+        <SimViewport />
       </section>
 
       <section className="dashboard-section">
