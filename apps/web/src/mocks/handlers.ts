@@ -3,6 +3,16 @@ import type { components } from "@puffin/api-types";
 
 type Schemas = components["schemas"];
 
+// lifecycle mock is stateful so the ui responds to transitions in dev
+const TRANSITION_RESULTS: Record<string, Schemas["LifecycleState"]["state"]> = {
+  configure: "inactive",
+  activate: "active",
+  deactivate: "inactive",
+  cleanup: "unconfigured",
+  shutdown: "finalized",
+};
+const lifecycleStates = new Map<string, Schemas["LifecycleState"]["state"]>();
+
 /* One fixture per contract endpoint; shapes are compile-checked against
    packages/api-types, so contract drift fails `pnpm typecheck` here. */
 
@@ -177,8 +187,13 @@ export const handlers = [
   http.get("/api/ros/lifecycle/:nodeName", ({ params }) =>
     HttpResponse.json({
       node: String(params.nodeName),
-      state: "inactive",
+      state: lifecycleStates.get(String(params.nodeName)) ?? "inactive",
     } satisfies Schemas["LifecycleState"]),
   ),
-  http.post("/api/ros/lifecycle/:nodeName/transition", () => HttpResponse.json(ack)),
+  http.post("/api/ros/lifecycle/:nodeName/transition", async ({ params, request }) => {
+    const body = (await request.json()) as Schemas["TransitionRequest"];
+    const next = TRANSITION_RESULTS[body.transition];
+    if (next) lifecycleStates.set(String(params.nodeName), next);
+    return HttpResponse.json(ack);
+  }),
 ];
