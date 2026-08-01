@@ -20,3 +20,48 @@
 .launcher-screen .recent-folders {
   max-width: var(--launcher-preview-width);
 }
+
+.launcher-login {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  width: min(var(--launcher-button-width), 90vw);
+}
+
+.launcher-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  color: var(--base-palette-storm);
+  font-size: var(--text-md);
+}
+
+.launcher-field input {
+  padding: var(--space-2) var(--recent-folder-padding-inline);
+  background: var(--base-palette-cloud);
+  border: var(--recent-folders-border-width) solid var(--color-recent-folder);
+  border-radius: var(--recent-folder-radius);
+  color: var(--base-palette-storm);
+  font: inherit;
+}
+
+.launcher-field input:focus-visible {
+  outline: var(--button-focus-width) solid var(--color-button-focus);
+  outline-offset: var(--button-focus-offset);
+}
+
+.launcher-error {
+  margin: 0;
+  color: var(--color-danger);
+  font-size: var(--text-md);
+}
+
+.launcher-signup {
+  margin: 0;
+  color: var(--base-palette-storm);
+  font-size: var(--text-md);
+}
+
+.launcher-signup a {
+  color: var(--base-palette-blue);
+}
