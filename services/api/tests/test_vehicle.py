@@ -3,7 +3,6 @@ from fastapi.testclient import TestClient
 from puffin_api.adapters.ros_node import (
     VEHICLE_CMD_ARM_DISARM,
     VEHICLE_CMD_NAV_LAND,
-    VEHICLE_CMD_NAV_TAKEOFF,
 )
 from tests.conftest import FakeRos
 
@@ -21,7 +20,8 @@ def test_disarm_publishes_disarm_command(client: TestClient, fake_ros: FakeRos) 
 def test_takeoff_passes_altitude(client: TestClient, fake_ros: FakeRos) -> None:
     response = client.post("/api/vehicle/takeoff", json={"altitude_m": 5.0})
     assert response.json()["ok"] is True
-    assert fake_ros.commands == [(VEHICLE_CMD_NAV_TAKEOFF, 0.0, 5.0)]
+    # relative altitude goes to the adapter, which owns the AMSL conversion
+    assert fake_ros.takeoffs == [5.0]
 
 
 def test_takeoff_rejects_out_of_range_altitude(client: TestClient) -> None:
