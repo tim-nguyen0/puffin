@@ -1,0 +1,21 @@
+.sim-viewport {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.sim-viewport-frame {
+  width: 100%;
+
+  /* matches the 1280x720 xvfb screen the sim renders into */
+  aspect-ratio: 16 / 9;
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-1);
+  background: var(--color-bg);
+}
+
+.sim-viewport-link {
+  align-self: flex-end;
+  color: var(--color-accent);
+  font-size: var(--text-sm);
+}
