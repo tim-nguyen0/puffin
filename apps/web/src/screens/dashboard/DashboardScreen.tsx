@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { Button } from "../../components/button";
+import { LifecycleQuickPanel } from "../../components/lifecycle";
 import { SimViewport } from "../../components/sim-viewport";
 import { api } from "../../lib/api";
 import { useSettingsStore } from "../../lib/settingsStore";
@@ -153,7 +154,7 @@ export function DashboardScreen() {
 
   return (
     <div className="dashboard-screen">
-      <h1>Dashboard</h1>
+      <h1>Simulation</h1>
 
       <section className="dashboard-section">
         <h2>Simulation</h2>
@@ -191,6 +192,11 @@ export function DashboardScreen() {
             Reset
           </Button>
         </div>
+      </section>
+
+      <section className="dashboard-section">
+        <h2>Nodes</h2>
+        <LifecycleQuickPanel />
       </section>
 
       <section className="dashboard-section">
