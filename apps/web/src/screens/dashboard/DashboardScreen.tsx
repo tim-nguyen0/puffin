@@ -3,12 +3,18 @@ import { useEffect, useState } from "react";
 import { Button } from "../../components/button";
 import { SimViewport } from "../../components/sim-viewport";
 import { api } from "../../lib/api";
+import { useSettingsStore } from "../../lib/settingsStore";
 import { connectTelemetry, disconnectTelemetry, useTelemetryStore } from "../../lib/telemetryStore";
 import "./dashboard.css";
+
+const M_TO_FT = 3.28084;
 
 export function DashboardScreen() {
   const queryClient = useQueryClient();
   const { connected, latest } = useTelemetryStore();
+  const units = useSettingsStore((state) => state.units);
+  const toLength = (meters: number) => (units === "imperial" ? meters * M_TO_FT : meters);
+  const lengthUnit = units === "imperial" ? "ft" : "m";
   const [altitude, setAltitude] = useState("10");
   const [actionError, setActionError] = useState<string | null>(null);
 
@@ -182,9 +188,10 @@ export function DashboardScreen() {
             <dd>{latest.armed ? "Yes" : "No"}</dd>
             <dt>Mode</dt>
             <dd>{latest.mode}</dd>
-            <dt>Position (NED)</dt>
+            <dt>Position (NED, {lengthUnit})</dt>
             <dd>
-              x: {latest.ned.x.toFixed(2)}, y: {latest.ned.y.toFixed(2)}, z: {latest.ned.z.toFixed(2)}
+              x: {toLength(latest.ned.x).toFixed(2)}, y: {toLength(latest.ned.y).toFixed(2)}, z:{" "}
+              {toLength(latest.ned.z).toFixed(2)}
             </dd>
             <dt>Battery</dt>
             <dd>{latest.battery_v.toFixed(2)} V</dd>
