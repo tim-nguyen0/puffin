@@ -43,7 +43,15 @@
   width: var(--terminal-dot-size);
   height: var(--terminal-dot-size);
   border-radius: 50%;
+  background: var(--color-warn);
+}
+
+.terminal-status-connected {
   background: var(--color-ok);
+}
+
+.terminal-status-disconnected {
+  background: var(--color-danger);
 }
 
 .terminal-minimize {
