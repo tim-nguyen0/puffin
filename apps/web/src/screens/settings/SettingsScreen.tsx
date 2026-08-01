@@ -104,7 +104,7 @@ export function SettingsScreen() {
 
       <Button className="settings-save-button" onClick={handleSave}>Save changes</Button>
 
-      <section className="settings-section">
+      <section className="settings-section settings-system-section">
         <h2>System</h2>
         {health.isLoading ? <p>Checking API status…</p> : null}
         {health.isError ? <p className="settings-error">Could not reach the API.</p> : null}
