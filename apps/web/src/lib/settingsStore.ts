@@ -1,6 +1,5 @@
 import type { components } from "@puffin/api-types";
 import { create } from "zustand";
-import { api, apiErrorMessage, authHeaders } from "./api";
 
 type ApiSettings = components["schemas"]["UserSettings"];
 export type Units = ApiSettings["units"];
@@ -17,49 +16,70 @@ interface SettingsState {
   reset: () => void;
 }
 
+const WS_PROTOCOL = window.location.protocol === "https:" ? "wss:" : "ws:";
+const DEFAULT_WS_URL = `${WS_PROTOCOL}//${window.location.host}/ws/telemetry`;
+const DEFAULT_API_BASE_URL = "/api";
+
 const defaults = {
   units: "metric" as const,
   telemetryHistoryLimit: 600,
-  wsUrl: "/ws/telemetry",
-  apiBaseUrl: "/api",
+  wsUrl: DEFAULT_WS_URL,
+  apiBaseUrl: DEFAULT_API_BASE_URL,
 };
 
 function fromApi(settings: ApiSettings) {
+  const wsUrl = settings.ws_url.startsWith("/")
+    ? `${WS_PROTOCOL}//${window.location.host}${settings.ws_url}`
+    : settings.ws_url;
   return {
     units: settings.units,
     telemetryHistoryLimit: settings.telemetry_history_limit,
-    wsUrl: settings.ws_url,
+    wsUrl,
     apiBaseUrl: settings.api_base_url,
   };
 }
 
-export const useSettingsStore = create<SettingsState>((set) => ({
+async function responseError(response: Response, fallback: string): Promise<string> {
+  const body = await response.json().catch(() => null) as { detail?: unknown } | null;
+  return typeof body?.detail === "string" ? body.detail : fallback;
+}
+
+export const useSettingsStore = create<SettingsState>((set, get) => ({
   ...defaults,
   loading: false,
   error: null,
   load: async (token) => {
     set({ loading: true, error: null });
-    const { data, error } = await api.GET("/settings", {
-      headers: authHeaders(token),
+    const response = await fetch(`${get().apiBaseUrl}/settings`, {
+      headers: { Authorization: `Bearer ${token}` },
     });
-    if (error || !data) {
-      set({ loading: false, error: apiErrorMessage(error, "Could not load settings") });
+    if (!response.ok) {
+      set({
+        loading: false,
+        error: await responseError(response, "Could not load settings"),
+      });
       return;
     }
-    set({ ...fromApi(data), loading: false, error: null });
+    const settings = await response.json() as ApiSettings;
+    set({ ...fromApi(settings), loading: false, error: null });
   },
   save: async (token, settings) => {
     set({ loading: true, error: null });
-    const { data, error } = await api.PUT("/settings", {
-      headers: authHeaders(token),
-      body: settings,
+    const response = await fetch(`${get().apiBaseUrl}/settings`, {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(settings),
     });
-    if (error || !data) {
-      const message = apiErrorMessage(error, "Could not save settings");
+    if (!response.ok) {
+      const message = await responseError(response, "Could not save settings");
       set({ loading: false, error: message });
       throw new Error(message);
     }
-    set({ ...fromApi(data), loading: false, error: null });
+    const saved = await response.json() as ApiSettings;
+    set({ ...fromApi(saved), loading: false, error: null });
   },
   reset: () => set({ ...defaults, loading: false, error: null }),
 }));

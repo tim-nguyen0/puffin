@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { layoutGraph, SYSTEM_TOPICS } from "./graphLayout";
+import { INFRA_NODES, layoutGraph, SYSTEM_TOPICS } from "./graphLayout";
 
 const GRAPH = {
   nodes: ["/puffin_api", "/offboard_demo"],
@@ -9,6 +9,12 @@ const GRAPH = {
       type: "px4_msgs/msg/TrajectorySetpoint",
       publishers: ["/offboard_demo"],
       subscribers: ["/px4_xrce_agent"],
+    },
+    {
+      name: "/fmu/out/vehicle_status_v1",
+      type: "px4_msgs/msg/VehicleStatus",
+      publishers: ["/px4_xrce_agent"],
+      subscribers: ["/puffin_api"],
     },
     {
       name: "/parameter_events",
@@ -41,12 +47,25 @@ describe("graph layout", () => {
     expect(layout.boxes.some((b) => b.id === "/px4_xrce_agent" && b.kind === "node")).toBe(true);
   });
 
-  it("hides system topics when asked", () => {
+  it("hides system topics in ros-only mode", () => {
     const layout = layoutGraph(GRAPH, true);
     for (const name of SYSTEM_TOPICS) {
       expect(layout.boxes.some((b) => b.id === name)).toBe(false);
     }
     expect(layout.boxes.some((b) => b.id === "/fmu/in/trajectory_setpoint")).toBe(true);
+  });
+
+  it("hides the api node and its edges in ros-only mode", () => {
+    const layout = layoutGraph(GRAPH, true);
+    for (const name of INFRA_NODES) {
+      expect(layout.boxes.some((b) => b.id === name)).toBe(false);
+      expect(layout.edges.some((e) => e.id.includes(name))).toBe(false);
+    }
+  });
+
+  it("shows the api node when ros-only is off", () => {
+    const layout = layoutGraph(GRAPH, false);
+    expect(layout.boxes.some((b) => b.id === "/puffin_api")).toBe(true);
   });
 
   it("survives an empty graph", () => {

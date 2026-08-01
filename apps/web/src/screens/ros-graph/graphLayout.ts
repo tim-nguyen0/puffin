@@ -15,6 +15,10 @@ const COLUMN_GAP = 140;
 // chatter every node has; rqt hides these by default too
 export const SYSTEM_TOPICS = new Set(["/parameter_events", "/rosout"]);
 
+// the api's own introspection node - infrastructure, not part of the ros
+// system the graph is meant to show
+export const INFRA_NODES = new Set(["/puffin_api"]);
+
 export interface GraphBox {
   id: string;
   label: string;
@@ -47,14 +51,19 @@ function edgePath(from: { x: number; y: number }, to: { x: number; y: number }):
   return `M ${from.x} ${from.y} C ${from.x + bend} ${from.y}, ${to.x - bend} ${to.y}, ${to.x} ${to.y}`;
 }
 
-export function layoutGraph(graph: RosGraph, hideSystemTopics: boolean): GraphLayout {
-  const topics = graph.topics.filter(
-    (topic) => !hideSystemTopics || !SYSTEM_TOPICS.has(topic.name),
-  );
+export function layoutGraph(graph: RosGraph, rosOnly: boolean): GraphLayout {
+  const showsNode = (name: string) => !rosOnly || !INFRA_NODES.has(name);
+  const topics = graph.topics
+    .filter((topic) => !rosOnly || !SYSTEM_TOPICS.has(topic.name))
+    .map((topic) => ({
+      ...topic,
+      publishers: topic.publishers.filter(showsNode),
+      subscribers: topic.subscribers.filter(showsNode),
+    }));
 
   // edges may reference participants missing from the node list (bare dds
   // apps) - draw them as nodes anyway so no edge dangles
-  const nodeIds = [...graph.nodes];
+  const nodeIds = graph.nodes.filter(showsNode);
   for (const topic of topics) {
     for (const name of [...topic.publishers, ...topic.subscribers]) {
       if (!nodeIds.includes(name)) nodeIds.push(name);

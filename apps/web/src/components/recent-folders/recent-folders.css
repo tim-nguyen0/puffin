@@ -53,6 +53,10 @@
   text-align: left;
 }
 
+.recent-folder-button:disabled {
+  cursor: default;
+}
+
 .recent-folder-button:focus-visible {
   outline: var(--button-focus-width) solid var(--color-button-focus);
   outline-offset: var(--button-focus-offset);

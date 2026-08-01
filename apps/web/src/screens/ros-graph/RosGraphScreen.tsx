@@ -5,7 +5,7 @@ import { layoutGraph } from "./graphLayout";
 import "./ros-graph.css";
 
 export function RosGraphScreen() {
-  const [hideSystemTopics, setHideSystemTopics] = useState(true);
+  const [rosOnly, setRosOnly] = useState(true);
 
   const graph = useQuery({
     queryKey: ["ros-graph"],
@@ -17,7 +17,7 @@ export function RosGraphScreen() {
     refetchInterval: 5000,
   });
 
-  const layout = graph.data ? layoutGraph(graph.data, hideSystemTopics) : null;
+  const layout = graph.data ? layoutGraph(graph.data, rosOnly) : null;
 
   return (
     <div className="ros-graph-screen">
@@ -28,10 +28,10 @@ export function RosGraphScreen() {
           <label className="ros-graph-toggle">
             <input
               type="checkbox"
-              checked={hideSystemTopics}
-              onChange={(e) => setHideSystemTopics(e.target.checked)}
+              checked={rosOnly}
+              onChange={(e) => setRosOnly(e.target.checked)}
             />
-            Hide system topics
+            ROS system only (hide puffin_api and system topics)
           </label>
           <span className="ros-graph-legend">
             <span className="ros-graph-legend-swatch ros-graph-legend-pub" /> publish

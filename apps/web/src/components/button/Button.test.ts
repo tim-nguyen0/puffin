@@ -45,7 +45,7 @@ describe("NewSimulationButton", () => {
   it("provides the reference label and decorative drone icon", () => {
     const markup = renderToStaticMarkup(createElement(NewSimulationButton));
 
-    expect(markup).toContain("New Simulation Environment");
+    expect(markup).toContain("Enter Dashboard");
     expect(markup).toContain('class="puffin-button new-simulation-button"');
     expect(markup).toContain('aria-hidden="true"');
     expect(markup).toContain("<svg");

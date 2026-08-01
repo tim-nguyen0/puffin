@@ -1,9 +1,8 @@
 import { create } from "zustand";
 import type { components } from "@puffin/api-types";
+import { useSettingsStore } from "./settingsStore";
 
 export type TelemetrySample = components["schemas"]["TelemetrySample"];
-
-const HISTORY_LIMIT = 600;
 
 interface TelemetryState {
   connected: boolean;
@@ -18,16 +17,19 @@ export const useTelemetryStore = create<TelemetryState>((set) => ({
   latest: null,
   history: [],
   ingest: (sample) =>
-    set((state) => ({
-      latest: sample,
-      history: [...state.history.slice(-(HISTORY_LIMIT - 1)), sample],
-    })),
+    set((state) => {
+      const limit = useSettingsStore.getState().telemetryHistoryLimit;
+      return {
+        latest: sample,
+        history: [...state.history.slice(-(limit - 1)), sample],
+      };
+    }),
   setConnected: (connected) => set({ connected }),
 }));
 
 let socket: WebSocket | null = null;
 
-export function connectTelemetry(url = `ws://${window.location.host}/ws/telemetry`): void {
+export function connectTelemetry(url = useSettingsStore.getState().wsUrl): void {
   if (socket) return;
   socket = new WebSocket(url);
   const { ingest, setConnected } = useTelemetryStore.getState();
