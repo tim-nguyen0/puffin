@@ -111,6 +111,10 @@ class UserSettings(BaseModel):
     telemetry_history_limit: int = Field(ge=10, le=5000)
     ws_url: str = Field(min_length=1, max_length=500)
     api_base_url: str = Field(min_length=1, max_length=500)
+    # floating terminal layout, css px offset from its default anchor
+    terminal_x: float = Field(default=0.0, ge=-8192, le=8192)
+    terminal_y: float = Field(default=0.0, ge=-8192, le=8192)
+    terminal_minimized: bool = False
 
 
 class UserSettingsUpdate(UserSettings):

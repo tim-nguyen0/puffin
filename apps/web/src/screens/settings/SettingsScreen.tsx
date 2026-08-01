@@ -50,11 +50,15 @@ export function SettingsScreen() {
     setError(null);
     setSaved(false);
     try {
+      const { terminalX, terminalY, terminalMinimized } = useSettingsStore.getState();
       await save(token, {
         units: draftUnits,
         telemetry_history_limit: parsedLimit,
         ws_url: draftWsUrl.trim(),
         api_base_url: draftApiBaseUrl.trim(),
+        terminal_x: terminalX,
+        terminal_y: terminalY,
+        terminal_minimized: terminalMinimized,
       });
       setSaved(true);
     } catch (saveError) {

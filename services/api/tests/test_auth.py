@@ -44,6 +44,9 @@ def test_settings_require_login_and_persist(client: TestClient) -> None:
         "telemetry_history_limit": 1200,
         "ws_url": "/ws/telemetry",
         "api_base_url": "/api",
+        "terminal_x": 120.5,
+        "terminal_y": -40.0,
+        "terminal_minimized": True,
     }
 
     assert client.put("/api/settings", headers=headers, json=settings).status_code == 200

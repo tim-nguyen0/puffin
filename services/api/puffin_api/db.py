@@ -42,7 +42,20 @@ def init_db(path: str) -> None:
                 telemetry_history_limit INTEGER NOT NULL DEFAULT 600,
                 ws_url TEXT NOT NULL DEFAULT '/ws/telemetry',
                 api_base_url TEXT NOT NULL DEFAULT '/api',
+                terminal_x REAL NOT NULL DEFAULT 0,
+                terminal_y REAL NOT NULL DEFAULT 0,
+                terminal_minimized INTEGER NOT NULL DEFAULT 0,
                 FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
             );
             """
         )
+        # dbs created before the terminal layout columns existed
+        for ddl in (
+            "ALTER TABLE user_settings ADD COLUMN terminal_x REAL NOT NULL DEFAULT 0",
+            "ALTER TABLE user_settings ADD COLUMN terminal_y REAL NOT NULL DEFAULT 0",
+            "ALTER TABLE user_settings ADD COLUMN terminal_minimized INTEGER NOT NULL DEFAULT 0",
+        ):
+            try:
+                connection.execute(ddl)
+            except sqlite3.OperationalError:
+                pass

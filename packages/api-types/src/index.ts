@@ -775,6 +775,9 @@ export interface components {
             telemetry_history_limit: number;
             ws_url: string;
             api_base_url: string;
+            terminal_x: number;
+            terminal_y: number;
+            terminal_minimized: boolean;
         };
         Health: {
             /** @enum {string} */

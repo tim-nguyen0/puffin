@@ -9,7 +9,8 @@ router = APIRouter()
 def read_settings(db: Db, user_id: str) -> UserSettings:
     row = db.execute(
         """
-        SELECT units, telemetry_history_limit, ws_url, api_base_url
+        SELECT units, telemetry_history_limit, ws_url, api_base_url,
+               terminal_x, terminal_y, terminal_minimized
         FROM user_settings
         WHERE user_id = ?
         """,
@@ -30,7 +31,8 @@ def update_settings(
     db.execute(
         """
         UPDATE user_settings
-        SET units = ?, telemetry_history_limit = ?, ws_url = ?, api_base_url = ?
+        SET units = ?, telemetry_history_limit = ?, ws_url = ?, api_base_url = ?,
+            terminal_x = ?, terminal_y = ?, terminal_minimized = ?
         WHERE user_id = ?
         """,
         (
@@ -38,6 +40,9 @@ def update_settings(
             body.telemetry_history_limit,
             body.ws_url,
             body.api_base_url,
+            body.terminal_x,
+            body.terminal_y,
+            int(body.terminal_minimized),
             user.id,
         ),
     )
