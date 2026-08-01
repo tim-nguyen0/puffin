@@ -135,19 +135,39 @@ class RosAdapter:
         )
 
     def graph(self) -> AdapterResult:
+        def endpoint_nodes(infos: Any) -> list[str]:
+            # fastdds registers bare (non-ros) participants under a
+            # placeholder; the only one in this stack is the uxrce agent
+            # bridging px4, so label it as such instead of
+            # _CREATED_BY_BARE_DDS_APP_/_CREATED_BY_BARE_DDS_APP_
+            names = set()
+            for info in infos:
+                if info.node_name == "_CREATED_BY_BARE_DDS_APP_":
+                    names.add("/px4_xrce_agent")
+                else:
+                    names.add(f"{info.node_namespace.rstrip('/')}/{info.node_name}")
+            return sorted(names)
+
         try:
             node = self._ensure_node()
             node_names = node.get_node_names_and_namespaces()
-            topic_names = node.get_topic_names_and_types()
+            topics = [
+                {
+                    "name": name,
+                    "type": types[0],
+                    "publishers": endpoint_nodes(node.get_publishers_info_by_topic(name)),
+                    "subscribers": endpoint_nodes(node.get_subscriptions_info_by_topic(name)),
+                }
+                for name, types in node.get_topic_names_and_types()
+                if types
+            ]
         except Exception as exc:  # noqa: BLE001 - clean {ok, detail} at the boundary
             return AdapterResult(ok=False, detail=f"ros graph unavailable: {exc}")
         return AdapterResult(
             ok=True,
             data={
                 "nodes": [f"{ns.rstrip('/')}/{name}" for name, ns in node_names],
-                "topics": [
-                    {"name": name, "type": types[0]} for name, types in topic_names if types
-                ],
+                "topics": topics,
             },
         )
 

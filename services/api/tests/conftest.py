@@ -63,6 +63,8 @@ class FakeRos:
                     {
                         "name": "/fmu/out/vehicle_status_v1",
                         "type": "px4_msgs/msg/VehicleStatus",
+                        "publishers": ["/px4_xrce_agent"],
+                        "subscribers": ["/puffin_api"],
                     }
                 ],
             },

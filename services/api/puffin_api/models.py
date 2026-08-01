@@ -54,6 +54,8 @@ class RosService(BaseModel):
 class RosTopic(BaseModel):
     name: str
     type: str
+    publishers: list[str]
+    subscribers: list[str]
 
 
 class RosGraph(BaseModel):

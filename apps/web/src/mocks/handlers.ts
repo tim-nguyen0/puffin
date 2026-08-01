@@ -42,8 +42,33 @@ export const handlers = [
   ),
   http.get("/api/ros/graph", () =>
     HttpResponse.json({
-      nodes: ["/puffin_api", "/offboard_demo"],
-      topics: [{ name: "/fmu/out/vehicle_status_v1", type: "px4_msgs/msg/VehicleStatus" }],
+      nodes: ["/puffin_api", "/offboard_demo", "/px4_xrce_agent"],
+      topics: [
+        {
+          name: "/fmu/out/vehicle_status_v1",
+          type: "px4_msgs/msg/VehicleStatus",
+          publishers: ["/px4_xrce_agent"],
+          subscribers: ["/puffin_api"],
+        },
+        {
+          name: "/fmu/out/vehicle_local_position_v1",
+          type: "px4_msgs/msg/VehicleLocalPosition",
+          publishers: ["/px4_xrce_agent"],
+          subscribers: ["/puffin_api", "/offboard_demo"],
+        },
+        {
+          name: "/fmu/in/trajectory_setpoint",
+          type: "px4_msgs/msg/TrajectorySetpoint",
+          publishers: ["/offboard_demo"],
+          subscribers: ["/px4_xrce_agent"],
+        },
+        {
+          name: "/fmu/in/vehicle_command",
+          type: "px4_msgs/msg/VehicleCommand",
+          publishers: ["/puffin_api", "/offboard_demo"],
+          subscribers: ["/px4_xrce_agent"],
+        },
+      ],
     } satisfies Schemas["RosGraph"]),
   ),
   http.get("/api/ros/lifecycle/:nodeName", ({ params }) =>

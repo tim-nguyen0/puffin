@@ -278,13 +278,23 @@ components:
           type: string
 
     RosTopic:
+      # publishers/subscribers are fully-qualified node names - the edges the
+      # ros-graph screen draws, rqt style (node -> topic -> node)
       type: object
-      required: [name, type]
+      required: [name, type, publishers, subscribers]
       properties:
         name:
           type: string
         type:
           type: string
+        publishers:
+          type: array
+          items:
+            type: string
+        subscribers:
+          type: array
+          items:
+            type: string
 
     RosGraph:
       type: object

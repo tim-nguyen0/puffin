@@ -587,6 +587,8 @@ export interface components {
         RosTopic: {
             name: string;
             type: string;
+            publishers: string[];
+            subscribers: string[];
         };
         RosGraph: {
             nodes: string[];
