@@ -68,12 +68,29 @@ def make_vehicle_command(
     return msg
 
 
-def make_offboard_control_mode(node: Any) -> Any:
+def make_offboard_control_mode(node: Any, velocity: bool = False) -> Any:
     from px4_msgs.msg import OffboardControlMode
 
     msg = OffboardControlMode()
     msg.timestamp = now_us(node)
-    msg.position = True
+    msg.position = not velocity
+    msg.velocity = velocity
+    return msg
+
+
+def make_velocity_setpoint(
+    node: Any, velocity: tuple[float, float, float], yaw_rate: float
+) -> Any:
+    from px4_msgs.msg import TrajectorySetpoint
+
+    msg = TrajectorySetpoint()
+    msg.timestamp = now_us(node)
+    # nan position = velocity control only
+    msg.position = [float("nan")] * 3
+    msg.velocity = [float(velocity[0]), float(velocity[1]), float(velocity[2])]
+    msg.acceleration = [float("nan")] * 3
+    msg.yaw = float("nan")
+    msg.yawspeed = float(yaw_rate)
     return msg
 
 

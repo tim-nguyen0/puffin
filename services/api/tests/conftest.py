@@ -36,6 +36,7 @@ class FakeRos:
         self.transitions: list[tuple[str, str]] = []
         self.lifecycle = {"offboard_demo": "inactive"}
         self.telemetry: dict | None = None
+        self.teleop_frames: list[tuple[float, float, float, float]] = []
 
     def send_vehicle_command(
         self, command: int, param1: float = 0.0, param7: float = 0.0
@@ -85,6 +86,12 @@ class FakeRos:
         if transition == "activate":
             self.lifecycle[node_name] = "active"
         return AdapterResult(ok=True, detail=f"{node_name}: {transition} accepted")
+
+    def publish_teleop(
+        self, vx: float, vy: float, vz: float, yaw_rate: float = 0.0
+    ) -> AdapterResult:
+        self.teleop_frames.append((vx, vy, vz, yaw_rate))
+        return AdapterResult(ok=True)
 
     def latest_telemetry(self) -> AdapterResult:
         if self.telemetry is None:

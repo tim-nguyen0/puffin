@@ -327,6 +327,29 @@ class RosAdapter:
             VEHICLE_CMD_NAV_TAKEOFF, param4=nan, param5=nan, param6=nan, param7=amsl
         )
 
+    def publish_teleop(
+        self, vx: float, vy: float, vz: float, yaw_rate: float = 0.0
+    ) -> AdapterResult:
+        # ned frame, matching the teleop node; clamping happens sim-side
+        try:
+            from geometry_msgs.msg import Twist
+
+            node = self._ensure_node()
+            with self._init_lock:
+                if "teleop" not in self._clients:
+                    self._clients["teleop"] = node.create_publisher(
+                        Twist, "/puffin/teleop/cmd_vel", 10
+                    )
+            msg = Twist()
+            msg.linear.x = float(vx)
+            msg.linear.y = float(vy)
+            msg.linear.z = float(vz)
+            msg.angular.z = float(yaw_rate)
+            self._clients["teleop"].publish(msg)
+        except Exception as exc:  # noqa: BLE001 - clean {ok, detail} at the boundary
+            return AdapterResult(ok=False, detail=f"teleop publish failed: {exc}")
+        return AdapterResult(ok=True)
+
     def _now_us(self) -> int:
         # px4_msgs timestamps are microseconds from the node clock (gotcha #7).
         return int(self._node.get_clock().now().nanoseconds // 1000)
