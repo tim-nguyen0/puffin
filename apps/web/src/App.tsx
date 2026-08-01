@@ -1,3 +1,4 @@
+import { SettingsScreen } from "./screens/settings/SettingsScreen";
 import { Route, Routes, useLocation } from "react-router-dom";
 import { FloatingTerminal } from "./components/floating-terminal/FloatingTerminal";
 import { Sidebar } from "./components/sidebar/Sidebar";
@@ -12,6 +13,7 @@ const SCREENS = [
   { path: "/dashboard", element: <DashboardScreen /> },
   { path: "/ros-services", element: <RosServicesScreen /> },
   { path: "/ros-graph", element: <RosGraphScreen /> },
+  { path: "/settings", element: <SettingsScreen /> },
 ];
 
 export function App() {

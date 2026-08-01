@@ -15,7 +15,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Simulation", icon: cpu, path: null },
   { label: "ROS2 Services", icon: ros2Services, path: "/ros-services" },
   { label: "ROS2 Graph", icon: gitBranch, path: "/ros-graph" },
-  { label: "Settings", icon: settings, path: null },
+  { label: "Settings", icon: settings, path: "/settings" },
 ];
 
 export function Sidebar() {
