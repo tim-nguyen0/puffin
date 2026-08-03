@@ -115,7 +115,7 @@ export function SimulationScreen() {
               <div className="simulation-viewport-actions">
                 <span className="novnc-tag">
                   <i />
-                  noVNC · /novnc
+                  noVNC :6080 · full gazebo ui
                 </span>
               </div>
             }

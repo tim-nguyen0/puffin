@@ -21,24 +21,27 @@
 }
 
 .viewport-panel {
-  grid-area: viewport;
   border-color: var(--color-graph-border);
   background: var(--color-graph-surface);
 }
 
-.telemetry-panel {
+.dashboard-grid > .viewport-panel {
+  grid-area: viewport;
+}
+
+.dashboard-grid > .telemetry-panel {
   grid-area: telemetry;
 }
 
-.control-panel {
+.dashboard-grid > .control-panel {
   grid-area: control;
 }
 
-.processes-panel {
+.dashboard-grid > .processes-panel {
   grid-area: processes;
 }
 
-.nodes-panel {
+.dashboard-grid > .nodes-panel {
   grid-area: nodes;
 }
 
@@ -90,6 +93,10 @@
 .viewport-stats b {
   color: var(--color-command-accent);
   font-weight: 500;
+}
+
+.viewport-stats a {
+  color: var(--color-command-link);
 }
 
 .viewport-body {

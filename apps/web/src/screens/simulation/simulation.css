@@ -232,6 +232,7 @@
 
 .simulation-service-strip {
   display: flex;
+  flex-wrap: wrap;
   min-height: var(--simulation-service-strip-height);
   box-sizing: border-box;
   align-items: center;
