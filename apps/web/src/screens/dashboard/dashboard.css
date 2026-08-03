@@ -1,67 +1,129 @@
+/* console design: light page, dark viewport panel. bleeds over main's
+   padding so the page background reaches the chrome. */
 .dashboard-screen {
+  min-height: calc(100vh - var(--topbar-height));
+  box-sizing: border-box;
+  margin: calc(var(--space-4) * -1);
+  padding: var(--graph-page-gap);
+  background: var(--color-page-bg);
+  color: var(--color-page-text);
+}
+
+.dashboard-grid {
   display: grid;
-  grid-template-columns: 1fr;
-
-  /* cards keep their own height instead of stretching to the row */
-  align-items: start;
-  gap: var(--space-4);
-  padding: var(--space-2) var(--space-4) var(--space-4);
-  color: var(--color-text);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--dashboard-card-min-width)), 1fr));
+  gap: var(--graph-page-gap);
+  align-items: stretch;
 }
 
-.dashboard-screen h1 {
+.dashboard-panel-wide {
   grid-column: 1 / -1;
-  margin-top: 0;
-  margin-bottom: var(--space-3);
 }
 
-.dashboard-section {
-  padding: var(--space-4);
-  background: var(--color-surface);
-  border: var(--border-width) solid var(--color-border);
+.panel-pad {
+  padding: var(--space-3);
+}
+
+/* -- viewport panel: the one dark card ---------------------------------- */
+.viewport-panel {
+  border-color: var(--color-graph-border);
+  background: var(--color-graph-surface);
+}
+
+.viewport-panel .dashboard-panel-header {
+  background: var(--color-graph-surface);
+}
+
+.viewport-panel .dashboard-panel-header h2 {
+  color: var(--color-graph-text);
+}
+
+.viewport-stats {
+  padding: var(--space-1) var(--space-2);
   border-radius: var(--radius-2);
+  background: var(--color-command-bg);
+  color: var(--color-graph-muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-graph-micro);
+  white-space: nowrap;
 }
 
-.dashboard-section h2 {
-  margin-top: 0;
-  margin-bottom: var(--space-2);
+.viewport-stats b {
+  color: var(--color-command-accent);
+  font-weight: 500;
 }
 
-/* four-column base; every card takes half of it, so cards pair up two per row
-   and the shorter card of a pair leaves the next row offset against it */
-@media (width >= 64rem) {
-  .dashboard-screen {
-    grid-template-columns: repeat(4, 1fr);
-  }
-
-  .dashboard-section {
-    grid-column: span 2;
-  }
+.viewport-body {
+  padding: 0 var(--space-3) var(--space-3);
 }
 
+.viewport-body .sim-viewport-frame {
+  border-color: var(--color-graph-border);
+}
+
+.viewport-body .sim-viewport-link {
+  color: var(--color-command-link);
+}
+
+/* -- telemetry ----------------------------------------------------------- */
+.telemetry-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--dashboard-metric-min-width)), 1fr));
+  gap: var(--space-2);
+}
+
+/* -- shared bits on the light surface ------------------------------------ */
 .dashboard-ok {
-  color: var(--color-ok);
+  color: var(--color-status-running);
 }
 
 .dashboard-warn {
-  color: var(--color-warn);
+  color: var(--color-status-armed);
 }
 
 .dashboard-error {
   margin-top: var(--space-2);
-  color: var(--color-danger);
+  color: var(--color-danger-strong);
   font-size: var(--text-sm);
 }
 
 .dashboard-empty {
-  color: var(--color-text-muted);
+  color: var(--color-page-muted);
+  font-size: var(--text-sm);
+}
+
+.dashboard-world {
+  margin: 0 0 var(--space-2);
   font-size: var(--text-sm);
 }
 
 .dashboard-process-list {
-  margin: var(--space-2) 0 0;
-  padding-left: var(--space-4);
+  margin: 0 0 var(--space-2);
+  padding: 0;
+  list-style: none;
   font-size: var(--text-sm);
+}
+
+.dashboard-process-list li {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  padding: var(--space-2) 0;
+  border-bottom: var(--graph-border-width) solid var(--color-page-border);
+}
+
+.dashboard-process-list li:last-child {
+  border-bottom: none;
+}
+
+.dashboard-process-name {
+  font-family: var(--font-mono);
+}
+
+.dashboard-process-uptime {
+  margin-left: auto;
+  color: var(--color-page-muted);
+  font-family: var(--font-mono);
 }
 
 .dashboard-actions {
@@ -77,34 +139,22 @@
   font-size: var(--text-md);
 }
 
-.dashboard-telemetry {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: var(--space-1) var(--space-3);
-  margin-top: var(--space-2);
-  font-size: var(--text-sm);
-}
-
-.dashboard-telemetry dt {
-  color: var(--color-text-muted);
-}
-
 .dashboard-field {
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
-  margin-top: var(--space-3);
-  font-size: var(--text-sm);
-  color: var(--color-text-muted);
   max-width: 10rem;
+  margin-top: var(--space-3);
+  color: var(--color-page-muted);
+  font-size: var(--text-sm);
 }
 
 .dashboard-field input {
   padding: var(--space-1) var(--space-2);
-  background: var(--color-bg);
-  border: var(--border-width) solid var(--color-border);
+  background: var(--color-page-control);
+  border: var(--graph-border-width) solid var(--color-page-border);
   border-radius: var(--radius-1);
-  color: var(--color-text);
+  color: var(--color-page-text);
   font-size: var(--text-md);
 }
 
@@ -115,7 +165,7 @@
   align-items: center;
   margin-top: var(--space-3);
   padding-top: var(--space-3);
-  border-top: var(--border-width) solid var(--color-border);
+  border-top: var(--graph-border-width) solid var(--color-page-border);
   font-size: var(--text-sm);
 }
 
@@ -123,16 +173,76 @@
   display: flex;
   gap: var(--space-1);
   align-items: center;
-  color: var(--color-text-muted);
+  color: var(--color-page-muted);
 }
 
 .dashboard-status-dot {
   width: var(--space-2);
   height: var(--space-2);
   border-radius: 50%;
-  background: var(--color-text-muted);
+  background: var(--color-status-stopped);
 }
 
 .dashboard-status-dot.is-armed {
-  background: var(--color-ok);
+  background: var(--color-status-running);
+}
+
+/* -- light-surface overrides for components styled for the dark theme ---- */
+.dashboard-screen .lifecycle-quick-row {
+  border-color: var(--color-page-border);
+}
+
+.dashboard-screen .lifecycle-quick-name {
+  color: var(--color-page-text);
+}
+
+.dashboard-screen .lifecycle-quick-state {
+  color: var(--color-page-muted);
+}
+
+.dashboard-screen .lifecycle-quick-state-active {
+  color: var(--color-status-running);
+}
+
+.dashboard-screen .lifecycle-quick-state-unconfigured,
+.dashboard-screen .lifecycle-quick-state-unknown {
+  color: var(--color-status-armed);
+}
+
+.dashboard-screen .lifecycle-quick-button,
+.dashboard-screen .teleop-button {
+  background: var(--color-page-control);
+  border-color: var(--color-page-border);
+  color: var(--color-page-text);
+}
+
+.dashboard-screen .lifecycle-quick-button:disabled {
+  color: var(--color-status-stopped);
+}
+
+.dashboard-screen .lifecycle-quick-kill:not(:disabled) {
+  border-color: var(--color-danger-border);
+  color: var(--color-danger-strong);
+}
+
+.dashboard-screen .lifecycle-quick-empty,
+.dashboard-screen .teleop-hint {
+  color: var(--color-page-muted);
+}
+
+.dashboard-screen .teleop-button-held {
+  border-color: var(--color-service-blue);
+  color: var(--color-service-blue);
+}
+
+.dashboard-screen .teleop-dot {
+  background: var(--color-status-stopped);
+}
+
+.dashboard-screen .teleop-dot.is-ok {
+  background: var(--color-discovery);
+}
+
+.dashboard-screen .lifecycle-quick-error {
+  color: var(--color-danger-strong);
 }

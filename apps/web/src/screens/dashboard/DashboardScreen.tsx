@@ -1,9 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
+import { AppIcon } from "../../components/app-icon";
 import { Button } from "../../components/button";
-import { TeleopPad } from "../../components/teleop";
+import { DashboardPanel } from "../../components/dashboard-panel";
 import { LifecycleQuickPanel } from "../../components/lifecycle";
+import { MetricCard } from "../../components/metric-card";
 import { SimViewport } from "../../components/sim-viewport";
+import { StatusTag } from "../../components/status-tag";
+import { TeleopPad } from "../../components/teleop";
 import { api } from "../../lib/api";
 import { useSettingsStore } from "../../lib/settingsStore";
 import { connectTelemetry, disconnectTelemetry, useTelemetryStore } from "../../lib/telemetryStore";
@@ -155,154 +159,197 @@ export function DashboardScreen() {
 
   return (
     <div className="dashboard-screen">
-      <h1>Simulation</h1>
+      <div className="dashboard-grid">
+        <DashboardPanel
+          className="viewport-panel dashboard-panel-wide"
+          title="Gazebo 3D Viewport"
+          icon={<AppIcon name="camera" />}
+          headerAction={
+            <span className="viewport-stats">
+              MODE: <b>{latest?.mode ?? "—"}</b> · LINK: <b>{connected ? "LIVE" : "DOWN"}</b>
+            </span>
+          }
+        >
+          <div className="viewport-body">
+            <SimViewport />
+          </div>
+        </DashboardPanel>
 
-      <section className="dashboard-section">
-        <h2>Simulation</h2>
-        {simStatus.isLoading ? <p>Loading sim status…</p> : null}
-        {simStatus.isError ? <p className="dashboard-error">Could not reach the API.</p> : null}
-        {simStatus.data ? (
-          <>
-            <p>
-              World: <strong>{simStatus.data.world}</strong> —{" "}
-              <span className={simStatus.data.running ? "dashboard-ok" : "dashboard-warn"}>
-                {simStatus.data.running ? "Running" : "Not running"}
-              </span>
-            </p>
-            {simStatus.data.processes.length === 0 ? (
-              <p className="dashboard-empty">No processes reported.</p>
+        <DashboardPanel
+          title="PX4 Flight Telemetry"
+          icon={<AppIcon name="drone" />}
+          headerAction={
+            <StatusTag
+              status={latest?.armed ? "armed" : "stopped"}
+              label={latest ? (latest.armed ? "ARMED" : "DISARMED") : "NO LINK"}
+            />
+          }
+        >
+          <div className="panel-pad">
+            {latest ? (
+              <div className="telemetry-metrics">
+                <MetricCard
+                  label={`Altitude (${lengthUnit})`}
+                  value={toLength(-latest.ned.z).toFixed(2)}
+                  mono
+                  accent="cyan"
+                />
+                <MetricCard
+                  label={`North / East (${lengthUnit})`}
+                  value={`${toLength(latest.ned.x).toFixed(1)} / ${toLength(latest.ned.y).toFixed(1)}`}
+                  mono
+                />
+                <MetricCard
+                  label="Flight Mode"
+                  value={latest.mode}
+                  accent="green"
+                  valueAccent={offboardActive ? "green" : undefined}
+                />
+                <MetricCard
+                  label="Battery"
+                  value={`${latest.battery_v.toFixed(2)} V`}
+                  mono
+                />
+              </div>
             ) : (
-              <ul className="dashboard-process-list">
-                {simStatus.data.processes.map((proc) => (
-                  <li key={proc.name}>
-                    {proc.name}: {proc.state} ({proc.uptime_s}s)
-                  </li>
-                ))}
-              </ul>
+              <p className="dashboard-empty">No telemetry received yet.</p>
             )}
-          </>
-        ) : null}
-        <div className="dashboard-actions">
-          <Button onClick={() => runAction(startSim.mutate)} disabled={anyPending}>
-            Start
-          </Button>
-          <Button onClick={() => runAction(stopSim.mutate)} disabled={anyPending}>
-            Stop
-          </Button>
-          <Button onClick={() => runAction(resetSim.mutate)} disabled={anyPending}>
-            Reset
-          </Button>
-        </div>
-      </section>
+          </div>
+        </DashboardPanel>
 
-      <section className="dashboard-section">
-        <h2>Nodes</h2>
-        <LifecycleQuickPanel />
-      </section>
+        <DashboardPanel title="Control Panel" icon={<AppIcon name="pipeline" />}>
+          <div className="panel-pad">
+            <div className="dashboard-actions">
+              <Button
+                onClick={() => runAction(arm.mutate)}
+                disabled={anyPending || offboardActive}
+                title={manualLockTitle}
+              >
+                Arm
+              </Button>
+              <Button
+                onClick={() => runAction(disarm.mutate)}
+                disabled={anyPending || offboardActive}
+                title={manualLockTitle}
+              >
+                Disarm
+              </Button>
+              <Button
+                onClick={() => runAction(land.mutate)}
+                disabled={anyPending}
+                title={offboardActive ? "overrides offboard and lands" : undefined}
+              >
+                Land
+              </Button>
+            </div>
+            <label className="dashboard-field">
+              Takeoff altitude (m)
+              <input
+                type="number"
+                min={1}
+                max={50}
+                value={altitude}
+                onChange={(e) => setAltitude(e.target.value)}
+              />
+            </label>
+            <div className="dashboard-actions">
+              <Button
+                onClick={handleTakeoff}
+                disabled={anyPending || offboardActive}
+                title={manualLockTitle}
+              >
+                Takeoff
+              </Button>
+            </div>
+            {actionError ? (
+              <p className="dashboard-error" role="alert">
+                {actionError}
+              </p>
+            ) : null}
+            <TeleopPad />
+            <div className="dashboard-vehicle-status">
+              <span className="dashboard-status-chip">
+                <span className={`dashboard-status-dot ${latest?.armed ? "is-armed" : ""}`} />
+                {latest ? (latest.armed ? "Armed" : "Disarmed") : "No telemetry"}
+              </span>
+              <span className="dashboard-status-chip">Mode: {latest?.mode ?? "—"}</span>
+              {offboardActive ? (
+                <span className="dashboard-status-chip dashboard-warn">
+                  offboard node in control - manual controls locked
+                </span>
+              ) : null}
+              {lastCommand ? (
+                <span
+                  className={`dashboard-status-chip ${lastCommand.ok ? "dashboard-ok" : "dashboard-error"}`}
+                  role="status"
+                >
+                  {lastCommand.label}: {lastCommand.detail}
+                </span>
+              ) : null}
+            </div>
+          </div>
+        </DashboardPanel>
 
-      <section className="dashboard-section">
-        <h2>Live Telemetry</h2>
-        <p>
-          Connection:{" "}
-          <span className={connected ? "dashboard-ok" : "dashboard-warn"}>
-            {connected ? "Connected" : "Disconnected"}
-          </span>
-        </p>
-        {latest ? (
-          <dl className="dashboard-telemetry">
-            <dt>Armed</dt>
-            <dd>{latest.armed ? "Yes" : "No"}</dd>
-            <dt>Mode</dt>
-            <dd>{latest.mode}</dd>
-            <dt>Position (NED, {lengthUnit})</dt>
-            <dd>
-              x: {toLength(latest.ned.x).toFixed(2)}, y: {toLength(latest.ned.y).toFixed(2)}, z:{" "}
-              {toLength(latest.ned.z).toFixed(2)}
-            </dd>
-            <dt>Battery</dt>
-            <dd>{latest.battery_v.toFixed(2)} V</dd>
-          </dl>
-        ) : (
-          <p className="dashboard-empty">No telemetry received yet.</p>
-        )}
-      </section>
+        <DashboardPanel
+          title="Simulation Processes"
+          icon={<AppIcon name="network" />}
+          headerAction={
+            simStatus.data ? (
+              <StatusTag
+                status={simStatus.data.running ? "running" : "stopped"}
+                label={simStatus.data.running ? "RUNNING" : "STOPPED"}
+              />
+            ) : undefined
+          }
+        >
+          <div className="panel-pad">
+            {simStatus.isLoading ? <p>Loading sim status…</p> : null}
+            {simStatus.isError ? (
+              <p className="dashboard-error">Could not reach the API.</p>
+            ) : null}
+            {simStatus.data ? (
+              <>
+                <p className="dashboard-world">
+                  World: <strong>{simStatus.data.world}</strong>
+                </p>
+                {simStatus.data.processes.length === 0 ? (
+                  <p className="dashboard-empty">No processes reported.</p>
+                ) : (
+                  <ul className="dashboard-process-list">
+                    {simStatus.data.processes.map((proc) => (
+                      <li key={proc.name}>
+                        <span className="dashboard-process-name">{proc.name}</span>
+                        <span className="dashboard-process-uptime">{proc.uptime_s}s</span>
+                        <StatusTag
+                          status={proc.state === "RUNNING" ? "running" : "stopped"}
+                          label={proc.state}
+                        />
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </>
+            ) : null}
+            <div className="dashboard-actions">
+              <Button onClick={() => runAction(startSim.mutate)} disabled={anyPending}>
+                Start
+              </Button>
+              <Button onClick={() => runAction(stopSim.mutate)} disabled={anyPending}>
+                Stop
+              </Button>
+              <Button onClick={() => runAction(resetSim.mutate)} disabled={anyPending}>
+                Reset
+              </Button>
+            </div>
+          </div>
+        </DashboardPanel>
 
-      <section className="dashboard-section">
-        <h2>Control Panel</h2>
-        <div className="dashboard-actions">
-          <Button
-            onClick={() => runAction(arm.mutate)}
-            disabled={anyPending || offboardActive}
-            title={manualLockTitle}
-          >
-            Arm
-          </Button>
-          <Button
-            onClick={() => runAction(disarm.mutate)}
-            disabled={anyPending || offboardActive}
-            title={manualLockTitle}
-          >
-            Disarm
-          </Button>
-          <Button
-            onClick={() => runAction(land.mutate)}
-            disabled={anyPending}
-            title={offboardActive ? "overrides offboard and lands" : undefined}
-          >
-            Land
-          </Button>
-        </div>
-        <label className="dashboard-field">
-          Takeoff altitude (m)
-          <input
-            type="number"
-            min={1}
-            max={50}
-            value={altitude}
-            onChange={(e) => setAltitude(e.target.value)}
-          />
-        </label>
-        <div className="dashboard-actions">
-          <Button
-            onClick={handleTakeoff}
-            disabled={anyPending || offboardActive}
-            title={manualLockTitle}
-          >
-            Takeoff
-          </Button>
-        </div>
-        {actionError ? (
-          <p className="dashboard-error" role="alert">
-            {actionError}
-          </p>
-        ) : null}
-        <TeleopPad />
-        <div className="dashboard-vehicle-status">
-          <span className="dashboard-status-chip">
-            <span className={`dashboard-status-dot ${latest?.armed ? "is-armed" : ""}`} />
-            {latest ? (latest.armed ? "Armed" : "Disarmed") : "No telemetry"}
-          </span>
-          <span className="dashboard-status-chip">Mode: {latest?.mode ?? "—"}</span>
-          {offboardActive ? (
-            <span className="dashboard-status-chip dashboard-warn">
-              offboard node in control - manual controls locked
-            </span>
-          ) : null}
-          {lastCommand ? (
-            <span
-              className={`dashboard-status-chip ${lastCommand.ok ? "dashboard-ok" : "dashboard-error"}`}
-              role="status"
-            >
-              {lastCommand.label}: {lastCommand.detail}
-            </span>
-          ) : null}
-        </div>
-      </section>
-
-      <section className="dashboard-section">
-        <h2>Simulation View</h2>
-        <SimViewport />
-      </section>
+        <DashboardPanel title="Lifecycle Nodes" icon={<AppIcon name="sensors" />}>
+          <div className="panel-pad">
+            <LifecycleQuickPanel />
+          </div>
+        </DashboardPanel>
+      </div>
     </div>
   );
 }
