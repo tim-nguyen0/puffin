@@ -1,16 +1,16 @@
 import { describe, expect, it } from "vitest";
 import { simViewportUrl } from "./viewportUrl";
 
-describe("sim viewport url", () => {
-  it("defaults to the full gazebo stream on 6080", () => {
-    expect(simViewportUrl("http:", "localhost")).toBe(
-      "http://localhost:6080/vnc.html?autoconnect=true&resize=scale&reconnect=true",
-    );
+describe("sim viewport url (public demo build)", () => {
+  it("serves the full gazebo stream from the same-origin proxy", () => {
+    const url = simViewportUrl();
+    expect(url.startsWith("/novnc/vnc.html?")).toBe(true);
+    expect(url).toContain("path=novnc/websockify");
   });
 
-  it("serves the chrome-free scene from 6081", () => {
-    expect(simViewportUrl("https:", "puffin.test", "clean")).toBe(
-      "https://puffin.test:6081/vnc.html?autoconnect=true&resize=scale&reconnect=true",
-    );
+  it("serves the chrome-free scene from its own proxy path", () => {
+    const url = simViewportUrl("clean");
+    expect(url.startsWith("/novnc-clean/vnc.html?")).toBe(true);
+    expect(url).toContain("path=novnc-clean/websockify");
   });
 });

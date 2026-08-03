@@ -1,6 +1,5 @@
 import { useEffect, type ReactNode } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
-import { FloatingTerminal } from "./components/floating-terminal/FloatingTerminal";
 import { Sidebar } from "./components/sidebar/Sidebar";
 import { TopBar } from "./components/topbar/TopBar";
 import { useAuthStore } from "./lib/authStore";
@@ -44,7 +43,6 @@ function AppShell() {
           </Routes>
         </main>
       </div>
-      <FloatingTerminal />
     </div>
   );
 }

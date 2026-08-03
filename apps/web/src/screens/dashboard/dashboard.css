@@ -99,6 +99,11 @@
   color: var(--color-command-link);
 }
 
+.viewport-stats-disabled {
+  color: var(--color-graph-subtle);
+  cursor: default;
+}
+
 .viewport-body {
   padding: 0 var(--space-3) var(--space-3);
 }
