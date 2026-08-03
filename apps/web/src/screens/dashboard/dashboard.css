@@ -24,8 +24,10 @@
   padding: var(--space-3);
 }
 
-/* -- viewport panel: the one dark card ---------------------------------- */
+/* -- viewport panel: the one dark card. capped so it stays a window even
+   when the grid collapses to one column ---------------------------------- */
 .viewport-panel {
+  max-width: var(--sim-viewport-max-width);
   border-color: var(--color-graph-border);
   background: var(--color-graph-surface);
 }
