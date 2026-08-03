@@ -163,7 +163,7 @@ export function DashboardScreen() {
       <div className="dashboard-grid">
         <DashboardPanel
           className="viewport-panel dashboard-panel-wide"
-          title="Gazebo 3D Viewport"
+          title="Simulation View"
           icon={<AppIcon name="camera" />}
           headerAction={
             <span className="viewport-stats">
@@ -173,7 +173,7 @@ export function DashboardScreen() {
           }
         >
           <div className="viewport-body">
-            <SimViewport />
+            <SimViewport variant="clean" />
           </div>
         </DashboardPanel>
 

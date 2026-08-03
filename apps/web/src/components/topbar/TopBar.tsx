@@ -5,9 +5,9 @@ import { WorkspaceHeader } from "../workspace-header";
 
 const SCREEN_LABELS: Record<string, string> = {
   "/": "Launcher",
-  "/dashboard": "Simulation",
+  "/dashboard": "Dashboard",
   "/dashboard/console": "Console",
-  "/simulation": "Operations",
+  "/simulation": "Simulation",
   "/ros-services": "ROS Nodes",
   "/ros-graph": "ROS2 Graph",
   "/settings": "Settings",

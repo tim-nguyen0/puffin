@@ -15,8 +15,8 @@ type NavItem = { label: string; icon: string | ReactNode; path: string | null };
 // routeless items exist in the design but their screens haven't shipped;
 // they render disabled until they do
 const NAV_ITEMS: NavItem[] = [
-  { label: "Simulation", icon: cpu, path: "/dashboard" },
-  { label: "Operations", icon: <AppIcon name="pipeline" />, path: "/simulation" },
+  { label: "Dashboard", icon: cpu, path: "/dashboard" },
+  { label: "Simulation", icon: <AppIcon name="pipeline" />, path: "/simulation" },
   { label: "Vehicles", icon: <AppIcon name="vehicle" />, path: null },
   { label: "World Editor", icon: <AppIcon name="globe" />, path: null },
   { label: "Sensors", icon: <AppIcon name="sensors" />, path: null },
