@@ -178,6 +178,7 @@ export function DashboardScreen() {
         </DashboardPanel>
 
         <DashboardPanel
+          className="telemetry-panel"
           title="PX4 Flight Telemetry"
           icon={<AppIcon name="drone" />}
           headerAction={
@@ -219,7 +220,11 @@ export function DashboardScreen() {
           </div>
         </DashboardPanel>
 
-        <DashboardPanel title="Control Panel" icon={<AppIcon name="pipeline" />}>
+        <DashboardPanel
+          className="control-panel"
+          title="Control Panel"
+          icon={<AppIcon name="pipeline" />}
+        >
           <div className="panel-pad">
             <div className="dashboard-actions">
               <Button
@@ -293,6 +298,7 @@ export function DashboardScreen() {
         </DashboardPanel>
 
         <DashboardPanel
+          className="processes-panel"
           title="Simulation Processes"
           icon={<AppIcon name="network" />}
           headerAction={
@@ -346,7 +352,11 @@ export function DashboardScreen() {
           </div>
         </DashboardPanel>
 
-        <DashboardPanel title="Lifecycle Nodes" icon={<AppIcon name="sensors" />}>
+        <DashboardPanel
+          className="nodes-panel"
+          title="Lifecycle Nodes"
+          icon={<AppIcon name="sensors" />}
+        >
           <div className="panel-pad">
             <LifecycleQuickPanel />
           </div>

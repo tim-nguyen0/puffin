@@ -9,27 +9,64 @@
   color: var(--color-page-text);
 }
 
+/* named areas: the capped viewport and telemetry stack on the left,
+   controls and nodes in the middle, the tall process list as a right
+   rail - everything on screen at once */
 .dashboard-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--dashboard-card-min-width)), 1fr));
+  grid-template:
+    "viewport control processes" auto "telemetry control processes" auto "telemetry nodes processes" 1fr / minmax(0, var(--sim-viewport-max-width)) minmax(0, 1fr) minmax(0, 1fr);
   gap: var(--graph-page-gap);
   align-items: stretch;
 }
 
-.dashboard-panel-wide {
-  grid-column: 1 / -1;
+.viewport-panel {
+  grid-area: viewport;
+  border-color: var(--color-graph-border);
+  background: var(--color-graph-surface);
+}
+
+.telemetry-panel {
+  grid-area: telemetry;
+}
+
+.control-panel {
+  grid-area: control;
+}
+
+.processes-panel {
+  grid-area: processes;
+}
+
+.nodes-panel {
+  grid-area: nodes;
+}
+
+@media (width <= 74rem) {
+  .dashboard-grid {
+    grid-template:
+      "viewport control"
+      "telemetry control"
+      "telemetry nodes"
+      "processes processes"
+      / repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (width <= 48rem) {
+  .dashboard-grid {
+    grid-template-areas:
+      "viewport"
+      "telemetry"
+      "control"
+      "nodes"
+      "processes";
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .panel-pad {
   padding: var(--space-3);
-}
-
-/* -- viewport panel: the one dark card. capped so it stays a window even
-   when the grid collapses to one column ---------------------------------- */
-.viewport-panel {
-  max-width: var(--sim-viewport-max-width);
-  border-color: var(--color-graph-border);
-  background: var(--color-graph-surface);
 }
 
 .viewport-panel .dashboard-panel-header {
