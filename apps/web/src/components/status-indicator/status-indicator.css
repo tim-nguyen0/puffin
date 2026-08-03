@@ -16,6 +16,11 @@
   box-shadow: 0 0 0 var(--space-1) var(--color-discovery-soft);
 }
 
+.status-indicator i.is-down {
+  background: var(--color-status-stopped);
+  box-shadow: 0 0 0 var(--space-1) var(--color-status-stopped-soft);
+}
+
 .status-indicator i.is-refreshing {
   animation: status-indicator-pulse 1.1s ease-in-out infinite;
 }
@@ -28,7 +33,12 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .status-indicator i.is-refreshing {
+  .status-indicator i.is-down {
+  background: var(--color-status-stopped);
+  box-shadow: 0 0 0 var(--space-1) var(--color-status-stopped-soft);
+}
+
+.status-indicator i.is-refreshing {
     animation: none;
   }
 }
