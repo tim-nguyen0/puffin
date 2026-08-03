@@ -162,7 +162,7 @@ export function DashboardScreen() {
     <div className="dashboard-screen">
       <div className="dashboard-grid">
         <DashboardPanel
-          className="viewport-panel dashboard-panel-wide"
+          className="viewport-panel"
           title="Simulation View"
           icon={<AppIcon name="camera" />}
           headerAction={

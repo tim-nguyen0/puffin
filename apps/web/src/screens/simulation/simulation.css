@@ -24,7 +24,7 @@
   display: grid;
   min-height: 0;
   flex: 1;
-  grid-template-columns: minmax(0, 2.35fr) minmax(var(--simulation-side-width), 1fr);
+  grid-template-columns: minmax(0, 3.4fr) minmax(var(--simulation-side-width), 1fr);
   gap: var(--space-3);
 }
 
