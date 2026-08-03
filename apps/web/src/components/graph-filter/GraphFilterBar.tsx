@@ -4,7 +4,7 @@ import {
 } from "./GraphLayoutToggle";
 import "./graph-filter.css";
 
-export type GraphVisibility = "active" | "all";
+export type GraphVisibility = "ros" | "all";
 
 interface GraphStatusFilterProps {
   value: GraphVisibility;
@@ -14,13 +14,13 @@ interface GraphStatusFilterProps {
 export function GraphStatusFilter({ value, onChange }: GraphStatusFilterProps) {
   return (
     <label className="graph-status-filter">
-      <span className="visually-hidden">Service visibility</span>
+      <span className="visually-hidden">Graph visibility</span>
       <select
         value={value}
         onChange={(event) => onChange(event.target.value as GraphVisibility)}
       >
-        <option value="active">Active Only</option>
-        <option value="all">All Services</option>
+        <option value="ros">ROS system only</option>
+        <option value="all">Everything (infra + chatter)</option>
       </select>
     </label>
   );

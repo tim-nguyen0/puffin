@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { buildServiceGraph, matchesGraphFilter } from "./graphModel";
+import {
+  buildServiceGraph,
+  filterRosOnly,
+  INFRA_NODES,
+  matchesGraphFilter,
+  SYSTEM_TOPICS,
+} from "./graphModel";
 
 const GRAPH = {
   nodes: ["/offboard_demo", "/puffin_api"],
@@ -55,5 +61,40 @@ describe("buildServiceGraph", () => {
     expect(matchesGraphFilter(topic!, "nope", "all")).toBe(false);
     expect(matchesGraphFilter(topic!, "", "px4_msgs")).toBe(true);
     expect(matchesGraphFilter(topic!, "", "node")).toBe(false);
+  });
+});
+
+describe("filterRosOnly", () => {
+  const RAW = {
+    nodes: ["/offboard_demo", "/puffin_api"],
+    topics: [
+      {
+        name: "/parameter_events",
+        type: "rcl_interfaces/msg/ParameterEvent",
+        publishers: ["/puffin_api"],
+        subscribers: [],
+      },
+      {
+        name: "/fmu/out/vehicle_status",
+        type: "px4_msgs/msg/VehicleStatus",
+        publishers: ["/px4_xrce_agent"],
+        subscribers: ["/puffin_api", "/offboard_demo"],
+      },
+    ],
+  };
+
+  it("drops infra nodes, system topics, and their edges", () => {
+    const filtered = filterRosOnly(RAW);
+    for (const name of INFRA_NODES) expect(filtered.nodes).not.toContain(name);
+    for (const name of SYSTEM_TOPICS) {
+      expect(filtered.topics.map((t) => t.name)).not.toContain(name);
+    }
+    expect(filtered.topics[0].subscribers).toEqual(["/offboard_demo"]);
+  });
+
+  it("keeps the ros system intact", () => {
+    const filtered = filterRosOnly(RAW);
+    expect(filtered.nodes).toContain("/offboard_demo");
+    expect(filtered.topics[0].publishers).toEqual(["/px4_xrce_agent"]);
   });
 });

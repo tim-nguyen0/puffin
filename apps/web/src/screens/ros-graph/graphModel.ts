@@ -46,6 +46,28 @@ function topicTone(typePackage: string): ServiceTone {
   return "violet";
 }
 
+// chatter every node has; rqt hides these by default too
+export const SYSTEM_TOPICS = new Set(["/parameter_events", "/rosout"]);
+
+// the api's own introspection node - infrastructure, not part of the ros
+// system the graph is meant to show
+export const INFRA_NODES = new Set(["/puffin_api"]);
+
+// rqt's "ros system only" view: drop system topics, infra nodes, and
+// their edges before the graph is built
+export function filterRosOnly(graph: RosGraphData): RosGraphData {
+  return {
+    nodes: graph.nodes.filter((name) => !INFRA_NODES.has(name)),
+    topics: graph.topics
+      .filter((topic) => !SYSTEM_TOPICS.has(topic.name))
+      .map((topic) => ({
+        ...topic,
+        publishers: topic.publishers.filter((name) => !INFRA_NODES.has(name)),
+        subscribers: topic.subscribers.filter((name) => !INFRA_NODES.has(name)),
+      })),
+  };
+}
+
 /**
  * Builds the computation graph from /ros/graph: ros nodes (cyan) and
  * topics (toned by message package), joined by real pub/sub edges -

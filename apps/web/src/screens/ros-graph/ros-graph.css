@@ -673,3 +673,11 @@
     transition: none;
   }
 }
+
+.graph-arrow-provider {
+  fill: var(--color-graph-provider);
+}
+
+.graph-arrow-interface {
+  fill: var(--color-service-violet);
+}

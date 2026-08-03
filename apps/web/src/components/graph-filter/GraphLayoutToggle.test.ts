@@ -24,7 +24,7 @@ describe("GraphFilterBar", () => {
   it("composes the reusable filter, search, layout, and refresh controls", () => {
     const markup = renderToStaticMarkup(
       createElement(GraphFilterBar, {
-        visibility: "active",
+        visibility: "ros",
         onVisibilityChange: () => undefined,
         search: "",
         onSearchChange: () => undefined,
@@ -35,7 +35,7 @@ describe("GraphFilterBar", () => {
       }),
     );
 
-    expect(markup).toContain("Active Only");
+    expect(markup).toContain("ROS system only");
     expect(markup).toContain("Search services, interfaces…");
     expect(markup).toContain("Force-Directed");
     expect(markup).toContain('aria-label="Refresh graph"');

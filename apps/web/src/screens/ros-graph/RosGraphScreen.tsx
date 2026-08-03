@@ -24,6 +24,7 @@ import { StatusIndicator } from "../../components/status-indicator";
 import { api } from "../../lib/api";
 import {
   buildServiceGraph,
+  filterRosOnly,
   matchesGraphFilter,
   type RosGraphData,
   type ServiceGraph,
@@ -416,6 +417,30 @@ function ServiceGraphViewport({
             <circle cx="1" cy="1" r="1" />
           </pattern>
         </defs>
+        <defs>
+          <marker
+            id="graph-arrow-provider"
+            className="graph-arrow graph-arrow-provider"
+            markerWidth="9"
+            markerHeight="9"
+            refX="8"
+            refY="4.5"
+            orient="auto"
+          >
+            <path d="M 0 0 L 9 4.5 L 0 9 z" />
+          </marker>
+          <marker
+            id="graph-arrow-interface"
+            className="graph-arrow graph-arrow-interface"
+            markerWidth="9"
+            markerHeight="9"
+            refX="8"
+            refY="4.5"
+            orient="auto"
+          >
+            <path d="M 0 0 L 9 4.5 L 0 9 z" />
+          </marker>
+        </defs>
         <rect className="graph-hit-area" width="100%" height="100%" />
         <g transform={`translate(${view.x} ${view.y}) scale(${view.scale})`}>
           <g className="graph-links">
@@ -428,16 +453,30 @@ function ServiceGraphViewport({
                 !matchesGraphFilter(source, search, "all") ||
                 !matchesGraphFilter(target, search, "all");
 
+              // stop at the target card's border so the arrowhead shows
+              const sx = source.x ?? 0;
+              const sy = source.y ?? 0;
+              const tx = target.x ?? 0;
+              const ty = target.y ?? 0;
+              const dx = sx - tx;
+              const dy = sy - ty;
+              const reach = Math.min(
+                dx !== 0 ? (NODE_WIDTH / 2 + 8) / Math.abs(dx) : Infinity,
+                dy !== 0 ? (NODE_HEIGHT / 2 + 8) / Math.abs(dy) : Infinity,
+                1,
+              );
+
               return (
                 <line
                   key={link.id}
                   className={`graph-link graph-link-${link.kind}${
                     isDimmed ? " is-dimmed" : ""
                   }`}
-                  x1={source.x}
-                  y1={source.y}
-                  x2={target.x}
-                  y2={target.y}
+                  x1={sx}
+                  y1={sy}
+                  x2={tx + dx * reach}
+                  y2={ty + dy * reach}
+                  markerEnd={`url(#graph-arrow-${link.kind})`}
                 />
               );
             })}
@@ -472,7 +511,7 @@ function ServiceGraphViewport({
                     y={-NODE_HEIGHT / 2}
                     width={NODE_WIDTH}
                     height={NODE_HEIGHT}
-                    rx="12"
+                    rx={node.typePackage === "node" ? NODE_HEIGHT / 2 : 12}
                   />
                   <circle
                     className="service-node-status"
@@ -496,11 +535,11 @@ function ServiceGraphViewport({
       <div className="graph-legend graph-legend-overlay" aria-label="Graph relationships">
         <span>
           <i className="legend-line-provider" />
-          Same provider
+          publishes →
         </span>
         <span>
           <i className="legend-line-interface" />
-          Shared interface
+          → subscribes
         </span>
       </div>
 
@@ -604,7 +643,7 @@ function ServiceInspector({ selected, related, onSelect }: ServiceInspectorProps
 
 export function RosGraphScreen() {
   const [search, setSearch] = useState("");
-  const [visibility, setVisibility] = useState<GraphVisibility>("active");
+  const [visibility, setVisibility] = useState<GraphVisibility>("ros");
   const [layout, setLayout] = useState<GraphLayout>("hierarchical");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const { data, isError, isFetching, isPending, refetch } = useQuery({
@@ -613,10 +652,10 @@ export function RosGraphScreen() {
     refetchInterval: GRAPH_REFRESH_INTERVAL_MS,
   });
 
-  const graph = useMemo(
-    () => buildServiceGraph(data ?? { nodes: [], topics: [] }),
-    [data],
-  );
+  const graph = useMemo(() => {
+    const raw = data ?? { nodes: [], topics: [] };
+    return buildServiceGraph(visibility === "ros" ? filterRosOnly(raw) : raw);
+  }, [data, visibility]);
   const namespaces = useMemo(
     () => new Set(graph.nodes.map((node) => node.namespace)).size,
     [graph.nodes],
