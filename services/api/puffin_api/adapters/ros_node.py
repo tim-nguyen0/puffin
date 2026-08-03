@@ -359,7 +359,12 @@ class RosAdapter:
     def _ensure_telemetry(self) -> None:
         if self._telemetry_ready:
             return
-        from px4_msgs.msg import BatteryStatus, VehicleLocalPosition, VehicleStatus
+        from px4_msgs.msg import (
+            BatteryStatus,
+            VehicleAttitude,
+            VehicleLocalPosition,
+            VehicleStatus,
+        )
 
         node = self._ensure_node()
         with self._init_lock:
@@ -386,6 +391,7 @@ class RosAdapter:
             subscribe("status", VehicleStatus, "vehicle_status")
             subscribe("local_position", VehicleLocalPosition, "vehicle_local_position")
             subscribe("battery", BatteryStatus, "battery_status")
+            subscribe("attitude", VehicleAttitude, "vehicle_attitude")
             self._telemetry_ready = True
 
     def latest_telemetry(self) -> AdapterResult:
@@ -397,6 +403,7 @@ class RosAdapter:
                 status = self._latest.get("status")
                 local_position = self._latest.get("local_position")
                 battery = self._latest.get("battery")
+                attitude = self._latest.get("attitude")
             if status is None:
                 return AdapterResult(ok=False, detail="no telemetry received yet")
             sample = {
@@ -409,6 +416,12 @@ class RosAdapter:
                     "z": float(local_position.z) if local_position else 0.0,
                 },
                 "battery_v": float(battery.voltage_v) if battery else 0.0,
+                # px4 q is [w, x, y, z], body FRD -> NED
+                "attitude_q": (
+                    [float(value) for value in attitude.q]
+                    if attitude is not None
+                    else [1.0, 0.0, 0.0, 0.0]
+                ),
             }
         except Exception as exc:  # noqa: BLE001 - clean {ok, detail} at the boundary
             return AdapterResult(ok=False, detail=f"telemetry unavailable: {exc}")

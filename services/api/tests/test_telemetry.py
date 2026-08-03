@@ -8,6 +8,7 @@ SAMPLE = {
     "mode": "offboard",
     "ned": {"x": 1.0, "y": 2.0, "z": -5.0},
     "battery_v": 15.8,
+    "attitude_q": [1.0, 0.0, 0.0, 0.0],
 }
 
 
@@ -40,5 +41,5 @@ def test_stream_sample_matches_contract_shape(
     fake_ros.telemetry = SAMPLE
     with client.websocket_connect("/ws/telemetry") as ws:
         sample = ws.receive_json()
-    assert set(sample) == {"t_us", "armed", "mode", "ned", "battery_v"}
+    assert set(sample) == {"t_us", "armed", "mode", "ned", "battery_v", "attitude_q"}
     assert set(sample["ned"]) == {"x", "y", "z"}
