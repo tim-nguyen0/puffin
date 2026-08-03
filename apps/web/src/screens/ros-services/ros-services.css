@@ -5,8 +5,10 @@
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
-  min-height: calc(100vh - (var(--space-4) * 2));
-  padding: var(--space-2);
+  min-height: calc(100vh - var(--topbar-height));
+  margin: calc(var(--space-4) * -1);
+  padding: var(--graph-page-gap);
+  background: var(--color-page-bg);
   color: var(--color-page-text);
 }
 
