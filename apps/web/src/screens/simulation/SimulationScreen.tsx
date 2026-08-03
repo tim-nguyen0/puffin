@@ -5,7 +5,6 @@ import { lifecycleNodeNames } from "../../components/lifecycle";
 import { MetricCard } from "../../components/metric-card";
 import { SimViewport } from "../../components/sim-viewport";
 import { StatusTag } from "../../components/status-tag";
-import { TerminalConsole } from "../../components/terminal-console";
 import { api } from "../../lib/api";
 import { useSettingsStore } from "../../lib/settingsStore";
 import {
@@ -126,26 +125,6 @@ export function SimulationScreen() {
             </div>
           </DashboardPanel>
 
-          <TerminalConsole
-            className="terminal-panel"
-            lines={[
-              <>
-                <b>$</b> make procs
-              </>,
-              ...procs.map((proc) => (
-                <>
-                  {proc.state === "RUNNING" ? "✓" : "✗"} {proc.name} ·{" "}
-                  <b>{proc.state}</b> · up {formatUptime(proc.uptime_s)}
-                </>
-              )),
-            ]}
-            prompt={
-              <>
-                <b>puffin@sim:~</b>$ ▋
-              </>
-            }
-            statusLabel={simStatus.isError ? "○ unreachable" : "● running"}
-          />
         </div>
         <aside className="simulation-secondary">
           <DashboardPanel

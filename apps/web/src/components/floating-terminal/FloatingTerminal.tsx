@@ -41,6 +41,13 @@ export function FloatingTerminal() {
     const terminal = new Terminal({
       cursorBlink: true,
       fontFamily: '"JetBrains Mono", ui-monospace, monospace',
+      // matches the console design's command palette (tokens cannot
+      // reach xterm's canvas): --color-command-bg/-text/-accent
+      theme: {
+        background: "#0d1726",
+        foreground: "#bdc9d8",
+        cursor: "#20d49a",
+      },
     });
     const terminalFitAddon = new FitAddon();
     let disposed = false;
@@ -157,13 +164,13 @@ export function FloatingTerminal() {
         onPointerCancel={stopDragging}
       >
         <div className="terminal-title">
+          <span className="terminal-title-text">〉_ Terminal</span>
           <span
             className={`terminal-status terminal-status-${connectionStatus}`}
             role="status"
-            aria-label={`Terminal ${connectionStatus}`}
-            title={connectionStatus}
-          />
-          <span>Terminal</span>
+          >
+            {connectionStatus === "connected" ? "● running" : `○ ${connectionStatus}`}
+          </span>
         </div>
         <button
           className="terminal-minimize"
