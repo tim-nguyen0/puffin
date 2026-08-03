@@ -219,7 +219,8 @@
 
 .console-viewport {
   position: relative;
-  height: 100%;
+  aspect-ratio: 16 / 9;
+  width: 100%;
   background:
     radial-gradient(circle at 50% 52%, var(--color-console-glow), transparent 38%),
     var(--color-console-viewport);
@@ -425,4 +426,25 @@
   .console-workspace > aside {
     display: none;
   }
+}
+
+/* 16:9 container above = the stream fills exactly */
+.console-viewport .sim-viewport {
+  position: absolute;
+  inset: var(--space-3);
+  gap: 0;
+}
+
+.console-viewport .sim-viewport-frame {
+  width: 100%;
+  height: 100%;
+  aspect-ratio: auto;
+  border-color: var(--color-graph-border);
+}
+
+.console-viewport .sim-viewport-link {
+  position: absolute;
+  right: var(--space-2);
+  bottom: var(--space-2);
+  color: var(--color-command-link);
 }
