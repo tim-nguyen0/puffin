@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { AppIcon } from "../../components/app-icon";
 import { Button } from "../../components/button";
 import { DashboardPanel } from "../../components/dashboard-panel";
@@ -166,7 +167,8 @@ export function DashboardScreen() {
           icon={<AppIcon name="camera" />}
           headerAction={
             <span className="viewport-stats">
-              MODE: <b>{latest?.mode ?? "—"}</b> · LINK: <b>{connected ? "LIVE" : "DOWN"}</b>
+              MODE: <b>{latest?.mode ?? "—"}</b> · LINK: <b>{connected ? "LIVE" : "DOWN"}</b>{" "}
+              · <Link to="/dashboard/console">console ⛶</Link>
             </span>
           }
         >
