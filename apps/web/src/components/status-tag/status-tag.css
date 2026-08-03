@@ -1,0 +1,38 @@
+.status-tag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--services-status-height);
+  padding: 0 var(--services-status-padding-inline);
+  gap: var(--space-1);
+  border-radius: var(--services-status-radius);
+  font-family: var(--font-mono);
+  font-size: var(--text-graph-micro);
+  font-weight: 700;
+  letter-spacing: var(--services-status-letter-spacing);
+  line-height: 1;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.status-tag i {
+  width: var(--services-status-dot-size);
+  height: var(--services-status-dot-size);
+  border-radius: 50%;
+  background: currentcolor;
+}
+
+.status-tag-running {
+  background: var(--color-status-running-soft);
+  color: var(--color-status-running);
+}
+
+.status-tag-armed {
+  background: var(--color-status-armed-soft);
+  color: var(--color-status-armed);
+}
+
+.status-tag-stopped {
+  background: var(--color-status-stopped-soft);
+  color: var(--color-status-stopped);
+}

@@ -63,8 +63,10 @@
 }
 
 .nav-item-icon {
+  display: inline-flex;
   width: var(--icon-md);
   height: var(--icon-md);
+  flex: none;
 }
 
 .sidebar-workspace {
@@ -110,4 +112,9 @@
   background: transparent;
   color: var(--base-palette-cloud);
   cursor: pointer;
+}
+
+.nav-item-icon svg {
+  width: 100%;
+  height: 100%;
 }

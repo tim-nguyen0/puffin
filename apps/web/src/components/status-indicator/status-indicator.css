@@ -1,0 +1,34 @@
+.status-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-page-text);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.status-indicator i {
+  width: var(--status-indicator-size);
+  height: var(--status-indicator-size);
+  border-radius: 50%;
+  background: var(--color-discovery);
+  box-shadow: 0 0 0 var(--space-1) var(--color-discovery-soft);
+}
+
+.status-indicator i.is-refreshing {
+  animation: status-indicator-pulse 1.1s ease-in-out infinite;
+}
+
+@keyframes status-indicator-pulse {
+  50% {
+    opacity: 0.4;
+    transform: scale(0.72);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .status-indicator i.is-refreshing {
+    animation: none;
+  }
+}
