@@ -1,0 +1,59 @@
+name: railway image
+
+# builds the amd64 all-in-one demo image and pushes it to ghcr. railway
+# deploys straight from the registry - its own builder would time out on
+# the px4 compile. first run is slow (~1h); registry layer cache makes
+# later runs minutes.
+on:
+  workflow_dispatch:
+  push:
+    branches: [deploy/railway]
+
+env:
+  # must match .env - same px4 release for both or topics go silent
+  # (CLAUDE.md gotcha #2). bump together or not at all.
+  PX4_REF: v1.15.4
+  PX4_MSGS_REF: release/1.15
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: build sim base
+        uses: docker/build-push-action@v6
+        with:
+          context: sim
+          platforms: linux/amd64
+          push: true
+          tags: ghcr.io/${{ github.repository }}-sim-base:latest
+          build-args: |
+            PX4_REF=${{ env.PX4_REF }}
+            PX4_MSGS_REF=${{ env.PX4_MSGS_REF }}
+          cache-from: type=registry,ref=ghcr.io/${{ github.repository }}-sim-base:cache
+          cache-to: type=registry,ref=ghcr.io/${{ github.repository }}-sim-base:cache,mode=max
+
+      - name: build railway image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: deploy/railway/Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: ghcr.io/${{ github.repository }}-railway:latest
+          build-args: |
+            SIM_BASE=ghcr.io/${{ github.repository }}-sim-base:latest
+          cache-from: type=registry,ref=ghcr.io/${{ github.repository }}-railway:cache
+          cache-to: type=registry,ref=ghcr.io/${{ github.repository }}-railway:cache,mode=max
