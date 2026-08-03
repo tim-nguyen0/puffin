@@ -50,20 +50,18 @@ export function WorkspaceHeader({
         <button
           type="button"
           className="workspace-command-button"
-          aria-label="Pause simulation"
           title="Pause is not available yet"
           disabled
         >
-          <span aria-hidden="true">Ⅱ</span>
+          Pause
         </button>
         <button
           type="button"
           className="workspace-command-button workspace-stop-button"
-          aria-label="Stop simulation"
           onClick={onStop}
           disabled={busy}
         >
-          <span aria-hidden="true">■</span>
+          Stop
         </button>
       </div>
 
