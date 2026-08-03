@@ -10,6 +10,7 @@ interface WorkspaceHeaderProps {
   busy?: boolean;
   gazeboUp?: boolean;
   px4Up?: boolean;
+  simRunning?: boolean;
 }
 
 function PlayIcon() {
@@ -28,6 +29,7 @@ export function WorkspaceHeader({
   busy = false,
   gazeboUp = false,
   px4Up = false,
+  simRunning = false,
 }: WorkspaceHeaderProps) {
   return (
     <header className="workspace-header">
@@ -45,7 +47,7 @@ export function WorkspaceHeader({
           onClick={onResume}
           disabled={busy}
         >
-          Resume
+          {simRunning ? "Resume" : "Start"}
         </Button>
         <button
           type="button"
