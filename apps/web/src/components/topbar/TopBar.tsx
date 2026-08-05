@@ -1,13 +1,16 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "react-router-dom";
 import { api } from "../../lib/api";
-import "./topbar.css";
+import { WorkspaceHeader } from "../workspace-header";
 
 const SCREEN_LABELS: Record<string, string> = {
   "/": "Launcher",
-  "/dashboard": "Simulation",
+  "/dashboard": "Dashboard",
+  "/dashboard/console": "Console",
+  "/simulation": "Simulation",
   "/ros-services": "ROS Nodes",
   "/ros-graph": "ROS2 Graph",
+  "/settings": "Settings",
 };
 
 export function TopBar() {
@@ -36,47 +39,13 @@ export function TopBar() {
   const px4Up = procs.get("px4") === "RUNNING";
 
   return (
-    <header className="topbar">
-      <nav className="breadcrumb" aria-label="breadcrumb">
-        <span className="breadcrumb-workspace">rospackage-4</span>
-        <span className="breadcrumb-sep" aria-hidden="true">
-          ›
-        </span>
-        <span className="breadcrumb-screen">
-          {SCREEN_LABELS[location.pathname] ?? "Puffin"}
-        </span>
-      </nav>
-      <div className="sim-controls">
-        <button
-          type="button"
-          className="sim-resume"
-          onClick={() => start.mutate()}
-          disabled={start.isPending}
-        >
-          Resume
-        </button>
-        <button type="button" className="sim-small-btn" title="Pause is not available yet" disabled>
-          Pause
-        </button>
-        <button
-          type="button"
-          className="sim-small-btn"
-          onClick={() => stop.mutate()}
-          disabled={stop.isPending}
-        >
-          Stop
-        </button>
-      </div>
-      <div className="status-indicators">
-        <span className="status-item">
-          <span className={`status-dot ${gazeboUp ? "is-ok" : "is-down"}`} />
-          {gazeboUp ? "Gazebo Connected" : "Gazebo Disconnected"}
-        </span>
-        <span className="status-item">
-          <span className={`status-dot ${px4Up ? "is-ok" : "is-down"}`} />
-          {px4Up ? "PX4 SITL Active" : "PX4 SITL Inactive"}
-        </span>
-      </div>
-    </header>
+    <WorkspaceHeader
+      pageLabel={SCREEN_LABELS[location.pathname] ?? "Puffin"}
+      onResume={() => start.mutate()}
+      onStop={() => stop.mutate()}
+      busy={start.isPending || stop.isPending}
+      gazeboUp={gazeboUp}
+      px4Up={px4Up}
+    />
   );
 }

@@ -1,0 +1,226 @@
+/* State selectors stay next to their reusable controls. */
+/* stylelint-disable no-descending-specificity */
+
+.graph-filter-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-sizing: border-box;
+  min-height: var(--graph-filter-bar-height);
+  margin-bottom: var(--graph-page-gap);
+  padding: var(--graph-filter-bar-padding);
+  border: var(--graph-border-width) solid var(--color-filter-border);
+  border-radius: var(--graph-filter-bar-radius);
+  background: var(--color-page-surface);
+}
+
+.graph-filter-primary,
+.graph-filter-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--graph-filter-bar-gap);
+}
+
+.graph-status-filter,
+.graph-filter-search {
+  position: relative;
+  display: block;
+}
+
+.graph-status-filter select,
+.graph-filter-search input,
+.graph-filter-refresh {
+  box-sizing: border-box;
+  height: var(--graph-filter-control-height);
+  border: var(--graph-border-width) solid var(--color-filter-border);
+  border-radius: var(--graph-filter-control-radius);
+  outline: none;
+  background: var(--color-page-surface);
+  color: var(--color-page-text);
+  font: inherit;
+  font-size: var(--text-graph-control);
+}
+
+.graph-status-filter select {
+  width: var(--graph-status-filter-width);
+  padding: 0 var(--graph-filter-select-padding);
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.graph-filter-search {
+  width: var(--graph-filter-search-width);
+}
+
+.graph-filter-search input {
+  width: 100%;
+  padding: 0 var(--space-3) 0 var(--graph-filter-search-padding);
+}
+
+.graph-filter-search input::placeholder {
+  color: var(--color-page-muted);
+}
+
+.graph-filter-search-icon {
+  position: absolute;
+  top: 50%;
+  left: var(--space-3);
+  z-index: 1;
+  box-sizing: border-box;
+  width: var(--graph-search-icon-size);
+  height: var(--graph-search-icon-size);
+  border: var(--graph-search-icon-stroke) solid var(--color-filter-icon);
+  border-radius: 50%;
+  pointer-events: none;
+  transform: translateY(-58%);
+}
+
+.graph-filter-search-icon::after {
+  position: absolute;
+  right: var(--graph-search-icon-handle-offset);
+  bottom: var(--graph-search-icon-handle-offset);
+  width: var(--graph-search-icon-handle);
+  height: var(--graph-search-icon-stroke);
+  background: var(--color-filter-icon);
+  content: "";
+  transform: rotate(45deg);
+  transform-origin: right;
+}
+
+.graph-layout-toggle {
+  display: inline-flex;
+  box-sizing: border-box;
+  height: var(--graph-filter-control-height);
+  padding: var(--graph-toggle-padding);
+  border-radius: var(--graph-filter-control-radius);
+  background: var(--color-filter-segment);
+}
+
+.graph-layout-toggle button {
+  min-width: var(--graph-toggle-option-width);
+  padding: 0 var(--space-3);
+  border: 0;
+  border-radius: var(--graph-toggle-option-radius);
+  background: transparent;
+  color: var(--color-page-text);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--text-graph-control);
+  white-space: nowrap;
+}
+
+.graph-layout-toggle button.is-active {
+  background: var(--base-palette-blue);
+  box-shadow: var(--graph-toggle-active-shadow);
+  color: var(--color-page-surface);
+  font-weight: 600;
+}
+
+.graph-filter-refresh {
+  display: grid;
+  width: var(--graph-filter-control-height);
+  padding: 0;
+  place-items: center;
+  cursor: pointer;
+}
+
+.graph-filter-refresh:hover:not(:disabled),
+.graph-status-filter select:hover,
+.graph-filter-search input:hover {
+  border-color: var(--color-page-focus);
+}
+
+.graph-filter-refresh:disabled {
+  cursor: wait;
+  opacity: 0.75;
+}
+
+.graph-filter-refresh span {
+  display: block;
+  color: var(--color-filter-icon);
+  font-size: var(--text-xl);
+  line-height: 1;
+}
+
+.graph-filter-refresh span.is-refreshing {
+  animation: graph-filter-spin 900ms linear infinite;
+}
+
+.graph-status-filter select:focus-visible,
+.graph-filter-search input:focus-visible,
+.graph-layout-toggle button:focus-visible,
+.graph-filter-refresh:focus-visible {
+  outline: var(--graph-control-focus-width) solid var(--color-page-focus);
+  outline-offset: var(--graph-control-focus-offset);
+}
+
+.visually-hidden {
+  position: absolute;
+  overflow: hidden;
+  width: var(--graph-visually-hidden-size);
+  height: var(--graph-visually-hidden-size);
+  padding: 0;
+  border: 0;
+  margin: var(--graph-visually-hidden-offset);
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+@keyframes graph-filter-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (width <= 64rem) {
+  .graph-filter-bar {
+    align-items: stretch;
+    flex-direction: column;
+    gap: var(--graph-filter-bar-gap);
+  }
+
+  .graph-filter-primary,
+  .graph-filter-actions {
+    justify-content: space-between;
+  }
+
+  .graph-filter-search {
+    flex: 1;
+    width: auto;
+  }
+}
+
+@media (width <= 44rem) {
+  .graph-filter-primary,
+  .graph-filter-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .graph-status-filter select,
+  .graph-filter-search,
+  .graph-layout-toggle {
+    width: 100%;
+  }
+
+  .graph-filter-actions {
+    position: relative;
+    padding-right: calc(var(--graph-filter-control-height) + var(--graph-filter-bar-gap));
+  }
+
+  .graph-layout-toggle button {
+    flex: 1;
+  }
+
+  .graph-filter-refresh {
+    position: absolute;
+    top: 0;
+    right: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .graph-filter-refresh span.is-refreshing {
+    animation: none;
+  }
+}

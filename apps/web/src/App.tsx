@@ -8,11 +8,14 @@ import { SignupScreen } from "./screens/auth/SignupScreen";
 import { DashboardScreen } from "./screens/dashboard/DashboardScreen";
 import { LauncherScreen } from "./screens/launcher/LauncherScreen";
 import { RosGraphScreen } from "./screens/ros-graph/RosGraphScreen";
+import { ConsoleDashboardScreen } from "./screens/console-dashboard/ConsoleDashboardScreen";
 import { RosServicesScreen } from "./screens/ros-services/RosServicesScreen";
+import { SimulationScreen } from "./screens/simulation/SimulationScreen";
 import { SettingsScreen } from "./screens/settings/SettingsScreen";
 
 const SCREENS = [
   { path: "/dashboard", element: <DashboardScreen /> },
+  { path: "/simulation", element: <SimulationScreen /> },
   { path: "/ros-services", element: <RosServicesScreen /> },
   { path: "/ros-graph", element: <RosGraphScreen /> },
   { path: "/settings", element: <SettingsScreen /> },
@@ -58,6 +61,16 @@ export function App() {
       <Route path="/" element={<LauncherScreen />} />
       <Route path="/login" element={<Navigate to="/" replace />} />
       <Route path="/signup" element={<SignupScreen />} />
+      <Route
+        path="/dashboard/console"
+        element={
+          <RequireAuth>
+            <main className="immersive-main">
+              <ConsoleDashboardScreen />
+            </main>
+          </RequireAuth>
+        }
+      />
       <Route
         path="*"
         element={
