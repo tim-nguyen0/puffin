@@ -55,3 +55,34 @@
 .teleop-dot.is-ok {
   background: var(--color-ok);
 }
+
+.teleop-gamepad {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+  font-size: var(--text-sm);
+}
+
+.teleop-gamepad-toggle {
+  display: flex;
+  gap: var(--space-1);
+  align-items: center;
+  color: var(--color-text-muted);
+}
+
+.teleop-gamepad-id {
+  overflow: hidden;
+  max-width: var(--terminal-minimized-width);
+  color: var(--color-text-muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.teleop-gamepad-hint {
+  color: var(--color-text-muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+}

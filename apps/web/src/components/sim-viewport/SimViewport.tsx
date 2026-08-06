@@ -1,8 +1,8 @@
-import { simViewportUrl, type ViewportVariant } from "./viewportUrl";
+import { simViewportUrl } from "./viewportUrl";
 import "./sim-viewport.css";
 
-export function SimViewport({ variant = "full" }: { variant?: ViewportVariant }) {
-  const url = simViewportUrl(window.location.protocol, window.location.hostname, variant);
+export function SimViewport() {
+  const url = simViewportUrl(window.location.protocol, window.location.hostname);
   return (
     <div className="sim-viewport">
       <iframe className="sim-viewport-frame" src={url} title="Gazebo viewport" />

@@ -30,3 +30,21 @@
 .scene-viewport-hint.is-live {
   color: var(--color-command-accent);
 }
+
+.scene-viewport-reset {
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+  background: var(--color-graph-surface);
+  border: var(--graph-border-width) solid var(--color-graph-border);
+  border-radius: var(--radius-1);
+  color: var(--color-graph-muted);
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: var(--text-graph-micro);
+}
+
+.scene-viewport-reset:hover {
+  color: var(--color-graph-text);
+}
