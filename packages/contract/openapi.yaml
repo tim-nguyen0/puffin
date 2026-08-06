@@ -471,7 +471,7 @@ components:
     TelemetrySample:
       # ws frame. t_us = px4 clock in microseconds, ned z is negative up
       type: object
-      required: [t_us, armed, mode, ned, battery_v]
+      required: [t_us, armed, mode, ned, battery_v, attitude_q]
       properties:
         t_us:
           type: integer
@@ -479,6 +479,14 @@ components:
           type: boolean
         mode:
           type: string
+        # px4 vehicle attitude quaternion [w, x, y, z], body FRD -> NED;
+        # identity until the first attitude sample arrives
+        attitude_q:
+          type: array
+          minItems: 4
+          maxItems: 4
+          items:
+            type: number
         ned:
           type: object
           required: [x, y, z]
