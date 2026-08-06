@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import * as THREE from "three";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { useTelemetryStore } from "../../lib/telemetryStore";
 import { nedToScene, px4QuatToScene } from "./frames";
 import "./scene-viewport.css";
@@ -51,8 +52,11 @@ function buildDrone(): THREE.Group {
   return drone;
 }
 
+const HOME_OFFSET = new THREE.Vector3(5.5, 4, 5.5);
+
 export function SceneViewport() {
   const mount = useRef<HTMLDivElement>(null);
+  const resetView = useRef<(() => void) | null>(null);
   const connected = useTelemetryStore((state) => state.connected);
 
   useEffect(() => {
@@ -64,9 +68,22 @@ export function SceneViewport() {
     scene.fog = new THREE.Fog(COLORS.bg, 18, 42);
 
     const camera = new THREE.PerspectiveCamera(50, 16 / 9, 0.1, 100);
+    camera.position.copy(HOME_OFFSET);
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     host.appendChild(renderer.domElement);
+
+    // orbit around the drone; clamps keep every reachable view sane, so
+    // there is no "lost in the void" state to recover from
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.enablePan = false;
+    controls.minDistance = 2;
+    controls.maxDistance = 30;
+    controls.maxPolarAngle = Math.PI / 2 - 0.05;
+    resetView.current = () => {
+      camera.position.copy(controls.target).add(HOME_OFFSET);
+    };
 
     scene.add(new THREE.AmbientLight(0xffffff, 0.55));
     const sun = new THREE.DirectionalLight(0xffffff, 1.1);
@@ -94,7 +111,6 @@ export function SceneViewport() {
 
     const dronePosition = new THREE.Vector3(0, 0, 0);
     const droneQuat = new THREE.Quaternion();
-    const cameraTarget = new THREE.Vector3();
 
     const resize = () => {
       const width = host.clientWidth;
@@ -124,12 +140,9 @@ export function SceneViewport() {
       shadow.position.x = drone.position.x;
       shadow.position.z = drone.position.z;
 
-      cameraTarget.copy(drone.position);
-      camera.position.lerp(
-        new THREE.Vector3(cameraTarget.x + 5.5, cameraTarget.y + 4, cameraTarget.z + 5.5),
-        0.06,
-      );
-      camera.lookAt(cameraTarget);
+      // the camera orbits whatever it follows; keep the pivot on the drone
+      controls.target.lerp(drone.position, 0.12);
+      controls.update();
 
       renderer.render(scene, camera);
       frame = requestAnimationFrame(tick);
@@ -139,6 +152,8 @@ export function SceneViewport() {
     return () => {
       cancelAnimationFrame(frame);
       observer.disconnect();
+      controls.dispose();
+      resetView.current = null;
       renderer.dispose();
       scene.traverse((object) => {
         if (object instanceof THREE.Mesh) {
@@ -157,6 +172,14 @@ export function SceneViewport() {
       <span className={`scene-viewport-hint${connected ? " is-live" : ""}`}>
         {connected ? "● live telemetry render" : "○ waiting for telemetry"}
       </span>
+      <button
+        type="button"
+        className="scene-viewport-reset"
+        onClick={() => resetView.current?.()}
+        title="Reset view"
+      >
+        ⌂ view
+      </button>
     </div>
   );
 }
