@@ -50,10 +50,12 @@ RUN git clone --branch "${PX4_MSGS_REF}" --depth 1 \
       https://github.com/PX4/px4_msgs.git /ros_ws/src/px4_msgs \
     && bash -c "source /opt/ros/jazzy/setup.bash && cd /ros_ws && colcon build --symlink-install"
 
-# offboard_demo last: demo edits rebuild only this layer, never px4_msgs
-COPY offboard_demo/ /ros_ws/src/offboard_demo/
+# user packages last: anything with a package.xml dropped into
+# sim/packages/ builds here, and edits rebuild only this layer, never
+# px4_msgs (which is skipped - its install from the layer above stands)
+COPY packages/ /ros_ws/src/
 RUN bash -c "source /opt/ros/jazzy/setup.bash && cd /ros_ws \
-      && colcon build --symlink-install --packages-select offboard_demo"
+      && colcon build --symlink-install --packages-skip px4_msgs"
 
 COPY supervisord.conf /etc/supervisor/conf.d/puffin.conf
 COPY worlds/ /worlds/
