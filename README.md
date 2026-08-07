@@ -68,8 +68,24 @@ everything else works against the MSW fixtures.
 pnpm typecheck && pnpm lint && pnpm test    # web
 cd services/api && pytest                   # api (fake adapters, no ros needed)
 python3 scripts/lint_worlds.py sim/worlds   # world sanity
-cd sim/offboard_demo && python3 -m pytest   # square-flight geometry
+cd sim/packages/offboard_demo && python3 -m pytest   # square-flight geometry
 ```
+
+## Adding your own ROS package
+
+Drop the package into `sim/packages/` (anything with a `package.xml` -
+python or c++), then:
+
+```bash
+docker compose up -d --build sim && docker compose up -d --force-recreate api web
+```
+
+colcon discovers and builds it automatically. Lifecycle nodes appear on
+the ROS Nodes screen with full controls, no frontend changes; add a
+supervisord program if it should autostart. Two rules of the house:
+subscriptions to `/fmu/out/*` need the shared best-effort QoS profile or
+they silently receive nothing, and only one node should stream setpoints
+at a time.
 
 ## When something doesn't work
 
