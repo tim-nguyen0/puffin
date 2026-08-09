@@ -72,18 +72,31 @@ class TransitionRequest(BaseModel):
     transition: TransitionName
 
 
-class NedPosition(BaseModel):
+class Waypoint(BaseModel):
+    # ned meters: x north, y east, z down (5 m altitude = -5.0)
     x: float
     y: float
     z: float
+    hold_s: float = Field(default=0.0, ge=0)
 
 
-class TelemetrySample(BaseModel):
-    t_us: int
-    armed: bool
-    mode: str
-    ned: NedPosition
-    battery_v: float
+class MissionRequest(BaseModel):
+    waypoints: list[Waypoint] = Field(min_length=1, max_length=50)
+    rate_hz: float = Field(default=20.0, ge=2, le=100)
+    takeoff_z: float = -3.0
+    return_to_origin: bool = True
+
+
+MissionStateName = Literal[
+    "idle", "ready", "flying", "holding", "returning", "done", "aborted"
+]
+
+
+class MissionStatus(BaseModel):
+    state: MissionStateName
+    current_index: int | None = None
+    total: int
+    detail: str = ""
 
 
 class SignupRequest(BaseModel):

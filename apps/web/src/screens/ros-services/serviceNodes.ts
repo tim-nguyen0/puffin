@@ -66,6 +66,13 @@ const KNOWN_NODES: Record<string, ServiceNodeMeta> = {
     publishes: "/fmu/in/trajectory_setpoint",
     subscribes: "/puffin/teleop/cmd_vel",
   },
+  "/mission_node": {
+    description: "lifecycle node · flies the latched waypoint plan",
+    package: "offboard_demo",
+    executable: "mission_node",
+    publishes: "/puffin/mission/status",
+    subscribes: "/puffin/mission",
+  },
 };
 
 export function metaForNode(name: string): ServiceNodeMeta {
