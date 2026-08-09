@@ -190,3 +190,81 @@
 .pf-panel > div { padding: 0 14px 14px; }
 
 .pf-type-specimen p { margin: 6px 0; }
+
+/* --- radii / spacing / depth specimens -------------------------------- */
+
+.pf-radii {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: flex-end;
+  margin: 16px 0;
+}
+
+.pf-radius {
+  width: 96px;
+  height: 72px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 6px;
+  background: #fff;
+  border: 1px solid #dce3ec;
+  font-family: var(--vp-font-family-mono);
+  font-size: 10px;
+  color: #667085;
+  text-align: center;
+  line-height: 1.4;
+}
+
+.pf-radius.pf-dark {
+  background: #111e30;
+  border-color: #243a57;
+  color: #8ea3bd;
+}
+
+.pf-spacing {
+  display: flex;
+  gap: 24px;
+  align-items: flex-end;
+  margin: 16px 0;
+  font-family: var(--vp-font-family-mono);
+  font-size: 10px;
+  color: #667085;
+}
+
+.pf-spacing div {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.pf-spacing i {
+  display: block;
+  width: 28px;
+  background: #06c;
+  border-radius: 2px;
+}
+
+.pf-shadows {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 20px;
+  margin: 20px 0;
+}
+
+.pf-shadow {
+  height: 84px;
+  display: flex;
+  align-items: flex-end;
+  padding: 10px 12px;
+  background: #fff;
+  border: 1px solid #dce3ec;
+  border-radius: 12px;
+  font-family: var(--vp-font-family-mono);
+  font-size: 10px;
+  color: #667085;
+  line-height: 1.5;
+}
+

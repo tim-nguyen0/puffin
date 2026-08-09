@@ -49,7 +49,15 @@ an uptime — it renders in JetBrains Mono. Prose stays in Inter.
   <div class="pf-swatch"><i style="background:#8ea3bd"></i><span><b>graph-muted</b>#8ea3bd</span></div>
   <div class="pf-swatch"><i style="background:#20d49a"></i><span><b>command-accent</b>#20d49a</span></div>
   <div class="pf-swatch"><i style="background:#5ab5ff"></i><span><b>command-link</b>#5ab5ff</span></div>
+  <div class="pf-swatch"><i style="background:#14243a"></i><span><b>surface-raised</b>#14243a</span></div>
+  <div class="pf-swatch"><i style="background:#607894"></i><span><b>graph-subtle</b>#607894</span></div>
+  <div class="pf-swatch"><i style="background:#526d8d"></i><span><b>graph-link</b>#526d8d</span></div>
+  <div class="pf-swatch"><i style="background:#7190b4"></i><span><b>graph-provider</b>#7190b4</span></div>
 </div>
+
+The dark surfaces stack: `graph-bg` is the canvas floor, `graph-surface`
+the card sitting on it, `surface-raised` anything lifted above that —
+a hover, a selected row, a terminal header. Never skip a step.
 
 ## Status is a language
 
@@ -65,6 +73,31 @@ never repurposed, never approximated:
 - **running** `#0eb77a` — active, healthy, flying
 - **armed** `#ed9707` — configured and ready; attention without alarm
 - **stopped** `#93a4ba` — inactive, disabled, parked
+
+Every tone travels with a **soft** background for tags and rows — text
+in the tone, fill in its soft, never mixed across tones:
+
+<div class="pf-swatches">
+  <div class="pf-swatch"><i style="background:#e4f8f0"></i><span><b>running-soft</b>#e4f8f0</span></div>
+  <div class="pf-swatch"><i style="background:#fff4dc"></i><span><b>armed-soft</b>#fff4dc</span></div>
+  <div class="pf-swatch"><i style="background:#eaf0f7"></i><span><b>stopped-soft</b>#eaf0f7</span></div>
+  <div class="pf-swatch"><i style="background:#def8ee"></i><span><b>discovery-soft</b>#def8ee</span></div>
+</div>
+
+Danger is its own family, reserved for destructive actions (Kill, Stop
+in the inspector) and hard failures — not for "off", which is what
+stopped-grey is for:
+
+<div class="pf-swatches">
+  <div class="pf-swatch"><i style="background:#e5242a"></i><span><b>danger-strong</b>#e5242a</span></div>
+  <div class="pf-swatch"><i style="background:#cc1f25"></i><span><b>danger-hover</b>#cc1f25</span></div>
+  <div class="pf-swatch"><i style="background:#f5c2c5"></i><span><b>danger-border</b>#f5c2c5</span></div>
+  <div class="pf-swatch"><i style="background:#fff0f0"></i><span><b>danger-soft</b>#fff0f0</span></div>
+</div>
+
+Selection and discovery each get one voice and keep it: selected rows
+wash `#f1f7ff` with a `#94c6ff` border and an 18% ring of the same;
+live-connection dots glow discovery green `#28c98b`.
 
 Entities in the graph carry service tones: <span class="pf-tag" style="background:#102c34;color:#16d9cf"><i></i>ros nodes</span>
 <span class="pf-tag" style="background:#122746;color:#338eff"><i></i>px4 topics</span>
@@ -84,8 +117,73 @@ Entities in the graph carry service tones: <span class="pf-tag" style="backgroun
   </div>
 </div>
 
-Spacing walks a five-step scale (4 / 8 / 16 / 24 / 40). Panels round at
-12–18px, controls at 4–8px, and only the launch page gets pills.
+## Radii
+
+Rounding says what a thing is. Small radii mean *control*, large radii
+mean *container*, and pills mean *launch* — the scale in the app's own
+shapes:
+
+<div class="pf-radii">
+  <div class="pf-radius" style="border-radius:4px">4<br>inputs</div>
+  <div class="pf-radius" style="border-radius:8px">8<br>buttons · chips</div>
+  <div class="pf-radius" style="border-radius:10px">10<br>sidebar · rows</div>
+  <div class="pf-radius pf-dark" style="border-radius:12px">12<br>metric cards</div>
+  <div class="pf-radius" style="border-radius:16px">16<br>panels</div>
+  <div class="pf-radius pf-dark" style="border-radius:18px">18<br>graph canvas</div>
+  <div class="pf-radius" style="border-radius:24px 24px 0 24px">20–48<br>launch pills</div>
+</div>
+
+- `4px` (`--radius-1`) — inputs, selects, small controls, code chips
+- `8px` (`--radius-2`) — buttons, status chips, filter controls
+- `10px` — sidebar items, service rows, graph controls
+- `12px` — metric cards, graph nodes, the simulation cards
+- `16px` (`--dashboard-panel-radius`) — dashboard panels
+- `18px` (`--graph-card-radius`) — the big dark canvases
+- `20 / 40 / 48px` — recents, recent groups, and the launch pill;
+  pills live **only** on the launch page
+
+One in-between: the graph's top controls sit at `7px` and the filter
+bar at `14px` — the odd numbers are deliberate optical tweaks, not
+drift. Add new radii from this list, not from taste.
+
+## Spacing
+
+Five steps, no in-betweens. If a gap isn't on the scale, it's a bug:
+
+<div class="pf-spacing">
+  <div><i style="height:4px"></i>4</div>
+  <div><i style="height:8px"></i>8</div>
+  <div><i style="height:16px"></i>16</div>
+  <div><i style="height:24px"></i>24</div>
+  <div><i style="height:40px"></i>40</div>
+</div>
+
+- `4` — icon-to-label, dot-to-text, the tightest pairs
+- `8` — between controls, inside chips, list-row padding
+- `16` — panel padding, gaps between related blocks
+- `24` — page padding, panel-to-panel breathing room
+- `40` — launch-page drama; rarely appears inside the console
+
+The page grid itself uses `20px` gaps (`--graph-page-gap`) — the one
+deliberate exception, sized so three panels and two gutters fill a
+laptop row exactly.
+
+## Depth
+
+Borders do almost all the work: `1px` everywhere, `2px` only on the
+launch page's recents. Shadows are reserved for the few things that
+genuinely float:
+
+<div class="pf-shadows">
+  <div class="pf-shadow" style="box-shadow:0 14px 40px rgb(20 31 46 / 12%)">graph cards<br>0 14 40 · 12%</div>
+  <div class="pf-shadow" style="box-shadow:0 12px 32px #0008;background:#111e30;border-color:#243a57;color:#8ea3bd">terminal<br>0 12 32 · 50%</div>
+  <div class="pf-shadow" style="box-shadow:0 10px 24px rgb(0 102 204 / 28%)">launch button<br>0 10 24 · brand 28%</div>
+  <div class="pf-shadow" style="box-shadow:0 4px 8px rgb(28 40 53 / 12%)">recents<br>0 4 8 · 12%</div>
+</div>
+
+Flat things stay flat: panels sit on the page with a border, not a
+shadow. If a new element wants elevation, ask whether it truly floats
+above the page (terminal: yes; a card: no).
 
 ## Feeling
 
