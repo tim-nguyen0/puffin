@@ -265,6 +265,33 @@ paths:
               schema:
                 $ref: "#/components/schemas/Ack"
 
+  # missions latch onto a transient-local ros topic; the mission_node
+  # lifecycle node flies the latest latched plan when activated. abort =
+  # deactivate the node via the lifecycle endpoint - no extra verb here.
+  /mission:
+    get:
+      responses:
+        "200":
+          description: Progress of the latched/flying mission
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MissionStatus"
+    post:
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MissionRequest"
+      responses:
+        "202":
+          description: Mission latched for the executor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Ack"
+
 components:
   schemas:
     SignupRequest:
@@ -352,6 +379,62 @@ components:
       properties:
         ok:
           type: boolean
+        detail:
+          type: string
+
+    Waypoint:
+      # ned meters, matching the setpoints px4 flies: x north, y east,
+      # z down (5 m altitude = -5.0)
+      type: object
+      required: [x, y, z]
+      properties:
+        x:
+          type: number
+        y:
+          type: number
+        z:
+          type: number
+        hold_s:
+          # loiter at this waypoint before moving on
+          type: number
+          default: 0
+
+    MissionRequest:
+      type: object
+      required: [waypoints]
+      properties:
+        waypoints:
+          type: array
+          minItems: 1
+          maxItems: 50
+          items:
+            $ref: "#/components/schemas/Waypoint"
+        rate_hz:
+          # setpoint stream rate; offboard needs >= 2 hz
+          type: number
+          minimum: 2
+          maximum: 100
+          default: 20
+        takeoff_z:
+          # ned down - the climb-out altitude before the first waypoint
+          type: number
+          default: -3.0
+        return_to_origin:
+          type: boolean
+          default: true
+
+    MissionStatus:
+      type: object
+      required: [state, total]
+      properties:
+        state:
+          type: string
+          enum: [idle, ready, flying, holding, returning, done, aborted]
+        current_index:
+          # waypoint being flown; null unless flying/holding
+          type: [integer, "null"]
+        total:
+          type: integer
         detail:
           type: string
 

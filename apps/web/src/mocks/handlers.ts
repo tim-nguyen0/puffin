@@ -18,6 +18,8 @@ const lifecycleStates = new Map<string, Schemas["LifecycleState"]["state"]>();
 
 const ack: Schemas["Ack"] = { ok: true, detail: "mock" };
 
+let mockMission: Schemas["MissionRequest"] | null = null;
+
 const processes: Schemas["ProcessInfo"][] = [
   { name: "gz-server", state: "RUNNING", uptime_s: 512 },
   { name: "gz-gui", state: "RUNNING", uptime_s: 510 },
@@ -151,6 +153,22 @@ export const handlers = [
   http.post("/api/vehicle/disarm", () => HttpResponse.json(ack)),
   http.post("/api/vehicle/takeoff", () => HttpResponse.json(ack)),
   http.post("/api/vehicle/land", () => HttpResponse.json(ack)),
+  // mission mock: latch the plan, then pretend the executor walks it
+  http.get("/api/mission", () =>
+    HttpResponse.json({
+      state: mockMission ? "ready" : "idle",
+      current_index: null,
+      total: mockMission?.waypoints.length ?? 0,
+      detail: mockMission ? "latched; activate mission_node to fly" : "no mission latched",
+    } satisfies Schemas["MissionStatus"]),
+  ),
+  http.post("/api/mission", async ({ request }) => {
+    mockMission = (await request.json()) as Schemas["MissionRequest"];
+    return HttpResponse.json(
+      { ok: true, detail: `mission latched (${mockMission.waypoints.length} waypoints)` } satisfies Schemas["Ack"],
+      { status: 202 },
+    );
+  }),
   http.get("/api/ros/services", () =>
     HttpResponse.json([
       { name: "/offboard_demo/change_state", type: "lifecycle_msgs/srv/ChangeState" },
