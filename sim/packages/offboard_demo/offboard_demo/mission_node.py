@@ -1,15 +1,16 @@
-"""mission_node lifecycle node: flies the waypoint plan the api latched.
+"""mission host: one process, one named lifecycle executor per mission.
 
-the api publishes a MissionRequest json body on /puffin/mission
-(transient-local, so a plan posted before activation still arrives). on
-activate this node parses the latest plan, streams warmup setpoints,
-requests OFFBOARD, climbs to takeoff_z, walks the waypoints (loitering
-hold_s at each), optionally returns to the activation point, then holds
-until deactivated. progress goes out latched on /puffin/mission/status in
-the contract's MissionStatus shape - the api relays it verbatim.
+the api posts a MissionRequest json body on /puffin/mission (transient-local,
+so a plan posted before this process started still arrives). the host parses
+it and builds an in-process lifecycle node called `name` that owns that plan,
+then configures it to inactive so the api only ever needs "activate" - same
+contract as offboard_demo. re-posting a name rebuilds its executor around the
+new plan; a rebuild is refused while that node is active, because tearing it
+down would drop the setpoint stream mid-air. every executor reports progress
+latched on /puffin/mission/status in the contract's MissionStatus shape, keyed
+by node.
 
-arming stays with the api (/vehicle/arm) - this node only flies, same
-contract as offboard_demo.
+arming stays with the api (/vehicle/arm) - these nodes only fly.
 """
 
 from typing import Any
@@ -34,7 +35,7 @@ WARMUP_S = 1.2
 
 def latched_qos() -> Any:
     # /puffin/mission* topics: reliable + transient-local so late joiners
-    # (this node, the api's status cache) get the last message
+    # (this host, the api's status cache) get the last message
     from rclpy.qos import (
         DurabilityPolicy,
         HistoryPolicy,
@@ -52,11 +53,20 @@ def latched_qos() -> Any:
 
 def main() -> None:
     import rclpy
+    from rclpy.executors import SingleThreadedExecutor
     from rclpy.lifecycle import LifecycleNode, TransitionCallbackReturn
+    from rclpy.node import Node
 
-    class MissionNode(LifecycleNode):
-        def __init__(self) -> None:
-            super().__init__("mission_node")
+    class MissionExecutor(LifecycleNode):
+        """one plan, one ros node: activate it and it flies that plan.
+
+        the plan is fixed at construction - the host rebuilds the node to
+        change it, so nothing here re-reads a shared latch mid-flight.
+        """
+
+        def __init__(self, name: str, plan: dict[str, Any]) -> None:
+            super().__init__(name)
+            self._plan = plan
             self._mode_pub: Any = None
             self._setpoint_pub: Any = None
             self._cmd_pub: Any = None
@@ -64,16 +74,20 @@ def main() -> None:
             self._timer: Any = None
             self._position: tuple[float, float, float] | None = None
             self._heading = 0.0
-            self._raw_mission: str | None = None
             self._steps: list[dict[str, Any]] = []
             self._step = 0
-            self._total = 0
+            self._total = len(plan["waypoints"])
             self._phase = "warmup"
             self._ticks = 0
             self._warmup_ticks = 0
             self._hold_ticks = 0
-            self._rate_hz = 20.0
+            self._rate_hz = plan["rate_hz"]
             self._target: tuple[float, float, float] = (0.0, 0.0, 0.0)
+            self._state = "ready"
+            self._index: int | None = None
+            # mirrors the lifecycle active state; the host reads it before
+            # rebuilding this node
+            self.is_flying = False
 
         def on_configure(self, state: Any) -> TransitionCallbackReturn:
             from px4_msgs.msg import (
@@ -93,6 +107,7 @@ def main() -> None:
             self._cmd_pub = self.create_publisher(
                 VehicleCommand, "/fmu/in/vehicle_command", fmu_qos()
             )
+            # every executor reports on the one shared status topic
             self._status_pub = self.create_publisher(
                 String, "/puffin/mission/status", latched_qos()
             )
@@ -109,45 +124,31 @@ def main() -> None:
                 self.create_subscription(
                     VehicleLocalPosition, topic, store_position, fmu_qos()
                 )
-
-            def store_mission(msg: Any) -> None:
-                self._raw_mission = msg.data
-                if self._timer is None:
-                    self._publish_status("ready", None, "latched; activate to fly")
-
-            self.create_subscription(String, "/puffin/mission", store_mission, latched_qos())
-            self._publish_status("idle", None, "no mission latched")
             return TransitionCallbackReturn.SUCCESS
 
         def on_activate(self, state: Any) -> TransitionCallbackReturn:
             if self._position is None:
                 self.get_logger().error("no local position yet; refusing to fly blind")
                 return TransitionCallbackReturn.FAILURE
-            if self._raw_mission is None:
-                self.get_logger().error("no mission latched; post one first")
-                return TransitionCallbackReturn.FAILURE
-            try:
-                plan = parse_mission(self._raw_mission)
-            except MissionError as exc:
-                self.get_logger().error(f"bad mission: {exc}")
-                self._publish_status("idle", None, f"bad mission: {exc}")
-                return TransitionCallbackReturn.FAILURE
 
             x0, y0, _ = self._position
-            self._steps = mission_steps(plan, x0, y0)
-            self._total = len(plan["waypoints"])
+            self._steps = mission_steps(self._plan, x0, y0)
             self._step = 0
-            self._rate_hz = plan["rate_hz"]
             self._warmup_ticks = int(WARMUP_S * self._rate_hz)
             self._phase = "warmup"
             self._ticks = 0
             self._hold_ticks = 0
             self._target = (x0, y0, self._position[2])
+            # warmup publishes nothing; carry the phase so a refusal mid-warmup
+            # doesn't report this node as still merely ready
+            self._state = "flying"
             self._timer = self.create_timer(1.0 / self._rate_hz, self._tick)
             self.get_logger().info(
                 f"mission: {self._total} waypoints from ({x0:.1f}, {y0:.1f})"
             )
-            return super().on_activate(state)
+            result = super().on_activate(state)
+            self.is_flying = result == TransitionCallbackReturn.SUCCESS
+            return result
 
         def on_deactivate(self, state: Any) -> TransitionCallbackReturn:
             # loiter before the stream stops, or px4 failsafes on setpoint loss
@@ -157,19 +158,21 @@ def main() -> None:
                 )
             )
             self._destroy_timer()
+            self.is_flying = False
             if self._phase != "done":
                 self._publish_status("aborted", None, "deactivated mid-mission")
             return super().on_deactivate(state)
 
         def on_cleanup(self, state: Any) -> TransitionCallbackReturn:
             self._destroy_timer()
+            self.is_flying = False
             return TransitionCallbackReturn.SUCCESS
 
         def on_shutdown(self, state: Any) -> TransitionCallbackReturn:
+            # no rclpy.shutdown() here: this node is one of many in the host
+            # process, and the host outlives it
             self._destroy_timer()
-            # exit once the transition completes: supervisord respawns the
-            # node fresh, so a ui "kill" is a clean restart
-            self.create_timer(0.5, rclpy.shutdown)
+            self.is_flying = False
             return TransitionCallbackReturn.SUCCESS
 
         def _destroy_timer(self) -> None:
@@ -178,11 +181,18 @@ def main() -> None:
                 self.destroy_timer(self._timer)
                 self._timer = None
 
+        def report_refusal(self, detail: str) -> None:
+            # re-states the phase this node is already in; only detail says
+            # why the new plan bounced
+            self._publish_status(self._state, self._index, detail)
+
         def _publish_status(self, state: str, index: int | None, detail: str) -> None:
             from std_msgs.msg import String
 
+            self._state = state
+            self._index = index
             msg = String()
-            msg.data = status_json(state, index, self._total, detail)
+            msg.data = status_json(self.get_name(), state, index, self._total, detail)
             self._status_pub.publish(msg)
 
         def _current(self) -> dict[str, Any]:
@@ -241,11 +251,70 @@ def main() -> None:
                     else:
                         self._advance()
 
+    class MissionHost(Node):
+        """plain node that owns the executors and the /puffin/mission latch."""
+
+        def __init__(self, spinner: Any) -> None:
+            super().__init__("mission_host")
+            from std_msgs.msg import String
+
+            self._spinner = spinner
+            self._executors: dict[str, MissionExecutor] = {}
+            self._status_pub = self.create_publisher(
+                String, "/puffin/mission/status", latched_qos()
+            )
+            self.create_subscription(
+                String, "/puffin/mission", self._on_mission, latched_qos()
+            )
+            self._publish_status(None, "idle", 0, "no mission primed")
+
+        def _publish_status(
+            self, node: str | None, state: str, total: int, detail: str
+        ) -> None:
+            from std_msgs.msg import String
+
+            msg = String()
+            msg.data = status_json(node, state, None, total, detail)
+            self._status_pub.publish(msg)
+
+        def _on_mission(self, msg: Any) -> None:
+            try:
+                plan = parse_mission(msg.data)
+            except MissionError as exc:
+                self.get_logger().error(f"bad mission: {exc}")
+                self._publish_status(None, "idle", 0, f"bad mission: {exc}")
+                return
+
+            name = plan["name"]
+            total = len(plan["waypoints"])
+            old = self._executors.get(name)
+            if old is not None and old.is_flying:
+                # destroying an active node would cut its setpoint stream
+                self.get_logger().warn(f"{name} is active; refusing to rebuild it")
+                old.report_refusal(f"rebuild refused: {name} is active, deactivate it first")
+                return
+
+            if old is not None:
+                self._spinner.remove_node(old)
+                old.destroy_node()
+                del self._executors[name]
+
+            node = MissionExecutor(name, plan)
+            self._spinner.add_node(node)
+            # boot it to inactive here so the api only ever sends "activate"
+            node.trigger_configure()
+            self._executors[name] = node
+            verb = "rebuilt" if old is not None else "primed"
+            self.get_logger().info(f"{verb} {name}: {total} waypoints")
+            self._publish_status(name, "ready", total, f"{verb}; activate {name} to fly")
+
     rclpy.init()
-    node = MissionNode()
-    node.trigger_configure()
+    # one executor spins the host and every mission node it builds
+    spinner = SingleThreadedExecutor()
+    host = MissionHost(spinner)
+    spinner.add_node(host)
     try:
-        rclpy.spin(node)
+        spinner.spin()
     except KeyboardInterrupt:
         pass
 
