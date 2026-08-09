@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { useTelemetryStore } from "../../lib/telemetryStore";
@@ -54,7 +54,13 @@ function buildDrone(): THREE.Group {
 
 const HOME_OFFSET = new THREE.Vector3(5.5, 4, 5.5);
 
-export function SceneViewport() {
+interface SceneViewportProps {
+  // optional readout pinned over the scene (the dashboard puts gps there);
+  // callers that pass nothing get the bare viewport
+  hud?: ReactNode;
+}
+
+export function SceneViewport({ hud }: SceneViewportProps = {}) {
   const mount = useRef<HTMLDivElement>(null);
   const resetView = useRef<(() => void) | null>(null);
   const connected = useTelemetryStore((state) => state.connected);
@@ -169,6 +175,7 @@ export function SceneViewport() {
   return (
     <div className="scene-viewport">
       <div ref={mount} className="scene-viewport-canvas" />
+      {hud ? <div className="scene-viewport-hud">{hud}</div> : null}
       <span className={`scene-viewport-hint${connected ? " is-live" : ""}`}>
         {connected ? "● live telemetry render" : "○ waiting for telemetry"}
       </span>

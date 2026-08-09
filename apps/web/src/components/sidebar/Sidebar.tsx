@@ -16,7 +16,6 @@ type NavItem = { label: string; icon: string | ReactNode; path: string | null };
 // they render disabled until they do
 const NAV_ITEMS: NavItem[] = [
   { label: "Dashboard", icon: cpu, path: "/dashboard" },
-  { label: "Simulation", icon: <AppIcon name="pipeline" />, path: "/simulation" },
   { label: "Vehicles", icon: <AppIcon name="vehicle" />, path: "/vehicles" },
   { label: "World Editor", icon: <AppIcon name="globe" />, path: null },
   { label: "Sensors", icon: <AppIcon name="sensors" />, path: "/sensors" },
