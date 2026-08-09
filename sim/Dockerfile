@@ -58,6 +58,7 @@ RUN bash -c "source /opt/ros/jazzy/setup.bash && cd /ros_ws \
       && colcon build --symlink-install --packages-skip px4_msgs"
 
 COPY supervisord.conf /etc/supervisor/conf.d/puffin.conf
+COPY qgc_link.sh /qgc_link.sh
 COPY worlds/ /worlds/
 
 # full gz gui, pinned to the 1280x720 screen: take gazebo's default gui
