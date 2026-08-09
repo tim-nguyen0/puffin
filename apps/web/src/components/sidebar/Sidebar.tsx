@@ -17,7 +17,7 @@ type NavItem = { label: string; icon: string | ReactNode; path: string | null };
 const NAV_ITEMS: NavItem[] = [
   { label: "Dashboard", icon: cpu, path: "/dashboard" },
   { label: "Simulation", icon: <AppIcon name="pipeline" />, path: "/simulation" },
-  { label: "Vehicles", icon: <AppIcon name="vehicle" />, path: null },
+  { label: "Vehicles", icon: <AppIcon name="vehicle" />, path: "/vehicles" },
   { label: "World Editor", icon: <AppIcon name="globe" />, path: null },
   { label: "Sensors", icon: <AppIcon name="sensors" />, path: null },
   { label: "Mission Planner", icon: <AppIcon name="map-pin" />, path: null },
