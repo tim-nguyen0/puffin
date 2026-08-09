@@ -11,11 +11,12 @@
 
 /* named areas: the capped viewport and telemetry stack on the left,
    controls and nodes in the middle, the tall process list as a right
-   rail - everything on screen at once */
+   rail - everything on screen at once. gps/qgc append a trailing row
+   rather than threading into the existing spans. */
 .dashboard-grid {
   display: grid;
   grid-template:
-    "viewport control processes" auto "telemetry control processes" auto "telemetry nodes processes" 1fr / minmax(0, var(--sim-viewport-max-width)) minmax(0, 1fr) minmax(0, 1fr);
+    "viewport control processes" auto "telemetry control processes" auto "telemetry nodes processes" 1fr "gps qgc qgc" auto / minmax(0, var(--sim-viewport-max-width)) minmax(0, 1fr) minmax(0, 1fr);
   gap: var(--graph-page-gap);
   align-items: stretch;
 }
@@ -45,6 +46,28 @@
   grid-area: nodes;
 }
 
+.dashboard-grid > .gps-panel {
+  grid-area: gps;
+}
+
+/* qgc gets the same dark surface treatment as the primary viewport panel */
+.qgc-panel {
+  border-color: var(--color-graph-border);
+  background: var(--color-graph-surface);
+}
+
+.qgc-panel .dashboard-panel-header {
+  background: var(--color-graph-surface);
+}
+
+.qgc-panel .dashboard-panel-header h2 {
+  color: var(--color-graph-text);
+}
+
+.dashboard-grid > .qgc-panel {
+  grid-area: qgc;
+}
+
 @media (width <= 74rem) {
   .dashboard-grid {
     grid-template:
@@ -52,6 +75,7 @@
       "telemetry control"
       "telemetry nodes"
       "processes processes"
+      "gps qgc"
       / repeat(2, minmax(0, 1fr));
   }
 }
@@ -63,7 +87,9 @@
       "telemetry"
       "control"
       "nodes"
-      "processes";
+      "processes"
+      "gps"
+      "qgc";
     grid-template-columns: minmax(0, 1fr);
   }
 }

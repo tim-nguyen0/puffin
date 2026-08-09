@@ -1,7 +1,7 @@
 import { AppIcon } from "../../components/app-icon";
 import { StatusTag } from "../../components/status-tag";
+import { climbRate, nedToLatLon, quatToEulerDeg } from "../../lib/geo";
 import { useTelemetryStore } from "../../lib/telemetryStore";
-import { climbRate, nedToLatLon, quatToEulerDeg } from "./sensorMath";
 import "./sensors.css";
 
 interface SparklineProps {

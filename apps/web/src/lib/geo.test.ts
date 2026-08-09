@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { climbRate, nedToLatLon, quatToEulerDeg, WORLD_ORIGIN } from "./sensorMath";
+import { climbRate, nedToLatLon, quatToEulerDeg, WORLD_ORIGIN } from "./geo";
 
 describe("quaternion to euler", () => {
   it("maps identity to level flight", () => {

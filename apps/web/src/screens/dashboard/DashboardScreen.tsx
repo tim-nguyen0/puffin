@@ -7,9 +7,11 @@ import { DashboardPanel } from "../../components/dashboard-panel";
 import { LifecycleQuickPanel } from "../../components/lifecycle";
 import { MetricCard } from "../../components/metric-card";
 import { SceneViewport } from "../../components/scene-viewport";
+import { SimViewport } from "../../components/sim-viewport";
 import { StatusTag } from "../../components/status-tag";
 import { TeleopPad } from "../../components/teleop";
 import { api } from "../../lib/api";
+import { climbRate, nedToLatLon } from "../../lib/geo";
 import { useSettingsStore } from "../../lib/settingsStore";
 import { connectTelemetry, disconnectTelemetry, useTelemetryStore } from "../../lib/telemetryStore";
 import "./dashboard.css";
@@ -18,7 +20,10 @@ const M_TO_FT = 3.28084;
 
 export function DashboardScreen() {
   const queryClient = useQueryClient();
-  const { connected, latest } = useTelemetryStore();
+  const { connected, latest, history } = useTelemetryStore();
+  const live = connected && latest !== null;
+  const gpsFix = latest ? nedToLatLon(latest.ned.x, latest.ned.y) : null;
+  const climb = climbRate(history);
   const units = useSettingsStore((state) => state.units);
   const toLength = (meters: number) => (units === "imperial" ? meters * M_TO_FT : meters);
   const lengthUnit = units === "imperial" ? "ft" : "m";
@@ -359,6 +364,58 @@ export function DashboardScreen() {
         >
           <div className="panel-pad">
             <LifecycleQuickPanel />
+          </div>
+        </DashboardPanel>
+
+        <DashboardPanel
+          className="gps-panel"
+          title="GPS"
+          icon={<AppIcon name="map-pin" />}
+          headerAction={
+            <StatusTag
+              status={live ? "running" : "stopped"}
+              label={live ? "3d fix (sim)" : "no fix"}
+            />
+          }
+        >
+          <div className="panel-pad">
+            <div className="telemetry-metrics">
+              <MetricCard
+                label="Latitude"
+                value={gpsFix ? `${gpsFix.lat.toFixed(6)}°` : "—"}
+                mono
+              />
+              <MetricCard
+                label="Longitude"
+                value={gpsFix ? `${gpsFix.lon.toFixed(6)}°` : "—"}
+                mono
+              />
+              <MetricCard
+                label="Altitude (m)"
+                value={latest ? (-latest.ned.z).toFixed(2) : "—"}
+                mono
+                accent="cyan"
+              />
+              <MetricCard
+                label="Climb (m/s)"
+                value={latest ? climb.toFixed(2) : "—"}
+                mono
+              />
+            </div>
+          </div>
+        </DashboardPanel>
+
+        <DashboardPanel
+          className="qgc-panel"
+          title="QGroundControl"
+          icon={<AppIcon name="globe" />}
+          headerAction={<span className="viewport-stats">:6081</span>}
+        >
+          <div className="viewport-body">
+            <SimViewport
+              variant="qgc"
+              hint="stream offline — rebuild the sim image to add qgc"
+            />
           </div>
         </DashboardPanel>
       </div>

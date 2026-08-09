@@ -5,3 +5,9 @@ export function simViewportUrl(protocol: string, hostname: string): string {
   const params = "autoconnect=true&resize=scale&reconnect=true";
   return `${protocol}//${hostname}:6080/vnc.html?${params}`;
 }
+
+// qgroundcontrol streams over its own novnc port, same host, same recipe.
+export function qgcViewportUrl(protocol: string, hostname: string): string {
+  const params = "autoconnect=true&resize=scale&reconnect=true";
+  return `${protocol}//${hostname}:6081/vnc.html?${params}`;
+}
