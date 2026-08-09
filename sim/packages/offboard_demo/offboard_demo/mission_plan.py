@@ -7,6 +7,7 @@ turns it into a flat list of steps the node walks with reached().
 
 import json
 import math
+import re
 from typing import Any
 
 MAX_WAYPOINTS = 50
@@ -14,6 +15,12 @@ MIN_RATE_HZ = 2.0
 MAX_RATE_HZ = 100.0
 DEFAULT_RATE_HZ = 20.0
 DEFAULT_TAKEOFF_Z = -3.0
+
+# the executor's ros node name, so it is also a ros name: lowercase, no
+# dashes, no leading digit. same pattern the contract enforces.
+NAME_PATTERN = "^[a-z][a-z0-9_]{0,30}$"
+NAME_RE = re.compile(NAME_PATTERN)
+DEFAULT_NAME = "mission"
 
 # ned: z is down. missions that would fly at/below the ground are refused
 # rather than clamped - a surprise altitude is worse than a rejection.
@@ -41,6 +48,11 @@ def parse_mission(raw: str) -> dict[str, Any]:
         raise MissionError(f"mission is not json: {exc}") from exc
     if not isinstance(body, dict):
         raise MissionError("mission must be an object")
+
+    name = body.get("name", DEFAULT_NAME)
+    # fullmatch, not match: "$" alone would let a trailing newline through
+    if not isinstance(name, str) or not NAME_RE.fullmatch(name):
+        raise MissionError(f"name must match {NAME_PATTERN}")
 
     waypoints = body.get("waypoints")
     if not isinstance(waypoints, list) or not waypoints:
@@ -71,6 +83,7 @@ def parse_mission(raw: str) -> dict[str, Any]:
         raise MissionError(f"takeoff_z is at/below ground (z={takeoff_z})")
 
     return {
+        "name": name,
         "waypoints": parsed,
         "rate_hz": rate_hz,
         "takeoff_z": takeoff_z,
@@ -115,8 +128,15 @@ def mission_steps(
     return steps
 
 
-def status_json(state: str, current_index: int | None, total: int, detail: str) -> str:
-    # the MissionStatus shape from the contract; the api relays it verbatim
-    return json.dumps(
+def status_json(
+    node: str | None, state: str, current_index: int | None, total: int, detail: str
+) -> str:
+    # the MissionStatus shape from the contract; the api relays it verbatim.
+    # node is which executor reported - omitted while the host has none.
+    body: dict[str, Any] = {}
+    if node is not None:
+        body["node"] = node
+    body.update(
         {"state": state, "current_index": current_index, "total": total, "detail": detail}
     )
+    return json.dumps(body)

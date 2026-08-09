@@ -10,8 +10,24 @@ services:
     ipc: shareable
     ports:
       - "6080:6080" # noVNC viewport, full gazebo ui (pixels)
+      - "6081:6081" # noVNC qgroundcontrol, second display (pixels)
       - "8000:8000" # API + telemetry websocket (numbers)
       - "5173:5173" # web
+    volumes:
+      # forged mission packages land here, which is the repo's sim/packages:
+      # the next image build bakes them in like any hand-written package
+      - ./sim/packages:/persist/packages
+
+  qgc:
+    build:
+      context: ./services/qgc
+    # qgc ships no arm64 appimage; on apple silicon rosetta emulates just
+    # this container while physics stays native. it binds :6081 inside the
+    # sim's netns, so the port publish stays on the sim service.
+    platform: linux/amd64
+    network_mode: "service:sim"
+    depends_on:
+      - sim
 
   api:
     build:

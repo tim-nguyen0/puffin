@@ -50,76 +50,6 @@
   font-size: var(--text-sm);
 }
 
-/* --- map: a dark live surface, like the graph canvas ------------------- */
-
-.mission-map {
-  position: relative;
-  overflow: hidden;
-  border: var(--border-width) solid var(--color-graph-border);
-  border-radius: var(--simulation-card-radius);
-  background: var(--color-graph-bg);
-}
-
-.mission-map svg {
-  display: block;
-  width: 100%;
-  height: auto;
-}
-
-.mission-grid line {
-  stroke: var(--color-graph-grid);
-  stroke-width: var(--graph-border-width);
-}
-
-.mission-grid line:first-child,
-.mission-grid > line {
-  stroke: var(--color-graph-link);
-}
-
-.mission-path {
-  fill: none;
-  stroke: var(--color-command-link);
-  stroke-width: var(--graph-link-width);
-  stroke-dasharray: var(--mission-path-dash);
-}
-
-.mission-origin {
-  fill: var(--color-graph-bg);
-  stroke: var(--color-graph-muted);
-  stroke-width: var(--graph-node-border-width);
-}
-
-.mission-wp {
-  fill: var(--color-service-blue-fill);
-  stroke: var(--color-service-blue);
-  stroke-width: var(--graph-node-border-width);
-}
-
-.mission-wp-label {
-  fill: var(--color-graph-text);
-  font-family: var(--font-mono);
-  font-size: var(--text-graph-micro);
-  text-anchor: middle;
-  dominant-baseline: central;
-}
-
-.mission-drone {
-  fill: var(--color-service-cyan);
-  stroke: var(--color-service-cyan-fill);
-  stroke-width: var(--graph-node-border-width);
-}
-
-.mission-map-scale {
-  position: absolute;
-  right: var(--space-3);
-  bottom: var(--space-2);
-  color: var(--color-graph-subtle);
-  font-family: var(--font-mono);
-  font-size: var(--text-graph-micro);
-  text-transform: uppercase;
-  letter-spacing: var(--services-status-letter-spacing);
-}
-
 .mission-stats {
   display: flex;
   flex-wrap: wrap;
@@ -265,6 +195,16 @@
   font-size: var(--text-sm);
 }
 
+.mission-field-row input[aria-invalid="true"] {
+  border-color: var(--color-danger-strong);
+}
+
+.mission-name-error {
+  margin: var(--space-2) 0 0;
+  color: var(--color-danger-strong);
+  font-size: var(--text-sm);
+}
+
 .mission-builder-buttons {
   display: flex;
   align-items: center;
@@ -324,6 +264,101 @@
   color: var(--color-page-muted);
 }
 
+/* --- control panel: any lifecycle node, not just the primed one -------- */
+
+.mission-control-panel {
+  padding: var(--space-3);
+  border: var(--border-width) solid var(--color-page-border);
+  border-radius: var(--graph-control-radius);
+  background: var(--color-page-control);
+  margin-bottom: var(--space-3);
+}
+
+.mission-control-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+.mission-control-header h2 {
+  margin: 0;
+  color: var(--base-palette-not-quite-gray);
+  font-size: var(--text-md);
+}
+
+.mission-control-select-label {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  color: var(--color-page-muted);
+  font-size: var(--text-sm);
+}
+
+.mission-control-select {
+  box-sizing: border-box;
+  width: 100%;
+  height: var(--mission-input-height);
+  padding-inline: var(--space-2);
+  border: var(--border-width) solid var(--color-page-border);
+  border-radius: var(--vehicle-chip-radius);
+  background: var(--color-page-surface);
+  color: var(--color-page-text);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+}
+
+.mission-control-actions {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.mission-control-button {
+  flex: 1;
+  height: var(--btn-h-sm);
+  border: var(--border-width) solid var(--color-page-border);
+  border-radius: var(--graph-control-radius);
+  background: var(--color-page-surface);
+  color: var(--color-page-text);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.mission-control-button:disabled {
+  color: var(--color-status-stopped);
+  cursor: not-allowed;
+}
+
+.mission-control-arm {
+  border-color: var(--base-palette-blue);
+  color: var(--base-palette-blue);
+}
+
+.mission-control-run {
+  border-color: var(--color-status-running);
+  color: var(--color-status-running);
+}
+
+.mission-control-stop {
+  border-color: var(--color-danger-border);
+  background: var(--color-danger-soft);
+  color: var(--color-danger-strong);
+}
+
+.mission-control-button:hover:not(:disabled) {
+  background: var(--color-page-control-hover);
+}
+
+.mission-control-empty {
+  margin: 0;
+  color: var(--color-page-muted);
+  font-size: var(--text-sm);
+}
+
 .mission-actions {
   display: flex;
   gap: var(--space-2);
@@ -347,29 +382,63 @@
   cursor: not-allowed;
 }
 
-.mission-start {
+.mission-prime {
   border: 0;
   background: var(--base-palette-blue);
   color: var(--color-launch-bg);
 }
 
-.mission-start:hover:not(:disabled) {
+.mission-prime:hover:not(:disabled) {
   background: var(--color-button-primary-hover);
 }
 
-.mission-start:disabled {
+.mission-prime:disabled {
   background: var(--color-status-stopped-soft);
 }
 
-.mission-abort {
-  border-color: var(--color-danger-border);
-  background: var(--color-danger-soft);
-  color: var(--color-danger-strong);
+.mission-forge {
+  border-color: var(--base-palette-blue);
+  color: var(--base-palette-blue);
 }
 
 .mission-clear:hover:not(:disabled),
-.mission-actions button:not(.mission-start, .mission-abort):hover {
+.mission-actions button:not(.mission-prime):hover {
   background: var(--color-page-control-hover);
+}
+
+.mission-forge-status {
+  margin: var(--space-2) 0 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+}
+
+.mission-forge-tone-queued,
+.mission-forge-tone-building {
+  color: var(--color-status-armed);
+}
+
+.mission-forge-tone-done {
+  color: var(--color-status-running);
+}
+
+.mission-forge-tone-failed {
+  color: var(--color-danger-strong);
+}
+
+.mission-forge-tone-building {
+  animation: mission-forge-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes mission-forge-pulse {
+  50% {
+    opacity: 0.5;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mission-forge-tone-building {
+    animation: none;
+  }
 }
 
 .mission-announcement {

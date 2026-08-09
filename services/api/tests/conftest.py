@@ -4,6 +4,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from puffin_api.adapters import AdapterResult
+from puffin_api.adapters.forge import ForgeAdapter
 from puffin_api.main import create_app
 
 
@@ -146,16 +147,30 @@ def fake_gz() -> FakeGz:
 
 
 @pytest.fixture
+def forge_dir(tmp_path: Path) -> Path:
+    return tmp_path / "forge"
+
+
+@pytest.fixture
+def forge_adapter(forge_dir: Path) -> ForgeAdapter:
+    # the real adapter, pointed at an isolated tmp dir - forge is just
+    # filesystem plumbing, no need to fake it
+    return ForgeAdapter(str(forge_dir))
+
+
+@pytest.fixture
 def client(
     fake_supervisor: FakeSupervisor,
     fake_ros: FakeRos,
     fake_gz: FakeGz,
+    forge_adapter: ForgeAdapter,
     tmp_path: Path,
 ) -> TestClient:
     app = create_app(
         supervisor=fake_supervisor,
         ros_adapter=fake_ros,
         gz=fake_gz,
+        forge=forge_adapter,
         db_path=str(tmp_path / "test.db"),
     )
     return TestClient(app)

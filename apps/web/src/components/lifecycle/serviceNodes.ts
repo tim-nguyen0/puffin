@@ -1,4 +1,4 @@
-import type { StatusTone } from "../../components/status-tag";
+import type { StatusTone } from "../status-tag";
 
 // the design's three states map cleanly onto the ros 2 lifecycle:
 // stopped = unconfigured/finalized, armed = inactive (configured),
@@ -65,13 +65,6 @@ const KNOWN_NODES: Record<string, ServiceNodeMeta> = {
     executable: "teleop_node",
     publishes: "/fmu/in/trajectory_setpoint",
     subscribes: "/puffin/teleop/cmd_vel",
-  },
-  "/mission_node": {
-    description: "lifecycle node · flies the latched waypoint plan",
-    package: "offboard_demo",
-    executable: "mission_node",
-    publishes: "/puffin/mission/status",
-    subscribes: "/puffin/mission",
   },
 };
 

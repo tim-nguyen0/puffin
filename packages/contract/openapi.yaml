@@ -292,6 +292,43 @@ paths:
               schema:
                 $ref: "#/components/schemas/Ack"
 
+  # the forge turns a plan into a real standalone package: the api drops a
+  # spec into the /dev/shm dir it shares with the sim container, a watcher
+  # there renders the template, colcon-builds it live, registers a
+  # supervisord program under the plan's name, and copies the package into
+  # sim/packages/ so the next image build bakes it in
+  /mission/forge:
+    post:
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MissionRequest"
+      responses:
+        "202":
+          description: Spec queued for the sim-side forge
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Ack"
+
+  /mission/forge/{name}:
+    get:
+      parameters:
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Build progress for that node name
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ForgeStatus"
+
 components:
   schemas:
     SignupRequest:
@@ -403,6 +440,12 @@ components:
       type: object
       required: [waypoints]
       properties:
+        name:
+          # ros node name for this mission's executor; priming an existing
+          # name rebuilds that node with the new plan
+          type: string
+          pattern: "^[a-z][a-z0-9_]{0,30}$"
+          default: mission
         waypoints:
           type: array
           minItems: 1
@@ -423,10 +466,25 @@ components:
           type: boolean
           default: true
 
+    ForgeStatus:
+      type: object
+      required: [name, state, detail]
+      properties:
+        name:
+          type: string
+        state:
+          type: string
+          enum: [unknown, queued, building, done, failed]
+        detail:
+          type: string
+
     MissionStatus:
       type: object
       required: [state, total]
       properties:
+        node:
+          # which mission executor reported this; absent until one exists
+          type: string
         state:
           type: string
           enum: [idle, ready, flying, holding, returning, done, aborted]

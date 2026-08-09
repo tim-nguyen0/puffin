@@ -92,11 +92,20 @@ pnpm --filter @puffin/docs build
 
 ## QGroundControl
 
-The sim streams MAVLink to the docker host on udp 14550, so a locally
-installed QGroundControl auto-connects the moment it opens - full GCS
-alongside the Puffin UI, no configuration. Both are control channels to
-the same vehicle: the one-pilot rule applies. (Cloud deploys can't carry
-this link - the tunnel/proxy path is http-only.)
+Two ways to fly with a real GCS:
+
+- **Embedded**: the `qgc` compose service runs QGroundControl headless and
+  the dashboard shows it on :6081 next to the Gazebo viewport. The
+  container is pinned `linux/amd64` (QGC ships no arm64 build) - on Apple
+  silicon, Rosetta emulates just this one container while the sim stays
+  native.
+- **Desktop**: the sim also streams MAVLink to the docker host on udp
+  14550, so a locally installed QGroundControl auto-connects the moment
+  it opens.
+
+Both are control channels to the same vehicle: the one-pilot rule
+applies. (Cloud deploys can't carry either link - the tunnel/proxy path
+is http-only.)
 
 ## Adding your own ROS package
 
