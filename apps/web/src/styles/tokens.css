@@ -342,4 +342,10 @@
   /* Mission 3d scene */
   --mission-scene-aspect: 10 / 7;
   --mission-scene-min-height: 320px;
+
+  /* Ops dashboard: health strip, node cards, scene hud */
+  --dashboard-health-strip-height: 44px;
+  --dashboard-node-card-min-width: 240px;
+  --color-scene-hud-bg: rgb(13 23 38 / 82%);
+  --scene-hud-line-height: 1.7;
 }

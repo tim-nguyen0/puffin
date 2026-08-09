@@ -22,6 +22,8 @@ export default defineConfig({
         items: [
           { text: "Getting started", link: "/guide/getting-started" },
           { text: "Flying the demo", link: "/guide/flying" },
+          { text: "Flying missions", link: "/guide/missions" },
+          { text: "Forging a node", link: "/guide/forge" },
           { text: "Adding a ROS package", link: "/guide/packages" },
           { text: "QGroundControl", link: "/guide/qgc" },
         ],

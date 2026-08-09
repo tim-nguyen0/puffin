@@ -31,6 +31,23 @@
   color: var(--color-command-accent);
 }
 
+/* same chrome family as the reset button: micro mono on a subtle dark
+   backing, pinned clear of the hint and the reset control */
+.scene-viewport-hud {
+  position: absolute;
+  top: var(--space-2);
+  left: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+  border: var(--graph-border-width) solid var(--color-graph-border);
+  border-radius: var(--radius-1);
+  background: var(--color-scene-hud-bg);
+  color: var(--color-graph-muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-graph-micro);
+  line-height: var(--scene-hud-line-height);
+  text-transform: uppercase;
+}
+
 .scene-viewport-reset {
   position: absolute;
   top: var(--space-2);

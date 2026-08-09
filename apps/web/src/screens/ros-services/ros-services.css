@@ -248,11 +248,22 @@
   text-transform: uppercase;
 }
 
+.node-inspector-title-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
 .node-inspector-header h2 {
   overflow-wrap: anywhere;
   margin: 0 0 var(--space-1);
   color: var(--base-palette-not-quite-gray);
   font-size: var(--services-inspector-title);
+}
+
+.node-inspector-forged-tag .status-tag {
+  text-transform: lowercase;
 }
 
 .node-inspector-section {

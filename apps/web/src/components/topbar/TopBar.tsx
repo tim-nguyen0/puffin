@@ -7,7 +7,6 @@ const SCREEN_LABELS: Record<string, string> = {
   "/": "Launcher",
   "/dashboard": "Dashboard",
   "/dashboard/console": "Console",
-  "/simulation": "Simulation",
   "/vehicles": "Vehicle Library",
   "/sensors": "Sensors",
   "/mission-planner": "Mission Planner",
