@@ -37,6 +37,8 @@ class FakeRos:
         self.lifecycle = {"offboard_demo": "inactive"}
         self.telemetry: dict | None = None
         self.teleop_frames: list[tuple[float, float, float, float]] = []
+        self.missions: list[str] = []
+        self.mission_state: dict | None = None
 
     def send_vehicle_command(
         self, command: int, param1: float = 0.0, param7: float = 0.0
@@ -97,6 +99,19 @@ class FakeRos:
         if self.telemetry is None:
             return AdapterResult(ok=False, detail="no telemetry received yet")
         return AdapterResult(ok=True, data=self.telemetry)
+
+    def publish_mission(self, mission_json: str) -> AdapterResult:
+        self.missions.append(mission_json)
+        return AdapterResult(ok=True, detail="mission latched; activate mission_node to fly")
+
+    def mission_status(self) -> AdapterResult:
+        if self.mission_state is None:
+            return AdapterResult(
+                ok=True,
+                data={"state": "idle", "current_index": None, "total": 0,
+                      "detail": "no mission status yet"},
+            )
+        return AdapterResult(ok=True, data=self.mission_state)
 
 
 class FakeGz:

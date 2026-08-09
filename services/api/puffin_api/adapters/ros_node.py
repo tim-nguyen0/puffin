@@ -8,6 +8,7 @@ life of the process. Graph queries need no spinning, but the node must be
 long-lived anyway: DDS discovery is gossip, and a fresh node knows nothing.
 """
 
+import json
 import os
 import threading
 from typing import Any
@@ -56,6 +57,28 @@ def fmu_out_qos() -> Any:
     )
 
 
+def latched_qos() -> Any:
+    """QoS for the /puffin/mission* topics, mirroring the sim-side node.
+
+    RELIABLE + TRANSIENT_LOCAL + KEEP_LAST(1) - a mission latched before
+    mission_node activates still arrives, and this api sees the last
+    status even if it subscribed late.
+    """
+    from rclpy.qos import (
+        DurabilityPolicy,
+        HistoryPolicy,
+        QoSProfile,
+        ReliabilityPolicy,
+    )
+
+    return QoSProfile(
+        reliability=ReliabilityPolicy.RELIABLE,
+        durability=DurabilityPolicy.TRANSIENT_LOCAL,
+        history=HistoryPolicy.KEEP_LAST,
+        depth=1,
+    )
+
+
 class RosAdapter:
     def __init__(self) -> None:
         self._init_lock = threading.Lock()
@@ -67,6 +90,7 @@ class RosAdapter:
         self._latest: dict[str, Any] = {}
         self._nav_states: dict[int, str] = {}
         self._telemetry_ready = False
+        self._mission_ready = False
         self._acks: dict[int, Any] = {}
         self._ack_cond = threading.Condition()
 
@@ -353,6 +377,59 @@ class RosAdapter:
     def _now_us(self) -> int:
         # px4_msgs timestamps are microseconds from the node clock (gotcha #7).
         return int(self._node.get_clock().now().nanoseconds // 1000)
+
+    # -- mission ------------------------------------------------------------
+
+    def _ensure_mission(self) -> None:
+        if self._mission_ready:
+            return
+        from std_msgs.msg import String
+
+        node = self._ensure_node()
+        with self._init_lock:
+            if self._mission_ready:
+                return
+
+            def store(msg: Any) -> None:
+                with self._data_lock:
+                    self._latest["mission_status"] = msg.data
+
+            node.create_subscription(String, "/puffin/mission/status", store, latched_qos())
+            self._clients["mission"] = node.create_publisher(
+                String, "/puffin/mission", latched_qos()
+            )
+            self._mission_ready = True
+
+    def publish_mission(self, mission_json: str) -> AdapterResult:
+        try:
+            from std_msgs.msg import String
+
+            self._ensure_mission()
+            msg = String()
+            msg.data = mission_json
+            self._clients["mission"].publish(msg)
+        except Exception as exc:  # noqa: BLE001 - clean {ok, detail} at the boundary
+            return AdapterResult(ok=False, detail=f"mission publish failed: {exc}")
+        return AdapterResult(ok=True, detail="mission latched; activate mission_node to fly")
+
+    def mission_status(self) -> AdapterResult:
+        try:
+            self._ensure_mission()
+            with self._data_lock:
+                raw = self._latest.get("mission_status")
+        except Exception as exc:  # noqa: BLE001 - clean {ok, detail} at the boundary
+            return AdapterResult(ok=False, detail=f"mission status unavailable: {exc}")
+        if raw is None:
+            # nothing published yet - mission_node not up or nothing latched
+            return AdapterResult(
+                ok=True,
+                data={"state": "idle", "current_index": None, "total": 0,
+                      "detail": "no mission status yet"},
+            )
+        try:
+            return AdapterResult(ok=True, data=json.loads(raw))
+        except json.JSONDecodeError as exc:
+            return AdapterResult(ok=False, detail=f"bad mission status json: {exc}")
 
     # -- telemetry ----------------------------------------------------------
 
