@@ -56,7 +56,6 @@ RUN bash -c "source /opt/ros/jazzy/setup.bash && cd /ros_ws \
       && colcon build --symlink-install --packages-select offboard_demo"
 
 COPY supervisord.conf /etc/supervisor/conf.d/puffin.conf
-COPY gui_minimal.config /gui_minimal.config
 COPY worlds/ /worlds/
 
 # full gz gui, pinned to the 1280x720 screen: take gazebo's default gui

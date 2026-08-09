@@ -10,7 +10,6 @@ services:
     ipc: shareable
     ports:
       - "6080:6080" # noVNC viewport, full gazebo ui (pixels)
-      - "6081:6081" # noVNC viewport, chrome-free scene for the dashboard
       - "8000:8000" # API + telemetry websocket (numbers)
       - "5173:5173" # web
 

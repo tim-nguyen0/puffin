@@ -837,6 +837,7 @@ export interface components {
             t_us: number;
             armed: boolean;
             mode: string;
+            attitude_q: number[];
             ned: {
                 x: number;
                 y: number;

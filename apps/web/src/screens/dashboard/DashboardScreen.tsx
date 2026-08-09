@@ -6,7 +6,7 @@ import { Button } from "../../components/button";
 import { DashboardPanel } from "../../components/dashboard-panel";
 import { LifecycleQuickPanel } from "../../components/lifecycle";
 import { MetricCard } from "../../components/metric-card";
-import { SimViewport } from "../../components/sim-viewport";
+import { SceneViewport } from "../../components/scene-viewport";
 import { StatusTag } from "../../components/status-tag";
 import { TeleopPad } from "../../components/teleop";
 import { api } from "../../lib/api";
@@ -173,7 +173,7 @@ export function DashboardScreen() {
           }
         >
           <div className="viewport-body">
-            <SimViewport variant="clean" />
+            <SceneViewport />
           </div>
         </DashboardPanel>
 
