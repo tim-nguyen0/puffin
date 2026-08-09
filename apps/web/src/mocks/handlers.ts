@@ -20,6 +20,7 @@ const ack: Schemas["Ack"] = { ok: true, detail: "mock" };
 
 let mockMission: Schemas["MissionRequest"] | null = null;
 const mockMissionNodes = new Set<string>();
+const mockForge = new Map<string, Schemas["ForgeStatus"]["state"]>();
 
 const processes: Schemas["ProcessInfo"][] = [
   { name: "gz-server", state: "RUNNING", uptime_s: 512 },
@@ -176,6 +177,37 @@ export const handlers = [
       { ok: true, detail: `mission primed on /${node} (${mockMission.waypoints.length} waypoints)` } satisfies Schemas["Ack"],
       { status: 202 },
     );
+  }),
+  // forge mock: a build that finishes on the second status poll
+  http.post("/api/mission/forge", async ({ request }) => {
+    const body = (await request.json()) as Schemas["MissionRequest"];
+    const node = body.name ?? "mission";
+    mockForge.set(node, "building");
+    return HttpResponse.json(
+      { ok: true, detail: `forging /${node}; watch its build status` } satisfies Schemas["Ack"],
+      { status: 202 },
+    );
+  }),
+  http.get("/api/mission/forge/:name", ({ params }) => {
+    const node = String(params.name);
+    const state = mockForge.get(node) ?? "unknown";
+    if (state === "building") {
+      mockForge.set(node, "done");
+      mockMissionNodes.add(node);
+      lifecycleStates.set(node, "inactive");
+    }
+    return HttpResponse.json({
+      name: node,
+      state,
+      detail:
+        state === "done"
+          ? `package ${node} built; supervised program running`
+          : state === "building"
+            ? "colcon building"
+            : state === "unknown"
+              ? "no forge spec for that name"
+              : state,
+    } satisfies Schemas["ForgeStatus"]);
   }),
   http.get("/api/ros/services", () =>
     HttpResponse.json(
