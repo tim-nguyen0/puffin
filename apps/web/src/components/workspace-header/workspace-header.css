@@ -1,0 +1,117 @@
+.workspace-header {
+  display: grid;
+  min-height: var(--graph-top-bar-height);
+  padding: 0 var(--space-3);
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  border-bottom: var(--graph-border-width) solid var(--color-page-border);
+  background: var(--color-page-surface);
+}
+
+.workspace-breadcrumbs ol {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--color-page-muted);
+  font-size: var(--text-sm);
+}
+
+.workspace-breadcrumbs li + li::before {
+  margin-right: var(--space-2);
+  color: var(--color-page-muted);
+  content: "›";
+}
+
+.workspace-breadcrumbs li[aria-current="page"] {
+  color: var(--base-palette-not-quite-gray);
+  font-weight: 700;
+}
+
+.workspace-command-controls,
+.workspace-top-status {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.workspace-command-controls {
+  justify-self: center;
+}
+
+.workspace-top-status {
+  justify-self: end;
+  gap: var(--space-3);
+}
+
+.workspace-resume-button {
+  --button-height-lg: var(--graph-top-control-height);
+  --button-padding-inline-lg: var(--space-3);
+  --button-radius-pill: var(--graph-top-control-radius);
+  --button-icon-lg: var(--icon-sm);
+  --button-text-lg: var(--text-sm);
+
+  min-height: var(--graph-top-control-height);
+  gap: var(--space-2);
+  box-shadow: none;
+}
+
+.workspace-resume-button:hover:not(:disabled) {
+  box-shadow: none;
+}
+
+.workspace-command-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--graph-top-control-height);
+  height: var(--graph-top-control-height);
+  padding: 0;
+  border: var(--graph-border-width) solid var(--color-page-border);
+  border-radius: var(--graph-top-control-radius);
+  background: var(--color-page-surface);
+  color: var(--base-palette-not-quite-gray);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--text-graph-micro);
+  font-weight: 600;
+}
+
+.workspace-stop-button {
+  color: var(--color-danger);
+}
+
+.workspace-command-button:hover {
+  border-color: var(--color-page-focus);
+}
+
+.workspace-command-button:focus-visible {
+  outline: var(--graph-control-focus-width) solid var(--color-page-focus);
+  outline-offset: var(--graph-control-focus-offset);
+}
+
+@media (width <= 72rem) {
+  .workspace-header {
+    padding: var(--space-2);
+    grid-template-columns: minmax(0, 1fr) auto;
+    row-gap: var(--space-2);
+  }
+
+  .workspace-top-status {
+    grid-column: 1 / -1;
+    justify-self: start;
+  }
+}
+
+@media (width <= 54rem) {
+  .workspace-header {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .workspace-command-controls,
+  .workspace-top-status {
+    justify-self: start;
+  }
+}

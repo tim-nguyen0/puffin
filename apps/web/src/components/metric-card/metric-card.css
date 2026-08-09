@@ -1,0 +1,67 @@
+.metric-card {
+  display: flex;
+  min-width: 0;
+  box-sizing: border-box;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: var(--space-3);
+  border: var(--graph-border-width) solid var(--color-page-border);
+  border-radius: var(--simulation-card-radius);
+  background: var(--color-page-surface);
+}
+
+.metric-card header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--color-page-muted);
+  font-size: var(--text-graph-micro);
+}
+
+.metric-card-dot {
+  width: var(--services-status-dot-size);
+  height: var(--services-status-dot-size);
+  border-radius: 50%;
+  background: var(--base-palette-blue);
+}
+
+.metric-card-dot-cyan {
+  background: var(--color-accent);
+}
+
+.metric-card-dot-green {
+  background: var(--color-status-running);
+}
+
+.metric-card strong {
+  color: var(--color-page-text);
+  font-size: var(--simulation-metric-value-size);
+}
+
+.metric-card strong.is-mono {
+  font-family: var(--font-mono);
+  font-weight: 500;
+}
+
+.metric-card-dark {
+  border-color: var(--color-console-border);
+  background: var(--color-console-surface);
+}
+
+.metric-card-dark header {
+  color: var(--color-console-muted);
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+}
+
+.metric-card-dark strong {
+  color: var(--color-console-text);
+}
+
+.metric-card strong.metric-card-value-blue {
+  color: var(--color-command-link);
+}
+
+.metric-card strong.metric-card-value-green {
+  color: var(--color-command-accent);
+}

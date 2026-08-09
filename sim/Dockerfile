@@ -56,7 +56,14 @@ RUN bash -c "source /opt/ros/jazzy/setup.bash && cd /ros_ws \
       && colcon build --symlink-install --packages-select offboard_demo"
 
 COPY supervisord.conf /etc/supervisor/conf.d/puffin.conf
+COPY gui_minimal.config /gui_minimal.config
 COPY worlds/ /worlds/
+
+# full gz gui, pinned to the 1280x720 screen: take gazebo's default gui
+# config and size its window so the stream has no dead space
+RUN cfg=$(find /usr/share/gz -maxdepth 3 -name gui.config | head -1) \
+    && cp "$cfg" /gui_full.config \
+    && sed -i 's|<width>[0-9]*</width>|<width>1280</width>|; s|<height>[0-9]*</height>|<height>720</height>|' /gui_full.config
 
 # PX4's gz bridge must attach to the already-running puffin world; resource
 # path lets it spawn the x500 model from the PX4 tree.

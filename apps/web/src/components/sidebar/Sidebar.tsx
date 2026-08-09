@@ -1,4 +1,6 @@
+import type { ReactNode } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
+import { AppIcon } from "../app-icon";
 import cpu from "./assets/cpu.svg";
 import gitBranch from "./assets/git-branch.svg";
 import packageIcon from "./assets/package.svg";
@@ -8,10 +10,17 @@ import settings from "./assets/settings.svg";
 import { useAuthStore } from "../../lib/authStore";
 import "./sidebar.css";
 
-type NavItem = { label: string; icon: string; path: string | null };
+type NavItem = { label: string; icon: string | ReactNode; path: string | null };
 
+// routeless items exist in the design but their screens haven't shipped;
+// they render disabled until they do
 const NAV_ITEMS: NavItem[] = [
-  { label: "Simulation", icon: cpu, path: "/dashboard" },
+  { label: "Dashboard", icon: cpu, path: "/dashboard" },
+  { label: "Simulation", icon: <AppIcon name="pipeline" />, path: "/simulation" },
+  { label: "Vehicles", icon: <AppIcon name="vehicle" />, path: null },
+  { label: "World Editor", icon: <AppIcon name="globe" />, path: null },
+  { label: "Sensors", icon: <AppIcon name="sensors" />, path: null },
+  { label: "Mission Planner", icon: <AppIcon name="map-pin" />, path: null },
   { label: "ROS Nodes", icon: ros2Services, path: "/ros-services" },
   { label: "ROS2 Graph", icon: gitBranch, path: "/ros-graph" },
   { label: "Settings", icon: settings, path: "/settings" },
@@ -20,6 +29,13 @@ const NAV_ITEMS: NavItem[] = [
 export function Sidebar() {
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
+
+  const renderIcon = (icon: NavItem["icon"]) =>
+    typeof icon === "string" ? (
+      <img src={icon} alt="" className="nav-item-icon" />
+    ) : (
+      <span className="nav-item-icon">{icon}</span>
+    );
 
   async function handleLogout() {
     await logout();
@@ -37,7 +53,7 @@ export function Sidebar() {
           {NAV_ITEMS.map((item) =>
             item.path ? (
               <NavLink key={item.label} to={item.path} className="nav-item">
-                <img src={item.icon} alt="" className="nav-item-icon" />
+                {renderIcon(item.icon)}
                 {item.label}
               </NavLink>
             ) : (
@@ -47,7 +63,7 @@ export function Sidebar() {
                 aria-disabled="true"
                 title="Not available yet"
               >
-                <img src={item.icon} alt="" className="nav-item-icon" />
+                {renderIcon(item.icon)}
                 {item.label}
               </span>
             ),

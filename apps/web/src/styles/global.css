@@ -22,5 +22,11 @@ main {
   flex: 1;
   min-width: 0;
   padding: var(--space-4);
+  background: var(--color-page-bg);
 }
 
+.immersive-main {
+  min-height: 100vh;
+  padding: 0;
+  background: var(--color-console-bg);
+}

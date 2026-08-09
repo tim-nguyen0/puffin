@@ -1,0 +1,47 @@
+.dashboard-panel {
+  display: flex;
+  overflow: hidden;
+  min-width: 0;
+  min-height: 0;
+  flex-direction: column;
+  border: var(--graph-border-width) solid var(--color-page-border);
+  border-radius: var(--dashboard-panel-radius);
+  background: var(--color-page-surface);
+}
+
+.dashboard-panel-header {
+  display: flex;
+  min-height: var(--dashboard-panel-header-height);
+  box-sizing: border-box;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3);
+}
+
+.dashboard-panel-header h2 {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  color: var(--base-palette-not-quite-gray);
+  font-size: var(--text-md);
+  font-weight: 700;
+}
+
+.dashboard-panel-icon {
+  display: inline-flex;
+  flex: none;
+  color: var(--base-palette-blue);
+}
+
+.dashboard-panel-icon svg {
+  width: var(--icon-sm);
+  height: var(--icon-sm);
+}
+
+.dashboard-panel-body {
+  min-height: 0;
+  flex: 1;
+}
