@@ -15,6 +15,16 @@ While an offboard node is in control, manual controls gray out — the
 status strip says who is flying. **Land stays live** as the escape
 hatch; it overrides offboard by design.
 
+## Fly your own plan
+
+`offboard_demo` flies one fixed square — for anything else, the
+[mission planner](/guide/missions) builds a NED waypoint list in a 3D
+map and flies it through its own lifecycle node, with the same
+arm → run → stop controls and the same deactivate-to-loiter abort as
+above. Plans built there can also be turned into a standalone node —
+see [forging a node](/guide/forge) — so a one-off flight and a
+permanent addition to the stack start from the same builder.
+
 ## Manual flight
 
 Activate `/teleop` instead, arm, and either hold the directional pad
