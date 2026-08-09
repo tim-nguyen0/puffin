@@ -46,6 +46,7 @@ export function TopBar() {
       busy={start.isPending || stop.isPending}
       gazeboUp={gazeboUp}
       px4Up={px4Up}
+      simRunning={status?.running ?? false}
     />
   );
 }

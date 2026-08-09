@@ -10,6 +10,7 @@ interface WorkspaceHeaderProps {
   busy?: boolean;
   gazeboUp?: boolean;
   px4Up?: boolean;
+  simRunning?: boolean;
 }
 
 function PlayIcon() {
@@ -28,6 +29,7 @@ export function WorkspaceHeader({
   busy = false,
   gazeboUp = false,
   px4Up = false,
+  simRunning = false,
 }: WorkspaceHeaderProps) {
   return (
     <header className="workspace-header">
@@ -45,25 +47,23 @@ export function WorkspaceHeader({
           onClick={onResume}
           disabled={busy}
         >
-          Resume
+          {simRunning ? "Resume" : "Start"}
         </Button>
         <button
           type="button"
           className="workspace-command-button"
-          aria-label="Pause simulation"
           title="Pause is not available yet"
           disabled
         >
-          <span aria-hidden="true">Ⅱ</span>
+          Pause
         </button>
         <button
           type="button"
           className="workspace-command-button workspace-stop-button"
-          aria-label="Stop simulation"
           onClick={onStop}
           disabled={busy}
         >
-          <span aria-hidden="true">■</span>
+          Stop
         </button>
       </div>
 
