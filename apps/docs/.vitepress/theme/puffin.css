@@ -1,0 +1,270 @@
+/* the docs wear puffin's console design. values mirror
+   apps/web/src/styles/tokens.css - light operations page, dark console
+   surfaces, mono for anything a machine said. */
+
+:root {
+  /* page palette */
+  --vp-c-bg: #f3f6fa;
+  --vp-c-bg-alt: #fff;
+  --vp-c-bg-soft: #f8fafc;
+  --vp-c-bg-elv: #fff;
+  --vp-c-text-1: #17202b;
+  --vp-c-text-2: #667085;
+  --vp-c-text-3: #8a9bb2;
+  --vp-c-divider: #dce3ec;
+  --vp-c-border: #dce3ec;
+  --vp-c-gutter: #dce3ec;
+
+  /* brand = base palette blue */
+  --vp-c-brand-1: #06c;
+  --vp-c-brand-2: #005cb8;
+  --vp-c-brand-3: #0052a3;
+  --vp-c-brand-soft: rgb(0 102 204 / 10%);
+
+  /* consoles are dark surfaces, exactly like the app's viewport/terminal */
+  --vp-code-block-bg: #0d1726;
+  --vp-c-text-code: #bdc9d8;
+  --vp-code-color: #036;
+  --vp-code-bg: #eef4fb;
+
+  --vp-font-family-base: "Inter", system-ui, sans-serif;
+  --vp-font-family-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  --vp-home-hero-name-color: #036;
+}
+
+.vp-doc h1,
+.vp-doc h2,
+.vp-doc h3 {
+  color: #036;
+}
+
+.vp-doc div[class*="language-"] {
+  border: 1px solid #243a57;
+}
+
+.vp-doc div[class*="language-"] code {
+  color: #bdc9d8;
+}
+
+/* --- visual style specimens ------------------------------------------- */
+
+.pf-swatches {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 12px;
+  margin: 16px 0;
+}
+
+.pf-swatch {
+  border: 1px solid #dce3ec;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.pf-swatch i {
+  display: block;
+  height: 56px;
+}
+
+.pf-swatch span {
+  display: block;
+  padding: 8px 10px;
+  font-family: var(--vp-font-family-mono);
+  font-size: 11px;
+  color: #667085;
+  line-height: 1.5;
+}
+
+.pf-swatch span b {
+  display: block;
+  color: #17202b;
+  font-weight: 600;
+}
+
+.pf-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-family: var(--vp-font-family-mono);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.pf-tag i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentcolor;
+}
+
+.pf-tag-running { background: #e4f8f0; color: #0eb77a; }
+.pf-tag-armed { background: #fff4dc; color: #ed9707; }
+.pf-tag-stopped { background: #eaf0f7; color: #93a4ba; }
+
+.pf-metric-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 12px;
+  margin: 16px 0;
+}
+
+.pf-metric {
+  padding: 14px;
+  background: #fff;
+  border: 1px solid #dce3ec;
+  border-radius: 12px;
+}
+
+.pf-metric header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: #667085;
+  font-size: 12px;
+  margin-bottom: 6px;
+}
+
+.pf-metric header i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #338eff;
+}
+
+.pf-metric strong {
+  font-family: var(--vp-font-family-mono);
+  font-size: 20px;
+  color: #17202b;
+}
+
+.pf-metric.pf-dark {
+  background: #111e30;
+  border-color: #243a57;
+}
+
+.pf-metric.pf-dark strong { color: #f5f8ff; }
+.pf-metric.pf-dark header { color: #8ea3bd; }
+
+.pf-console {
+  margin: 16px 0;
+  padding: 16px;
+  background: #0d1726;
+  border: 1px solid #243a57;
+  border-radius: 18px;
+  font-family: var(--vp-font-family-mono);
+  font-size: 12px;
+  line-height: 1.9;
+  color: #8ea3bd;
+}
+
+.pf-console b { color: #20d49a; font-weight: 500; }
+.pf-console em { color: #5ab5ff; font-style: normal; }
+.pf-console .pf-cursor { color: #20d49a; animation: pf-blink 1.1s steps(1) infinite; }
+
+@keyframes pf-blink { 50% { opacity: 0; } }
+
+.pf-panel {
+  margin: 16px 0;
+  background: #fff;
+  border: 1px solid #dce3ec;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.pf-panel > header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 14px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #036;
+}
+
+.pf-panel > div { padding: 0 14px 14px; }
+
+.pf-type-specimen p { margin: 6px 0; }
+
+/* --- radii / spacing / depth specimens -------------------------------- */
+
+.pf-radii {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: flex-end;
+  margin: 16px 0;
+}
+
+.pf-radius {
+  width: 96px;
+  height: 72px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 6px;
+  background: #fff;
+  border: 1px solid #dce3ec;
+  font-family: var(--vp-font-family-mono);
+  font-size: 10px;
+  color: #667085;
+  text-align: center;
+  line-height: 1.4;
+}
+
+.pf-radius.pf-dark {
+  background: #111e30;
+  border-color: #243a57;
+  color: #8ea3bd;
+}
+
+.pf-spacing {
+  display: flex;
+  gap: 24px;
+  align-items: flex-end;
+  margin: 16px 0;
+  font-family: var(--vp-font-family-mono);
+  font-size: 10px;
+  color: #667085;
+}
+
+.pf-spacing div {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.pf-spacing i {
+  display: block;
+  width: 28px;
+  background: #06c;
+  border-radius: 2px;
+}
+
+.pf-shadows {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 20px;
+  margin: 20px 0;
+}
+
+.pf-shadow {
+  height: 84px;
+  display: flex;
+  align-items: flex-end;
+  padding: 10px 12px;
+  background: #fff;
+  border: 1px solid #dce3ec;
+  border-radius: 12px;
+  font-family: var(--vp-font-family-mono);
+  font-size: 10px;
+  color: #667085;
+  line-height: 1.5;
+}
+
