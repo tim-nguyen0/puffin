@@ -336,7 +336,10 @@
   --mission-step-number-size: 22px;
   --mission-field-min: 72px;
   --mission-input-height: 32px;
-  --mission-path-dash: 6px 5px;
   --mission-preflight-rule: 3px;
   --mission-preflight-label: 84px;
+
+  /* Mission 3d scene */
+  --mission-scene-aspect: 10 / 7;
+  --mission-scene-min-height: 320px;
 }
