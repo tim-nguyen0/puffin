@@ -8,6 +8,7 @@ import {
   type LifecycleStateName,
   type ServiceNodeAction,
 } from "../../components/lifecycle";
+import { MissionScene } from "../../components/mission-scene";
 import { StatusTag } from "../../components/status-tag";
 import { api } from "../../lib/api";
 import { useTelemetryStore } from "../../lib/telemetryStore";
@@ -15,7 +16,6 @@ import {
   flightTimeS,
   formatDuration,
   maxAltitudeM,
-  missionPath,
   preflightChecks,
   rowTone,
   totalDistance,
@@ -40,72 +40,6 @@ const DEFAULT_PLAN: Waypoint[] = [
   { x: 0, y: 10, z: -5, hold_s: 0 },
   { x: 0, y: 0, z: -5, hold_s: 0 },
 ];
-
-const CANVAS_W = 800;
-const CANVAS_H = 560;
-
-interface MapProps {
-  drone: { x: number; y: number } | null;
-  returnToOrigin: boolean;
-  takeoffZ: number;
-  waypoints: Waypoint[];
-}
-
-function MissionMap({ drone, returnToOrigin, takeoffZ, waypoints }: MapProps) {
-  // world -> canvas: east right, north up
-  const points = missionPath(waypoints, takeoffZ, returnToOrigin)
-    .map((p) => ({ east: p.y, north: p.x }))
-    .concat(drone ? [{ east: drone.y, north: drone.x }] : []);
-  const spread = Math.max(
-    10,
-    ...points.map((p) => Math.abs(p.east)),
-    ...points.map((p) => Math.abs(p.north)),
-  );
-  const extent = spread * 1.3;
-  const scale = Math.min(CANVAS_W, CANVAS_H) / (extent * 2);
-  const toX = (east: number) => CANVAS_W / 2 + east * scale;
-  const toY = (north: number) => CANVAS_H / 2 - north * scale;
-
-  // grid step that keeps lines readable at any zoom
-  const step = [5, 10, 25, 50, 100].find((s) => s * scale >= 48) ?? 200;
-  const lines: number[] = [];
-  for (let v = step; v <= extent; v += step) lines.push(v, -v);
-
-  const pathPoints = missionPath(waypoints, takeoffZ, returnToOrigin)
-    .map((p) => `${toX(p.y).toFixed(1)},${toY(p.x).toFixed(1)}`)
-    .join(" ");
-
-  return (
-    <div className="mission-map">
-      <svg viewBox={`0 0 ${CANVAS_W} ${CANVAS_H}`} role="img" aria-label="Mission map, north up">
-        <g className="mission-grid">
-          <line x1={0} y1={toY(0)} x2={CANVAS_W} y2={toY(0)} />
-          <line x1={toX(0)} y1={0} x2={toX(0)} y2={CANVAS_H} />
-          {lines.map((v) => (
-            <g key={v}>
-              <line x1={0} y1={toY(v)} x2={CANVAS_W} y2={toY(v)} />
-              <line x1={toX(v)} y1={0} x2={toX(v)} y2={CANVAS_H} />
-            </g>
-          ))}
-        </g>
-        <polyline className="mission-path" points={pathPoints} />
-        <circle className="mission-origin" cx={toX(0)} cy={toY(0)} r={6} />
-        {waypoints.map((wp, i) => (
-          <g key={`${i}-${wp.x}-${wp.y}`}>
-            <circle className="mission-wp" cx={toX(wp.y)} cy={toY(wp.x)} r={9} />
-            <text className="mission-wp-label" x={toX(wp.y)} y={toY(wp.x)}>
-              {i + 1}
-            </text>
-          </g>
-        ))}
-        {drone ? (
-          <circle className="mission-drone" cx={toX(drone.y)} cy={toY(drone.x)} r={7} />
-        ) : null}
-      </svg>
-      <span className="mission-map-scale">grid {step} m · north up · ned</span>
-    </div>
-  );
-}
 
 export function MissionPlannerScreen() {
   const queryClient = useQueryClient();
@@ -250,11 +184,13 @@ export function MissionPlannerScreen() {
               label={selectedNode ? (nodeState ?? "…") : "no node selected"}
             />
           </header>
-          <MissionMap
+          <MissionScene
             waypoints={waypoints}
             takeoffZ={takeoffZ}
             returnToOrigin={returnToOrigin}
-            drone={telemetryLive && latest ? { x: latest.ned.x, y: latest.ned.y } : null}
+            drone={telemetryLive && latest ? { ...latest.ned } : null}
+            activeIndex={activeStatus?.current_index ?? null}
+            onChange={(index, wp) => update(index, wp)}
           />
           <footer className="mission-stats">
             <span>
