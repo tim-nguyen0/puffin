@@ -71,6 +71,14 @@ python3 scripts/lint_worlds.py sim/worlds   # world sanity
 cd sim/packages/offboard_demo && python3 -m pytest   # square-flight geometry
 ```
 
+## QGroundControl
+
+The sim streams MAVLink to the docker host on udp 14550, so a locally
+installed QGroundControl auto-connects the moment it opens - full GCS
+alongside the Puffin UI, no configuration. Both are control channels to
+the same vehicle: the one-pilot rule applies. (Cloud deploys can't carry
+this link - the tunnel/proxy path is http-only.)
+
 ## Adding your own ROS package
 
 Drop the package into `sim/packages/` (anything with a `package.xml` -
