@@ -191,7 +191,7 @@ export const handlers = [
   ),
   http.get("/api/ros/graph", () =>
     HttpResponse.json({
-      nodes: ["/puffin_api", "/offboard_demo", "/teleop", "/mission_node", "/px4_xrce_agent"],
+      nodes: ["/puffin_api", "/offboard_demo", "/teleop", "/mission_host", "/px4_xrce_agent"],
       topics: [
         {
           name: "/fmu/out/vehicle_status_v1",
@@ -221,12 +221,12 @@ export const handlers = [
           name: "/puffin/mission",
           type: "std_msgs/msg/String",
           publishers: ["/puffin_api"],
-          subscribers: ["/mission_node"],
+          subscribers: ["/mission_host"],
         },
         {
           name: "/puffin/mission/status",
           type: "std_msgs/msg/String",
-          publishers: ["/mission_node"],
+          publishers: ["/mission_host"],
           subscribers: ["/puffin_api"],
         },
       ],

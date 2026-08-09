@@ -66,12 +66,25 @@ describe("row tones from executor status", () => {
 
 describe("preflight", () => {
   it("flags underground z instead of letting the executor refuse later", () => {
-    const checks = preflightChecks([{ x: 1, y: 1, z: 2, hold_s: 0 }], -3, true, "inactive");
+    const checks = preflightChecks(
+      [{ x: 1, y: 1, z: 2, hold_s: 0 }],
+      -3,
+      true,
+      "inactive",
+      "/mission",
+    );
     expect(checks.find((c) => c.label === "altitudes")?.ok).toBe(false);
   });
 
   it("passes a sane plan", () => {
-    const checks = preflightChecks(square, -3, true, "inactive");
+    const checks = preflightChecks(square, -3, true, "inactive", "/mission");
     expect(checks.every((c) => c.ok)).toBe(true);
+  });
+
+  it("flags a missing node selection instead of a stale executor state", () => {
+    const checks = preflightChecks(square, -3, true, undefined, null);
+    const executor = checks.find((c) => c.label === "executor");
+    expect(executor?.ok).toBe(false);
+    expect(executor?.detail).toBe("no node selected in the control panel");
   });
 });

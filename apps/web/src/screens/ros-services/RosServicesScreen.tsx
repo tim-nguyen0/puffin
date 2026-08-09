@@ -1,18 +1,18 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useState } from "react";
 import { Button } from "../../components/button";
-import { lifecycleNodeNames } from "../../components/lifecycle";
-import { StatusIndicator } from "../../components/status-indicator";
-import { StatusTag } from "../../components/status-tag";
-import { api } from "../../lib/api";
 import {
   actionsForState,
+  lifecycleNodeNames,
   metaForNode,
   toneForState,
   transitionForAction,
   type LifecycleStateName,
   type ServiceNodeAction,
-} from "./serviceNodes";
+} from "../../components/lifecycle";
+import { StatusIndicator } from "../../components/status-indicator";
+import { StatusTag } from "../../components/status-tag";
+import { api } from "../../lib/api";
 import "./ros-services.css";
 
 const ACTION_LABELS: Record<ServiceNodeAction, string> = {

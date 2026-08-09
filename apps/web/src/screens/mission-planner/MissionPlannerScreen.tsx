@@ -1,5 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
+import {
+  actionsForState,
+  lifecycleNodeNames,
+  toneForState,
+  transitionForAction,
+  type LifecycleStateName,
+  type ServiceNodeAction,
+} from "../../components/lifecycle";
 import { StatusTag } from "../../components/status-tag";
 import { api } from "../../lib/api";
 import { useTelemetryStore } from "../../lib/telemetryStore";
@@ -16,7 +24,14 @@ import {
 } from "./missionMath";
 import "./mission-planner.css";
 
-const EXECUTOR = "mission_node";
+// contract: MissionRequest.name, ^[a-z][a-z0-9_]{0,30}$
+const NAME_PATTERN = /^[a-z][a-z0-9_]{0,30}$/;
+
+const CONTROL_LABELS: Record<ServiceNodeAction, string> = {
+  arm: "Arm",
+  run: "Run",
+  stop: "Stop",
+};
 
 // the demo square, so the screen opens with a flyable plan
 const DEFAULT_PLAN: Waypoint[] = [
@@ -98,11 +113,15 @@ export function MissionPlannerScreen() {
   const [rateHz, setRateHz] = useState(20);
   const [takeoffZ, setTakeoffZ] = useState(-3);
   const [returnToOrigin, setReturnToOrigin] = useState(true);
+  const [missionName, setMissionName] = useState("mission");
+  const [lastPrimed, setLastPrimed] = useState<string | null>(null);
+  const [selected, setSelected] = useState<string | null>(null);
   const [showPreflight, setShowPreflight] = useState(false);
   const [announcement, setAnnouncement] = useState("");
 
   const { connected, latest } = useTelemetryStore();
   const telemetryLive = connected && latest !== null;
+  const nameValid = NAME_PATTERN.test(missionName);
 
   const status = useQuery({
     queryKey: ["mission-status"],
@@ -110,59 +129,98 @@ export function MissionPlannerScreen() {
     refetchInterval: 1000,
   });
 
-  const executor = useQuery({
-    queryKey: ["ros-lifecycle", EXECUTOR],
+  const services = useQuery({
+    queryKey: ["ros-services"],
     queryFn: async () => {
-      const { data } = await api.GET("/ros/lifecycle/{nodeName}", {
-        params: { path: { nodeName: EXECUTOR } },
-      });
+      const { data, error } = await api.GET("/ros/services");
+      if (error) throw new Error("Failed to fetch services");
       return data;
     },
     refetchInterval: 5000,
   });
-  const executorState = executor.data?.state;
-  const flying = executorState === "active";
 
-  const start = useMutation({
-    mutationFn: async () => {
-      // latch -> arm -> activate; each step reports its own failure
-      const latch = await api.POST("/mission", {
-        body: { name: "mission", waypoints, rate_hz: rateHz, takeoff_z: takeoffZ, return_to_origin: returnToOrigin },
-      });
-      if (latch.error || !latch.data?.ok) {
-        throw new Error(latch.data?.detail ?? "mission latch failed");
-      }
-      const arm = await api.POST("/vehicle/arm");
-      if (arm.error || !arm.data.ok) throw new Error(arm.data?.detail ?? "arm failed");
-      const act = await api.POST("/ros/lifecycle/{nodeName}/transition", {
-        params: { path: { nodeName: EXECUTOR } },
-        body: { transition: "activate" },
-      });
-      if (act.error || !act.data.ok) throw new Error(act.data?.detail ?? "activate failed");
-      return act.data;
-    },
-    onSuccess: () => setAnnouncement("mission started"),
-    onError: (err) => setAnnouncement(err instanceof Error ? err.message : "start failed"),
-    onSettled: () => {
-      void queryClient.invalidateQueries({ queryKey: ["ros-lifecycle", EXECUTOR] });
-      void queryClient.invalidateQueries({ queryKey: ["mission-status"] });
-    },
-  });
+  const nodes = lifecycleNodeNames(services.data ?? []);
+  // prefer an explicit pick, then the mission we most recently primed, then
+  // whatever the discovery list turns up first
+  const preferredNode = lastPrimed ? `/${lastPrimed}` : null;
+  const selectedNode =
+    selected && nodes.includes(selected)
+      ? selected
+      : preferredNode && nodes.includes(preferredNode)
+        ? preferredNode
+        : (nodes[0] ?? null);
+  const pathName = selectedNode ? selectedNode.replace(/^\//, "") : null;
 
-  const abort = useMutation({
-    mutationFn: async () => {
-      const { data, error } = await api.POST("/ros/lifecycle/{nodeName}/transition", {
-        params: { path: { nodeName: EXECUTOR } },
-        body: { transition: "deactivate" },
+  const nodeLifecycle = useQuery({
+    queryKey: ["ros-lifecycle", pathName],
+    queryFn: async () => {
+      const { data, error } = await api.GET("/ros/lifecycle/{nodeName}", {
+        params: { path: { nodeName: pathName as string } },
       });
-      if (error || !data.ok) throw new Error(data?.detail ?? "deactivate failed");
+      if (error) throw new Error("Failed to fetch lifecycle state");
       return data;
     },
-    onSuccess: () => setAnnouncement("mission aborted; px4 holds in loiter"),
-    onError: (err) => setAnnouncement(err instanceof Error ? err.message : "abort failed"),
-    onSettled: () => {
-      void queryClient.invalidateQueries({ queryKey: ["ros-lifecycle", EXECUTOR] });
+    enabled: pathName !== null,
+    refetchInterval: 5000,
+  });
+  const nodeState = nodeLifecycle.data?.state as LifecycleStateName | undefined;
+  const flying = nodeState === "active";
+
+  // the executor's own status only describes the plan/node it's actually
+  // holding - only trust it when it's talking about what's selected here
+  const statusMatchesSelection =
+    status.data?.node != null &&
+    (status.data.node === pathName || status.data.node === lastPrimed);
+  const activeStatus = statusMatchesSelection ? (status.data as MissionStatus) : undefined;
+
+  const prime = useMutation({
+    mutationFn: async () => {
+      const res = await api.POST("/mission", {
+        body: {
+          name: missionName,
+          waypoints,
+          rate_hz: rateHz,
+          takeoff_z: takeoffZ,
+          return_to_origin: returnToOrigin,
+        },
+      });
+      if (res.error || !res.data?.ok) throw new Error(res.data?.detail ?? "prime failed");
+      return res.data;
     },
+    onSuccess: (data) => {
+      setAnnouncement(data.detail);
+      setLastPrimed(missionName);
+      // let the freshly primed executor become the control panel's default
+      setSelected(null);
+      void queryClient.invalidateQueries({ queryKey: ["mission-status"] });
+      void queryClient.invalidateQueries({ queryKey: ["ros-services"] });
+    },
+    onError: (err) => setAnnouncement(err instanceof Error ? err.message : "prime failed"),
+  });
+
+  const control = useMutation({
+    mutationFn: async (action: ServiceNodeAction) => {
+      if (!selectedNode || !pathName) throw new Error("no node selected");
+      const transition = transitionForAction(action, nodeState);
+      if (!transition) throw new Error(`${action} not valid from ${nodeState ?? "unknown"}`);
+      if (action === "run") {
+        const arm = await api.POST("/vehicle/arm");
+        if (arm.error || !arm.data.ok) throw new Error(arm.data?.detail ?? "arm failed");
+      }
+      const res = await api.POST("/ros/lifecycle/{nodeName}/transition", {
+        params: { path: { nodeName: pathName } },
+        body: { transition },
+      });
+      if (res.error || !res.data.ok) throw new Error(res.data?.detail ?? `${action} failed`);
+      return { action, detail: res.data.detail };
+    },
+    onSuccess: ({ action, detail }) => {
+      setAnnouncement(action === "stop" ? "px4 holds in loiter" : (detail ?? `${action} accepted`));
+      void queryClient.invalidateQueries({ queryKey: ["ros-lifecycle", pathName] });
+      void queryClient.invalidateQueries({ queryKey: ["ros-services"] });
+      void queryClient.invalidateQueries({ queryKey: ["mission-status"] });
+    },
+    onError: (err) => setAnnouncement(err instanceof Error ? err.message : "action failed"),
   });
 
   const update = (index: number, patch: Partial<Waypoint>) =>
@@ -171,8 +229,8 @@ export function MissionPlannerScreen() {
   const distance = totalDistance(waypoints, takeoffZ, returnToOrigin);
   const time = flightTimeS(waypoints, takeoffZ, returnToOrigin);
   const checks = useMemo(
-    () => preflightChecks(waypoints, takeoffZ, telemetryLive, executorState),
-    [waypoints, takeoffZ, telemetryLive, executorState],
+    () => preflightChecks(waypoints, takeoffZ, telemetryLive, nodeState, selectedNode),
+    [waypoints, takeoffZ, telemetryLive, nodeState, selectedNode],
   );
 
   return (
@@ -182,11 +240,14 @@ export function MissionPlannerScreen() {
           <header className="mission-header">
             <div>
               <h1 id="mission-title">Mission Planner</h1>
-              <p>ned waypoints streamed as offboard setpoints by mission_node</p>
+              <p>
+                ned waypoints streamed as offboard setpoints
+                {selectedNode ? ` by ${selectedNode}` : ""}
+              </p>
             </div>
             <StatusTag
-              status={flying ? "running" : executorState ? "armed" : "stopped"}
-              label={flying ? "executing" : (executorState ?? "executor offline")}
+              status={selectedNode ? toneForState(nodeState) : "stopped"}
+              label={selectedNode ? (nodeState ?? "…") : "no node selected"}
             />
           </header>
           <MissionMap
@@ -205,10 +266,10 @@ export function MissionPlannerScreen() {
             <span>
               max altitude <strong>{maxAltitudeM(waypoints, takeoffZ).toFixed(0)} m</strong>
             </span>
-            {status.data && status.data.state !== "idle" ? (
+            {activeStatus && activeStatus.state !== "idle" ? (
               <span className="mission-stats-status">
-                executor <strong>{status.data.state}</strong>
-                {status.data.detail ? ` · ${status.data.detail}` : ""}
+                executor <strong>{activeStatus.state}</strong>
+                {activeStatus.detail ? ` · ${activeStatus.detail}` : ""}
               </span>
             ) : null}
           </footer>
@@ -223,9 +284,18 @@ export function MissionPlannerScreen() {
           <div className="mission-step">
             <header>
               <span className="mission-step-number">1</span>
-              <strong>Arm &amp; Engage Offboard</strong>
+              <strong>Prime Mission</strong>
             </header>
             <div className="mission-field-row">
+              <label>
+                Mission name
+                <input
+                  type="text"
+                  value={missionName}
+                  aria-invalid={!nameValid}
+                  onChange={(e) => setMissionName(e.target.value)}
+                />
+              </label>
               <label>
                 Setpoint rate (Hz)
                 <input
@@ -246,11 +316,16 @@ export function MissionPlannerScreen() {
                 />
               </label>
             </div>
+            {!nameValid ? (
+              <p className="mission-name-error">
+                lowercase letters, digits, underscore only; must start with a letter (max 31 chars)
+              </p>
+            ) : null}
           </div>
 
           <ol className="mission-wp-list">
             {waypoints.map((wp, i) => {
-              const tone = rowTone(i, status.data as MissionStatus | undefined);
+              const tone = rowTone(i, activeStatus);
               return (
                 <li key={i} className={`mission-step mission-wp-${tone}`}>
                   <header>
@@ -342,6 +417,48 @@ export function MissionPlannerScreen() {
             </ul>
           ) : null}
 
+          <section className="mission-control-panel" aria-labelledby="mission-control-title">
+            <header className="mission-control-header">
+              <h2 id="mission-control-title">Control Panel</h2>
+              {selectedNode ? (
+                <StatusTag status={toneForState(nodeState)} label={nodeState ?? "…"} />
+              ) : null}
+            </header>
+            <label className="mission-control-select-label">
+              Executor node
+              <select
+                className="mission-control-select"
+                value={selectedNode ?? ""}
+                disabled={nodes.length === 0}
+                onChange={(e) => setSelected(e.target.value || null)}
+              >
+                {nodes.length === 0 ? <option value="">no lifecycle nodes found</option> : null}
+                {nodes.map((name) => (
+                  <option key={name} value={name}>
+                    {name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <div className="mission-control-actions">
+              {selectedNode ? (
+                actionsForState(nodeState).map((action) => (
+                  <button
+                    key={action}
+                    type="button"
+                    className={`mission-control-button mission-control-${action}`}
+                    disabled={control.isPending}
+                    onClick={() => control.mutate(action)}
+                  >
+                    {CONTROL_LABELS[action]}
+                  </button>
+                ))
+              ) : (
+                <p className="mission-control-empty">select a node to control it</p>
+              )}
+            </div>
+          </section>
+
           <div className="mission-actions">
             <button
               type="button"
@@ -354,25 +471,19 @@ export function MissionPlannerScreen() {
             <button type="button" onClick={() => setShowPreflight((v) => !v)}>
               Preflight Check
             </button>
-            {flying ? (
-              <button
-                type="button"
-                className="mission-abort"
-                onClick={() => abort.mutate()}
-                disabled={abort.isPending}
-              >
-                Abort
-              </button>
-            ) : (
-              <button
-                type="button"
-                className="mission-start"
-                onClick={() => start.mutate()}
-                disabled={start.isPending || waypoints.length === 0}
-              >
-                Start Offboard
-              </button>
-            )}
+            <button
+              type="button"
+              className="mission-prime"
+              onClick={() => prime.mutate()}
+              disabled={prime.isPending || waypoints.length === 0 || !nameValid}
+              title={
+                nodes.includes(`/${missionName}`)
+                  ? `rebuilds the /${missionName} executor with this plan`
+                  : `creates a new /${missionName} executor`
+              }
+            >
+              Prime Mission
+            </button>
           </div>
 
           <p className="mission-announcement" aria-live="polite">

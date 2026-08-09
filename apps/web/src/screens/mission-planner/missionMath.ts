@@ -87,8 +87,10 @@ export function preflightChecks(
   takeoffZ: number,
   telemetryLive: boolean,
   executorState: string | undefined,
+  nodeName: string | null,
 ): PreflightCheck[] {
   const aboveGround = waypoints.every((wp) => wp.z <= -1);
+  const executorOk = nodeName != null && executorState !== undefined;
   return [
     {
       label: "telemetry",
@@ -110,8 +112,12 @@ export function preflightChecks(
     },
     {
       label: "executor",
-      ok: executorState !== undefined,
-      detail: executorState !== undefined ? `mission_node ${executorState}` : "mission_node not reachable",
+      ok: executorOk,
+      detail: executorOk
+        ? `${nodeName} ${executorState}`
+        : nodeName
+          ? `${nodeName} not reachable`
+          : "no node selected in the control panel",
     },
   ];
 }
