@@ -11,6 +11,10 @@ latched on /puffin/mission/status in the contract's MissionStatus shape, keyed
 by node.
 
 arming stays with the api (/vehicle/arm) - these nodes only fly.
+
+the executor is also the whole of a forged node (see forge.py): run_executor
+spins one in its own process, so a forged package and a host child are the
+same flight code under a different lifetime.
 """
 
 from typing import Any
@@ -51,22 +55,30 @@ def latched_qos() -> Any:
     )
 
 
-def main() -> None:
-    import rclpy
-    from rclpy.executors import SingleThreadedExecutor
+def executor_class() -> Any:
+    """builds the MissionExecutor class. the rclpy import is deferred to here
+    so this module stays importable (and testable) without ros.
+
+    the host calls this once and builds one executor per primed plan; forged
+    nodes call it through run_executor, so both fly identical code.
+    """
     from rclpy.lifecycle import LifecycleNode, TransitionCallbackReturn
-    from rclpy.node import Node
 
     class MissionExecutor(LifecycleNode):
         """one plan, one ros node: activate it and it flies that plan.
 
         the plan is fixed at construction - the host rebuilds the node to
         change it, so nothing here re-reads a shared latch mid-flight.
+        standalone means this node owns its process (a forged node) rather
+        than sharing the host's.
         """
 
-        def __init__(self, name: str, plan: dict[str, Any]) -> None:
+        def __init__(
+            self, name: str, plan: dict[str, Any], standalone: bool = False
+        ) -> None:
             super().__init__(name)
             self._plan = plan
+            self._standalone = standalone
             self._mode_pub: Any = None
             self._setpoint_pub: Any = None
             self._cmd_pub: Any = None
@@ -169,10 +181,16 @@ def main() -> None:
             return TransitionCallbackReturn.SUCCESS
 
         def on_shutdown(self, state: Any) -> TransitionCallbackReturn:
-            # no rclpy.shutdown() here: this node is one of many in the host
-            # process, and the host outlives it
             self._destroy_timer()
             self.is_flying = False
+            # a host child must not call rclpy.shutdown(): it is one of many
+            # nodes in the host process, and the host outlives it. a forged
+            # node owns its process, so it exits and supervisord respawns it
+            # fresh (configure -> inactive), making a ui kill a clean restart.
+            if self._standalone:
+                import rclpy
+
+                self.create_timer(0.5, rclpy.shutdown)
             return TransitionCallbackReturn.SUCCESS
 
         def _destroy_timer(self) -> None:
@@ -250,6 +268,34 @@ def main() -> None:
                         )
                     else:
                         self._advance()
+
+    return MissionExecutor
+
+
+def run_executor(name: str, plan: dict[str, Any]) -> None:
+    """spins one executor as its own process - what a forged node's main does.
+
+    same contract as a host child: it configures itself to inactive at boot,
+    reports on /puffin/mission/status under `name`, and waits for the api to
+    activate it.
+    """
+    import rclpy
+
+    rclpy.init()
+    node = executor_class()(name, plan, standalone=True)
+    node.trigger_configure()
+    try:
+        rclpy.spin(node)
+    except KeyboardInterrupt:
+        pass
+
+
+def main() -> None:
+    import rclpy
+    from rclpy.executors import SingleThreadedExecutor
+    from rclpy.node import Node
+
+    MissionExecutor = executor_class()
 
     class MissionHost(Node):
         """plain node that owns the executors and the /puffin/mission latch."""
