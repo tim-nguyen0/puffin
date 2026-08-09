@@ -414,7 +414,7 @@ export function DashboardScreen() {
           <div className="viewport-body">
             <SimViewport
               variant="qgc"
-              hint="stream offline — rebuild the sim image to add qgc"
+              hint="stream offline — is the qgc container up? (docker compose up -d qgc)"
             />
           </div>
         </DashboardPanel>

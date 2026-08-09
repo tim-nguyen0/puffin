@@ -50,29 +50,6 @@ RUN git clone --branch "${PX4_MSGS_REF}" --depth 1 \
       https://github.com/PX4/px4_msgs.git /ros_ws/src/px4_msgs \
     && bash -c "source /opt/ros/jazzy/setup.bash && cd /ros_ws && colcon build --symlink-install"
 
-# QGroundControl for the second display. AppImages need FUSE, which
-# containers don't have, so extract it and run AppRun directly. The apt list
-# is the qt6 delta on top of what gazebo's qt5 stack already pulled in
-# (libxcb-cursor0 is qt6-only; sdl2 = joysticks, gstreamer = video widget).
-# amd64 only: qgc ships no arm64 appimage, so an arm64 image (apple silicon
-# native build) skips the install and [program:qgc] parks on the missing
-# AppRun instead of flapping.
-ARG TARGETARCH
-RUN if [ "$TARGETARCH" = "amd64" ]; then \
-      apt-get update && apt-get install -y --no-install-recommends \
-        libxcb-cursor0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 \
-        libxcb-randr0 libxcb-render-util0 libxcb-shape0 libxcb-xinerama0 \
-        libxcb-xkb1 libxkbcommon-x11-0 libpulse0 libsdl2-2.0-0 libspeechd2 \
-        libgstreamer1.0-0 libgstreamer-plugins-base1.0-0 \
-      && curl -fsSL -o /tmp/QGroundControl.AppImage \
-        https://d176tv9ibo4jno.cloudfront.net/latest/QGroundControl.AppImage \
-      && chmod +x /tmp/QGroundControl.AppImage \
-      && mkdir -p /opt/qgc && cd /opt/qgc \
-      && /tmp/QGroundControl.AppImage --appimage-extract > /dev/null \
-      && rm /tmp/QGroundControl.AppImage \
-      && rm -rf /var/lib/apt/lists/*; \
-    else mkdir -p /opt/qgc; fi
-
 # user packages last: anything with a package.xml dropped into
 # sim/packages/ builds here, and edits rebuild only this layer, never
 # px4_msgs (which is skipped - its install from the layer above stands)
