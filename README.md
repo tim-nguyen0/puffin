@@ -51,6 +51,15 @@ curl -X POST localhost:8000/api/vehicle/land
 
 Shut down with `make down`.
 
+### Fly your own plan
+
+The Mission Planner screen builds a NED waypoint list and flies it:
+**Start Offboard** latches the plan (`POST /api/mission`), arms, and
+activates `mission_node`, which climbs to the takeoff altitude, walks the
+waypoints (holding where asked), and returns to origin. **Abort**
+deactivates the node — PX4 holds in loiter. Progress streams back through
+`GET /api/mission`.
+
 ## Frontend development (no Docker)
 
 ```bash

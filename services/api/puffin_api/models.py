@@ -72,12 +72,6 @@ class TransitionRequest(BaseModel):
     transition: TransitionName
 
 
-class NedPosition(BaseModel):
-    x: float
-    y: float
-    z: float
-
-
 class Waypoint(BaseModel):
     # ned meters: x north, y east, z down (5 m altitude = -5.0)
     x: float
@@ -103,14 +97,6 @@ class MissionStatus(BaseModel):
     current_index: int | None = None
     total: int
     detail: str = ""
-
-
-class TelemetrySample(BaseModel):
-    t_us: int
-    armed: bool
-    mode: str
-    ned: NedPosition
-    battery_v: float
 
 
 class SignupRequest(BaseModel):

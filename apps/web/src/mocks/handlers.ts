@@ -172,11 +172,13 @@ export const handlers = [
   http.get("/api/ros/services", () =>
     HttpResponse.json([
       { name: "/offboard_demo/change_state", type: "lifecycle_msgs/srv/ChangeState" },
+      { name: "/teleop/change_state", type: "lifecycle_msgs/srv/ChangeState" },
+      { name: "/mission_node/change_state", type: "lifecycle_msgs/srv/ChangeState" },
     ] satisfies Schemas["RosService"][]),
   ),
   http.get("/api/ros/graph", () =>
     HttpResponse.json({
-      nodes: ["/puffin_api", "/offboard_demo", "/px4_xrce_agent"],
+      nodes: ["/puffin_api", "/offboard_demo", "/teleop", "/mission_node", "/px4_xrce_agent"],
       topics: [
         {
           name: "/fmu/out/vehicle_status_v1",
@@ -201,6 +203,18 @@ export const handlers = [
           type: "px4_msgs/msg/VehicleCommand",
           publishers: ["/puffin_api", "/offboard_demo"],
           subscribers: ["/px4_xrce_agent"],
+        },
+        {
+          name: "/puffin/mission",
+          type: "std_msgs/msg/String",
+          publishers: ["/puffin_api"],
+          subscribers: ["/mission_node"],
+        },
+        {
+          name: "/puffin/mission/status",
+          type: "std_msgs/msg/String",
+          publishers: ["/mission_node"],
+          subscribers: ["/puffin_api"],
         },
       ],
     } satisfies Schemas["RosGraph"]),
