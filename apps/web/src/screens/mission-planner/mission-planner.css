@@ -396,9 +396,49 @@
   background: var(--color-status-stopped-soft);
 }
 
+.mission-forge {
+  border-color: var(--base-palette-blue);
+  color: var(--base-palette-blue);
+}
+
 .mission-clear:hover:not(:disabled),
 .mission-actions button:not(.mission-prime):hover {
   background: var(--color-page-control-hover);
+}
+
+.mission-forge-status {
+  margin: var(--space-2) 0 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+}
+
+.mission-forge-tone-queued,
+.mission-forge-tone-building {
+  color: var(--color-status-armed);
+}
+
+.mission-forge-tone-done {
+  color: var(--color-status-running);
+}
+
+.mission-forge-tone-failed {
+  color: var(--color-danger-strong);
+}
+
+.mission-forge-tone-building {
+  animation: mission-forge-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes mission-forge-pulse {
+  50% {
+    opacity: 0.5;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mission-forge-tone-building {
+    animation: none;
+  }
 }
 
 .mission-announcement {

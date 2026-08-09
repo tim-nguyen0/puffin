@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   actionsForState,
   lifecycleNodeNames,
@@ -49,6 +49,7 @@ export function MissionPlannerScreen() {
   const [returnToOrigin, setReturnToOrigin] = useState(true);
   const [missionName, setMissionName] = useState("mission");
   const [lastPrimed, setLastPrimed] = useState<string | null>(null);
+  const [forgeName, setForgeName] = useState<string | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [showPreflight, setShowPreflight] = useState(false);
   const [announcement, setAnnouncement] = useState("");
@@ -131,6 +132,66 @@ export function MissionPlannerScreen() {
     },
     onError: (err) => setAnnouncement(err instanceof Error ? err.message : "prime failed"),
   });
+
+  // same plan body as prime - the forge renders it into a standalone
+  // package + supervised program instead of latching it onto a live node
+  const forge = useMutation({
+    mutationFn: async () => {
+      const res = await api.POST("/mission/forge", {
+        body: {
+          name: missionName,
+          waypoints,
+          rate_hz: rateHz,
+          takeoff_z: takeoffZ,
+          return_to_origin: returnToOrigin,
+        },
+      });
+      if (res.error || !res.data?.ok) throw new Error(res.data?.detail ?? "forge failed");
+      return res.data;
+    },
+    onSuccess: (data) => {
+      setAnnouncement(data.detail);
+      setForgeName(missionName);
+      void queryClient.invalidateQueries({ queryKey: ["mission-forge", missionName] });
+    },
+    onError: (err) => setAnnouncement(err instanceof Error ? err.message : "forge failed"),
+  });
+
+  const forgeStatus = useQuery({
+    queryKey: ["mission-forge", forgeName],
+    queryFn: async () => {
+      const { data, error } = await api.GET("/mission/forge/{name}", {
+        params: { path: { name: forgeName as string } },
+      });
+      if (error) throw new Error("failed to fetch forge status");
+      return data;
+    },
+    enabled: forgeName !== null,
+    // stop polling once the build has landed somewhere terminal
+    refetchInterval: (query) => {
+      const state = query.state.data?.state;
+      return state === "queued" || state === "building" ? 2000 : false;
+    },
+  });
+  // state of the most recently forged name - its detail text names the node,
+  // so it stays legible even after the mission-name field is edited further
+  const forgeState = forgeStatus.data?.state;
+  // true once the typed name has drifted from what was actually forged, so
+  // editing the name always re-enables the button even mid-build
+  const forgeStale = forgeName !== null && forgeName !== missionName;
+  // covers the gap between a successful POST and the first GET resolving,
+  // so a fast double-click can't fire a second forge for the same name
+  const forgeInFlight = forgeStatus.isFetching && forgeStatus.data === undefined;
+  const forgeBusy =
+    !forgeStale &&
+    (forge.isPending || forgeInFlight || forgeState === "queued" || forgeState === "building");
+
+  useEffect(() => {
+    if (forgeState === "done" && forgeStatus.data) {
+      setAnnouncement(forgeStatus.data.detail);
+      void queryClient.invalidateQueries({ queryKey: ["ros-services"] });
+    }
+  }, [forgeState, forgeStatus.data, queryClient]);
 
   const control = useMutation({
     mutationFn: async (action: ServiceNodeAction) => {
@@ -420,7 +481,28 @@ export function MissionPlannerScreen() {
             >
               Prime Mission
             </button>
+            <button
+              type="button"
+              className="mission-forge"
+              onClick={() => forge.mutate()}
+              disabled={forgeBusy || waypoints.length === 0 || !nameValid}
+              title={
+                !nameValid
+                  ? "lowercase letters, digits, underscore only; must start with a letter (max 31 chars)"
+                  : forgeBusy
+                    ? `/${missionName} forge is ${forgeState ?? "in progress"}`
+                    : `builds /${missionName} into a standalone package + supervised program`
+              }
+            >
+              Create Node
+            </button>
           </div>
+
+          {forgeName && forgeState ? (
+            <p className={`mission-forge-status mission-forge-tone-${forgeState}`}>
+              {forgeStatus.data?.detail}
+            </p>
+          ) : null}
 
           <p className="mission-announcement" aria-live="polite">
             {announcement}

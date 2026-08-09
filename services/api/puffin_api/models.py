@@ -90,6 +90,15 @@ class MissionRequest(BaseModel):
     return_to_origin: bool = True
 
 
+ForgeStateName = Literal["unknown", "queued", "building", "done", "failed"]
+
+
+class ForgeStatus(BaseModel):
+    name: str
+    state: ForgeStateName
+    detail: str
+
+
 MissionStateName = Literal[
     "idle", "ready", "flying", "holding", "returning", "done", "aborted"
 ]
