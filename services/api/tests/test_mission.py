@@ -24,6 +24,7 @@ def test_post_latches_the_mission_json(client: TestClient, fake_ros: FakeRos) ->
     assert latched["waypoints"][1]["hold_s"] == 4.0
     # contract defaults ride along so the node needs no fallback logic
     assert latched["return_to_origin"] is True
+    assert latched["name"] == "mission"
 
 
 def test_post_rejects_bad_plans(client: TestClient, fake_ros: FakeRos) -> None:
@@ -38,6 +39,15 @@ def test_post_rejects_bad_plans(client: TestClient, fake_ros: FakeRos) -> None:
     assert fake_ros.missions == []
 
 
+def test_post_rejects_a_bad_name(client: TestClient, fake_ros: FakeRos) -> None:
+    response = client.post(
+        "/api/mission",
+        json={"name": "Not Valid!", "waypoints": [{"x": 0, "y": 0, "z": -5}]},
+    )
+    assert response.status_code == 422
+    assert fake_ros.missions == []
+
+
 def test_get_defaults_to_idle(client: TestClient) -> None:
     body = client.get("/api/mission").json()
     assert body["state"] == "idle"
@@ -46,6 +56,7 @@ def test_get_defaults_to_idle(client: TestClient) -> None:
 
 def test_get_relays_the_executor_status(client: TestClient, fake_ros: FakeRos) -> None:
     fake_ros.mission_state = {
+        "node": "mission",
         "state": "flying",
         "current_index": 1,
         "total": 4,

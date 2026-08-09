@@ -81,6 +81,9 @@ class Waypoint(BaseModel):
 
 
 class MissionRequest(BaseModel):
+    # ros node name for this mission's executor; priming an existing name
+    # rebuilds that node with the new plan
+    name: str = Field(default="mission", pattern=r"^[a-z][a-z0-9_]{0,30}$")
     waypoints: list[Waypoint] = Field(min_length=1, max_length=50)
     rate_hz: float = Field(default=20.0, ge=2, le=100)
     takeoff_z: float = -3.0
@@ -93,6 +96,8 @@ MissionStateName = Literal[
 
 
 class MissionStatus(BaseModel):
+    # which mission executor reported this; absent until one exists
+    node: str | None = None
     state: MissionStateName
     current_index: int | None = None
     total: int

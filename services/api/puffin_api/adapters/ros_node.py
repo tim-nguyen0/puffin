@@ -391,8 +391,23 @@ class RosAdapter:
                 return
 
             def store(msg: Any) -> None:
+                # the topic has one latched publisher per executor plus the
+                # host; on late join their samples replay in arbitrary order.
+                # never let the host's node-less "idle" shadow a real
+                # executor's status - only a fresher executor message wins
+                try:
+                    parsed = json.loads(msg.data)
+                except json.JSONDecodeError:
+                    return
                 with self._data_lock:
-                    self._latest["mission_status"] = msg.data
+                    current = self._latest.get("mission_status")
+                    if (
+                        parsed.get("node") is None
+                        and current is not None
+                        and current.get("node") is not None
+                    ):
+                        return
+                    self._latest["mission_status"] = parsed
 
             node.create_subscription(String, "/puffin/mission/status", store, latched_qos())
             self._clients["mission"] = node.create_publisher(
@@ -416,20 +431,17 @@ class RosAdapter:
         try:
             self._ensure_mission()
             with self._data_lock:
-                raw = self._latest.get("mission_status")
+                status = self._latest.get("mission_status")
         except Exception as exc:  # noqa: BLE001 - clean {ok, detail} at the boundary
             return AdapterResult(ok=False, detail=f"mission status unavailable: {exc}")
-        if raw is None:
-            # nothing published yet - mission_node not up or nothing latched
+        if status is None:
+            # nothing published yet - mission host not up or nothing primed
             return AdapterResult(
                 ok=True,
                 data={"state": "idle", "current_index": None, "total": 0,
                       "detail": "no mission status yet"},
             )
-        try:
-            return AdapterResult(ok=True, data=json.loads(raw))
-        except json.JSONDecodeError as exc:
-            return AdapterResult(ok=False, detail=f"bad mission status json: {exc}")
+        return AdapterResult(ok=True, data=status)
 
     # -- telemetry ----------------------------------------------------------
 
