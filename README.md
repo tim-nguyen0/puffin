@@ -71,6 +71,16 @@ python3 scripts/lint_worlds.py sim/worlds   # world sanity
 cd sim/packages/offboard_demo && python3 -m pytest   # square-flight geometry
 ```
 
+## Project docs
+
+The documentation site lives in `apps/docs` (VitePress, wearing the
+console design):
+
+```bash
+pnpm --filter @puffin/docs dev     # local docs at :5174
+pnpm --filter @puffin/docs build
+```
+
 ## QGroundControl
 
 The sim streams MAVLink to the docker host on udp 14550, so a locally
