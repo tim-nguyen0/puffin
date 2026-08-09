@@ -19,6 +19,7 @@ const lifecycleStates = new Map<string, Schemas["LifecycleState"]["state"]>();
 const ack: Schemas["Ack"] = { ok: true, detail: "mock" };
 
 let mockMission: Schemas["MissionRequest"] | null = null;
+const mockMissionNodes = new Set<string>();
 
 const processes: Schemas["ProcessInfo"][] = [
   { name: "gz-server", state: "RUNNING", uptime_s: 512 },
@@ -153,28 +154,40 @@ export const handlers = [
   http.post("/api/vehicle/disarm", () => HttpResponse.json(ack)),
   http.post("/api/vehicle/takeoff", () => HttpResponse.json(ack)),
   http.post("/api/vehicle/land", () => HttpResponse.json(ack)),
-  // mission mock: latch the plan, then pretend the executor walks it
+  // mission mock: priming latches the plan and births a named executor
+  // node, exactly like the sim-side mission host
   http.get("/api/mission", () =>
     HttpResponse.json({
+      ...(mockMission ? { node: mockMission.name ?? "mission" } : {}),
       state: mockMission ? "ready" : "idle",
       current_index: null,
       total: mockMission?.waypoints.length ?? 0,
-      detail: mockMission ? "latched; activate mission_node to fly" : "no mission latched",
+      detail: mockMission
+        ? `primed; run /${mockMission.name ?? "mission"} to fly`
+        : "no mission primed",
     } satisfies Schemas["MissionStatus"]),
   ),
   http.post("/api/mission", async ({ request }) => {
     mockMission = (await request.json()) as Schemas["MissionRequest"];
+    const node = mockMission.name ?? "mission";
+    mockMissionNodes.add(node);
+    lifecycleStates.set(node, "inactive");
     return HttpResponse.json(
-      { ok: true, detail: `mission latched (${mockMission.waypoints.length} waypoints)` } satisfies Schemas["Ack"],
+      { ok: true, detail: `mission primed on /${node} (${mockMission.waypoints.length} waypoints)` } satisfies Schemas["Ack"],
       { status: 202 },
     );
   }),
   http.get("/api/ros/services", () =>
-    HttpResponse.json([
-      { name: "/offboard_demo/change_state", type: "lifecycle_msgs/srv/ChangeState" },
-      { name: "/teleop/change_state", type: "lifecycle_msgs/srv/ChangeState" },
-      { name: "/mission_node/change_state", type: "lifecycle_msgs/srv/ChangeState" },
-    ] satisfies Schemas["RosService"][]),
+    HttpResponse.json(
+      [
+        { name: "/offboard_demo/change_state", type: "lifecycle_msgs/srv/ChangeState" },
+        { name: "/teleop/change_state", type: "lifecycle_msgs/srv/ChangeState" },
+        ...[...mockMissionNodes].map((node) => ({
+          name: `/${node}/change_state`,
+          type: "lifecycle_msgs/srv/ChangeState",
+        })),
+      ] satisfies Schemas["RosService"][],
+    ),
   ),
   http.get("/api/ros/graph", () =>
     HttpResponse.json({

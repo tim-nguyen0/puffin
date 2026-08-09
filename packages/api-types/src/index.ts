@@ -854,6 +854,8 @@ export interface components {
             hold_s: number;
         };
         MissionRequest: {
+            /** @default mission */
+            name: string;
             waypoints: components["schemas"]["Waypoint"][];
             /** @default 20 */
             rate_hz: number;
@@ -863,6 +865,7 @@ export interface components {
             return_to_origin: boolean;
         };
         MissionStatus: {
+            node?: string;
             /** @enum {string} */
             state: "idle" | "ready" | "flying" | "holding" | "returning" | "done" | "aborted";
             current_index?: number | null;

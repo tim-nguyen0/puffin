@@ -127,7 +127,7 @@ export function MissionPlannerScreen() {
     mutationFn: async () => {
       // latch -> arm -> activate; each step reports its own failure
       const latch = await api.POST("/mission", {
-        body: { waypoints, rate_hz: rateHz, takeoff_z: takeoffZ, return_to_origin: returnToOrigin },
+        body: { name: "mission", waypoints, rate_hz: rateHz, takeoff_z: takeoffZ, return_to_origin: returnToOrigin },
       });
       if (latch.error || !latch.data?.ok) {
         throw new Error(latch.data?.detail ?? "mission latch failed");
