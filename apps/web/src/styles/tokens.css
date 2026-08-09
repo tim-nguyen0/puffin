@@ -324,4 +324,11 @@
   --vehicle-spec-gap: 12px;
   --color-vehicle-figure: #eef4fb;
   --color-vehicle-figure-live: #e4f8f0;
+
+  /* Sensors (figma node "sensors-page", 27:784) */
+  --sensor-card-min-width: 320px;
+  --sensor-figure-height: 140px;
+  --sensor-spark-height: 32px;
+  --sensor-spark-label: 48px;
+  --sensor-spark-value: 56px;
 }

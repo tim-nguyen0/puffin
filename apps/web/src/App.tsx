@@ -12,12 +12,14 @@ import { ConsoleDashboardScreen } from "./screens/console-dashboard/ConsoleDashb
 import { RosServicesScreen } from "./screens/ros-services/RosServicesScreen";
 import { SimulationScreen } from "./screens/simulation/SimulationScreen";
 import { SettingsScreen } from "./screens/settings/SettingsScreen";
+import { SensorsScreen } from "./screens/sensors/SensorsScreen";
 import { VehiclesScreen } from "./screens/vehicles/VehiclesScreen";
 
 const SCREENS = [
   { path: "/dashboard", element: <DashboardScreen /> },
   { path: "/simulation", element: <SimulationScreen /> },
   { path: "/vehicles", element: <VehiclesScreen /> },
+  { path: "/sensors", element: <SensorsScreen /> },
   { path: "/ros-services", element: <RosServicesScreen /> },
   { path: "/ros-graph", element: <RosGraphScreen /> },
   { path: "/settings", element: <SettingsScreen /> },

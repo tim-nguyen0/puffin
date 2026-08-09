@@ -19,7 +19,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Simulation", icon: <AppIcon name="pipeline" />, path: "/simulation" },
   { label: "Vehicles", icon: <AppIcon name="vehicle" />, path: "/vehicles" },
   { label: "World Editor", icon: <AppIcon name="globe" />, path: null },
-  { label: "Sensors", icon: <AppIcon name="sensors" />, path: null },
+  { label: "Sensors", icon: <AppIcon name="sensors" />, path: "/sensors" },
   { label: "Mission Planner", icon: <AppIcon name="map-pin" />, path: null },
   { label: "ROS Nodes", icon: ros2Services, path: "/ros-services" },
   { label: "ROS2 Graph", icon: gitBranch, path: "/ros-graph" },

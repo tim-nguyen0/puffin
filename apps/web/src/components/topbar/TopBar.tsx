@@ -9,6 +9,7 @@ const SCREEN_LABELS: Record<string, string> = {
   "/dashboard/console": "Console",
   "/simulation": "Simulation",
   "/vehicles": "Vehicle Library",
+  "/sensors": "Sensors",
   "/ros-services": "ROS Nodes",
   "/ros-graph": "ROS2 Graph",
   "/settings": "Settings",
