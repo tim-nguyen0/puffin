@@ -175,6 +175,10 @@ command = bash -c "source /ros_ws/install/setup.bash && ros2 run __FORGE_NAME__ 
 priority = 48
 autostart = true
 autorestart = unexpected
+; stop the whole process group: the program is a bash exec chain, and a
+; sigterm to ros2-run alone orphans the node into a second live server
+stopasgroup = true
+killasgroup = true
 exitcodes = 0
 """
 
