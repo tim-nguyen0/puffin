@@ -37,12 +37,20 @@ RUN git clone --branch v2.4.3 --depth 1 \
 # version-header script (px_update_git_header.py --validate) requires a
 # nuttx-x.y.z tag even for SITL, which never runs NuttX. Tagging HEAD is
 # cheaper than unshallowing the clone for a cosmetic version string.
+# The dds_topics.yaml edit: uxrce_dds_client bridges only the topics listed
+# there and vehicle_land_detected is not one of them upstream, so the api's
+# subscription would match nothing and report a flying vehicle as landed
+# forever (gotcha #1's failure mode, one layer down). The grep fails the
+# build if a PX4_REF bump ever moves the anchor.
 RUN git clone --branch "${PX4_REF}" --depth 1 --recurse-submodules --shallow-submodules \
       https://github.com/PX4/PX4-Autopilot.git /px4 \
     && for sub in platforms/nuttx/NuttX/nuttx platforms/nuttx/NuttX/apps; do \
          if [ -d "/px4/${sub}" ]; then git -C "/px4/${sub}" tag nuttx-0.0.0; fi; \
        done \
     && pip3 install --break-system-packages -r /px4/Tools/setup/requirements.txt \
+    && sed -i '0,/^publications:/s||publications:\n\n  - topic: /fmu/out/vehicle_land_detected\n    type: px4_msgs::msg::VehicleLandDetected|' \
+         /px4/src/modules/uxrce_dds_client/dds_topics.yaml \
+    && grep -q "vehicle_land_detected" /px4/src/modules/uxrce_dds_client/dds_topics.yaml \
     && cd /px4 && DONT_RUN=1 make px4_sitl_default
 
 # px4_msgs at PX4_MSGS_REF (same PX4 release as PX4_REF — gotcha #2).

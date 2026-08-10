@@ -394,6 +394,46 @@ def test_land_waits_for_the_loiter_handoff(adapter: RosAdapter, node: FakeNode) 
     assert seen == ["offboard", "offboard", "auto_loiter"]
 
 
+# -- landed: px4's detector, not a height guess -------------------------------
+
+
+def land_detected(landed: bool) -> Any:
+    return types.SimpleNamespace(landed=landed)
+
+
+def test_landed_defaults_to_true_before_the_detector_reports(adapter: RosAdapter) -> None:
+    # a vehicle we know nothing about is parked, not flying
+    store(adapter, "status", vehicle_status())
+    assert adapter.latest_telemetry().data["landed"] is True
+
+
+def test_landed_follows_the_detector(adapter: RosAdapter) -> None:
+    store(adapter, "status", vehicle_status())
+    store(adapter, "land_detected", land_detected(False))
+    assert adapter.latest_telemetry().data["landed"] is False
+
+    store(adapter, "land_detected", land_detected(True))
+    assert adapter.latest_telemetry().data["landed"] is True
+
+
+def test_stale_land_detection_reads_grounded(adapter: RosAdapter) -> None:
+    # px4 restarted; the airborne flag it left behind must not outlive it
+    store(adapter, "status", vehicle_status())
+    store(adapter, "land_detected", land_detected(False), age_s=TELEMETRY_STALE_S + 1)
+    assert adapter.latest_telemetry().data["landed"] is True
+
+
+def test_landed_ignores_a_drifted_z(adapter: RosAdapter) -> None:
+    # the whole point: the ekf origin drifts metres up across a few flights,
+    # so a parked vehicle reports altitude well clear of any threshold. the
+    # detector still says grounded and that is what the ui gets.
+    store(adapter, "status", vehicle_status())
+    store(adapter, "local_position", types.SimpleNamespace(x=0.0, y=0.0, z=-1.33, ref_alt=408.0))
+    store(adapter, "land_detected", land_detected(True))
+    sample = adapter.latest_telemetry().data
+    assert (sample["ned"]["z"], sample["landed"]) == (-1.33, True)
+
+
 def test_takeoff_refuses_a_stale_reference_altitude(adapter: RosAdapter) -> None:
     store(
         adapter,

@@ -580,6 +580,7 @@ class RosAdapter:
         from px4_msgs.msg import (
             BatteryStatus,
             VehicleAttitude,
+            VehicleLandDetected,
             VehicleLocalPosition,
             VehicleStatus,
         )
@@ -613,6 +614,7 @@ class RosAdapter:
             subscribe("local_position", VehicleLocalPosition, "vehicle_local_position")
             subscribe("battery", BatteryStatus, "battery_status")
             subscribe("attitude", VehicleAttitude, "vehicle_attitude")
+            subscribe("land_detected", VehicleLandDetected, "vehicle_land_detected")
             self._telemetry_ready = True
 
     def _sample(self, kind: str) -> tuple[Any, float | None]:
@@ -636,6 +638,7 @@ class RosAdapter:
             local_position, _ = self._sample("local_position")
             battery, _ = self._sample("battery")
             attitude, _ = self._sample("attitude")
+            land_detected, _ = self._sample("land_detected")
             if status is None:
                 if age is None:
                     return AdapterResult(ok=False, detail="no telemetry received yet")
@@ -647,6 +650,11 @@ class RosAdapter:
                 "t_us": int(status.timestamp),
                 "armed": bool(status.arming_state == VehicleStatus.ARMING_STATE_ARMED),
                 "mode": self._nav_states.get(status.nav_state, f"nav_state_{status.nav_state}"),
+                # px4's own landing detector, not a height threshold: the ned
+                # z the ui used to compare drifts metres upward across a few
+                # flights, so a parked vehicle read as flying. no sample (or a
+                # stale one) means grounded - the safe way to be wrong.
+                "landed": bool(land_detected.landed) if land_detected else True,
                 "ned": {
                     "x": float(local_position.x) if local_position else 0.0,
                     "y": float(local_position.y) if local_position else 0.0,
