@@ -380,14 +380,16 @@ export function RosServicesScreen() {
       </div>
 
       <footer className="services-status-bar">
+        {/* the counts speak puffin's vocabulary while the row chips print the
+            raw lifecycle state - the titles bridge the two */}
         <div className="services-status-counts">
-          <span>
+          <span title="lifecycle state: active">
             Running: <strong>{counts.running}</strong>
           </span>
-          <span>
+          <span title="lifecycle state: inactive (configured)">
             Armed: <strong>{counts.armed}</strong>
           </span>
-          <span>
+          <span title="lifecycle state: unconfigured or unknown">
             Stopped: <strong>{counts.stopped}</strong>
           </span>
           <span>

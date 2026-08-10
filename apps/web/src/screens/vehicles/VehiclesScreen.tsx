@@ -54,14 +54,24 @@ function VehicleCard({ isSelected, onSelect, status, vehicle }: VehicleCardProps
           <strong>{vehicle.name}</strong>
           <div className="vehicle-card-meta">
             <span className="vehicle-model">PX4 · gz {vehicle.model}</span>
+            {/* dimmed meant "absent", which only reads if the tooltip says so */}
             <span className="vehicle-sensor-icons">
-              <span className={vehicle.sensors.camera ? "" : "sensor-absent"} title="camera">
+              <span
+                className={vehicle.sensors.camera ? "" : "sensor-absent"}
+                title={vehicle.sensors.camera ? "carries a camera" : "no camera"}
+              >
                 <AppIcon name="camera" />
               </span>
-              <span className={vehicle.sensors.lidar ? "" : "sensor-absent"} title="lidar">
+              <span
+                className={vehicle.sensors.lidar ? "" : "sensor-absent"}
+                title={vehicle.sensors.lidar ? "carries lidar" : "no lidar"}
+              >
                 <AppIcon name="radar" />
               </span>
-              <span className={vehicle.sensors.gps ? "" : "sensor-absent"} title="gps">
+              <span
+                className={vehicle.sensors.gps ? "" : "sensor-absent"}
+                title={vehicle.sensors.gps ? "carries gps" : "no gps"}
+              >
                 <AppIcon name="map-pin" />
               </span>
             </span>
@@ -173,14 +183,13 @@ export function VehiclesScreen() {
                   onChange={(event) => setQuery(event.target.value)}
                 />
               </label>
-              <button
-                type="button"
-                className="vehicles-add"
-                disabled
-                title="spawning extra vehicles is on the roadmap — the stack boots with x500"
-              >
-                + Add Vehicle
-              </button>
+              {/* a disabled button never fires hover, so the tooltip rides on
+                  the wrapper */}
+              <span title="spawning extra vehicles is on the roadmap — the stack boots with x500">
+                <button type="button" className="vehicles-add" disabled>
+                  + Add Vehicle
+                </button>
+              </span>
             </div>
           </header>
 

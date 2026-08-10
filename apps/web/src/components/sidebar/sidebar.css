@@ -57,6 +57,17 @@
   font-weight: 600;
 }
 
+.nav-item:focus-visible {
+  outline: var(--graph-control-focus-width) solid var(--color-button-focus);
+  outline-offset: var(--graph-control-focus-offset);
+}
+
+/* a wash of the active blue, so hover reads as "clickable" without being
+   mistaken for "you are here" */
+.nav-item:hover:not(.nav-item-disabled, .active) {
+  background: color-mix(in srgb, var(--base-palette-blue) 45%, transparent);
+}
+
 .nav-item-disabled {
   cursor: default;
   opacity: 0.6;
@@ -95,6 +106,12 @@
 .sidebar-footer {
   display: flex;
   flex-direction: column;
+  gap: var(--space-4);
+}
+
+.sidebar-account {
+  display: flex;
+  flex-direction: column;
   gap: var(--space-2);
 }
 
@@ -102,6 +119,7 @@
   overflow: hidden;
   color: var(--base-palette-cloud);
   font-size: var(--text-sm);
+  white-space: nowrap;
   text-overflow: ellipsis;
 }
 
@@ -112,6 +130,11 @@
   background: transparent;
   color: var(--base-palette-cloud);
   cursor: pointer;
+}
+
+.sidebar-logout:focus-visible {
+  outline: var(--graph-control-focus-width) solid var(--color-button-focus);
+  outline-offset: var(--graph-control-focus-offset);
 }
 
 .nav-item-icon svg {

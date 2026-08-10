@@ -40,28 +40,32 @@ export function WorkspaceHeader({
         </ol>
       </nav>
 
-      <div className="workspace-command-controls" aria-label="Simulation controls">
-        <Button
-          className="workspace-resume-button"
-          startIcon={<PlayIcon />}
-          onClick={onResume}
-          disabled={busy}
-        >
-          {simRunning ? "Resume" : "Start"}
-        </Button>
-        <button
-          type="button"
-          className="workspace-command-button"
-          title="Pause is not available yet"
-          disabled
-        >
-          Pause
-        </button>
+      {/* a running sim has nothing to resume - the button reports the state
+          instead of offering a start that supervisor would reject. titles ride
+          on wrappers because disabled controls never fire the hover that shows
+          one. */}
+      <div className="workspace-command-controls" aria-label="Simulation controls" aria-busy={busy}>
+        <span title={simRunning ? "the simulation is already running" : undefined}>
+          <Button
+            className="workspace-resume-button"
+            startIcon={<PlayIcon />}
+            onClick={onResume}
+            disabled={busy || simRunning}
+          >
+            {busy ? "Working…" : simRunning ? "Running" : "Start"}
+          </Button>
+        </span>
+        <span title="Pause is not available yet">
+          <button type="button" className="workspace-command-button" disabled>
+            Pause
+          </button>
+        </span>
         <button
           type="button"
           className="workspace-command-button workspace-stop-button"
           onClick={onStop}
           disabled={busy}
+          title="stops gz-server, gz-gui, xrce-agent and px4"
         >
           Stop
         </button>

@@ -69,12 +69,16 @@ export function Sidebar() {
           )}
         </nav>
       </div>
+      {/* workspace first, then the account it belongs to - the chip used to
+          sit under "log out" and read as part of it */}
       <div className="sidebar-footer">
-        <span className="sidebar-user">{user?.email}</span>
-        <button type="button" className="sidebar-logout" onClick={handleLogout}>Log out</button>
         <div className="sidebar-workspace">
           <img src={packageIcon} alt="" className="sidebar-workspace-icon" />
           <span className="sidebar-workspace-name">rospackage-4</span>
+        </div>
+        <div className="sidebar-account">
+          <span className="sidebar-user" title={user?.email}>{user?.email}</span>
+          <button type="button" className="sidebar-logout" onClick={handleLogout}>Log out</button>
         </div>
       </div>
     </aside>

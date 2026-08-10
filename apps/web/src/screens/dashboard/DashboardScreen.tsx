@@ -574,9 +574,11 @@ export function DashboardScreen() {
           headerAction={<span className="viewport-stats">:6081</span>}
         >
           <div className="viewport-body">
+            {/* the hint renders whatever the stream is doing, so it asks
+                rather than declaring the stream dead */}
             <SimViewport
               variant="qgc"
-              hint="stream offline — is the qgc container up? (docker compose up -d qgc)"
+              hint="frame stays blank? the qgc container may be down — docker compose up -d qgc"
             />
           </div>
         </DashboardPanel>

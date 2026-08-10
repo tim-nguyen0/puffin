@@ -139,6 +139,17 @@
   background: var(--color-graph-bg);
 }
 
+.sensor-sparkline-empty {
+  box-sizing: border-box;
+  height: var(--sensor-spark-height);
+  padding: var(--space-2);
+  border: var(--graph-border-width) dashed var(--color-page-border);
+  border-radius: var(--vehicle-chip-radius);
+  background: var(--color-page-control);
+  color: var(--color-page-muted);
+  font-size: var(--text-sm);
+}
+
 .sensor-sparkline polyline {
   fill: none;
   stroke: var(--color-service-cyan);
@@ -239,8 +250,13 @@
   gap: var(--space-2);
 }
 
+.sensor-editor-form > span {
+  display: flex;
+}
+
 .sensor-editor-form button {
   box-sizing: border-box;
+  width: 100%;
   height: var(--vehicle-control-height);
   border: 0;
   border-radius: var(--graph-control-radius);
