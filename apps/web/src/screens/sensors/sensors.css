@@ -1,0 +1,274 @@
+/* State selectors stay next to their components for readable interaction styling. */
+/* stylelint-disable no-descending-specificity */
+
+.sensors-screen {
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  min-height: calc(100vh - var(--topbar-height));
+  margin: calc(var(--space-4) * -1);
+  padding: var(--graph-page-gap);
+  background: var(--color-page-bg);
+  color: var(--color-page-text);
+}
+
+.sensors-layout {
+  display: grid;
+  flex: 1;
+  min-height: 0;
+  grid-template-columns: minmax(0, 1fr) var(--vehicles-inspector-width);
+  gap: var(--space-3);
+  align-items: start;
+}
+
+.sensors-main,
+.sensor-editor {
+  box-sizing: border-box;
+  min-width: 0;
+  padding: var(--space-4);
+  border-radius: var(--graph-card-radius);
+  background: var(--color-page-surface);
+}
+
+.sensors-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.sensors-header h1 {
+  margin: 0 0 var(--space-1);
+  color: var(--base-palette-not-quite-gray);
+  font-size: var(--text-xl);
+}
+
+.sensors-header p {
+  margin: 0;
+  color: var(--color-page-muted);
+  font-size: var(--text-sm);
+}
+
+.sensors-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(var(--sensor-card-min-width), 1fr));
+  gap: var(--space-3);
+}
+
+.sensor-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  box-sizing: border-box;
+  padding: var(--space-3);
+  border: var(--border-width) solid var(--color-page-border);
+  border-radius: var(--dashboard-panel-radius);
+  background: var(--color-page-surface);
+}
+
+.sensor-card > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.sensor-card h2 {
+  margin: 0 0 var(--space-1);
+  font-size: var(--text-md);
+  color: var(--base-palette-not-quite-gray);
+}
+
+.sensor-source {
+  color: var(--color-page-muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+}
+
+/* absent hardware gets a quiet dark well, like an unplugged feed */
+.sensor-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: var(--sensor-figure-height);
+  padding: var(--space-3);
+  border-radius: var(--simulation-card-radius);
+  background: var(--color-graph-bg);
+  color: var(--color-graph-muted);
+  text-align: center;
+}
+
+.sensor-empty svg {
+  width: var(--icon-lg);
+  height: var(--icon-lg);
+  color: var(--color-graph-subtle);
+}
+
+.sensor-empty p {
+  margin: 0;
+  max-width: 34ch;
+  font-size: var(--text-sm);
+}
+
+.sensor-sparkline-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.sensor-sparkline {
+  display: grid;
+  grid-template-columns: var(--sensor-spark-label) 1fr var(--sensor-spark-value);
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.sensor-sparkline span {
+  color: var(--color-page-muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+}
+
+.sensor-sparkline svg {
+  width: 100%;
+  height: var(--sensor-spark-height);
+  border-radius: var(--vehicle-chip-radius);
+  background: var(--color-graph-bg);
+}
+
+.sensor-sparkline polyline {
+  fill: none;
+  stroke: var(--color-service-cyan);
+  stroke-width: var(--graph-link-width);
+  vector-effect: non-scaling-stroke;
+}
+
+.sensor-sparkline strong {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  text-align: right;
+}
+
+.sensor-readout {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.sensor-readout div {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.sensor-readout dt {
+  color: var(--color-page-muted);
+  font-size: var(--text-sm);
+}
+
+.sensor-readout dd {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+}
+
+.sensor-note {
+  margin: 0;
+  color: var(--color-inspector-kicker);
+  font-size: var(--text-sm);
+}
+
+/* --- editor panel ------------------------------------------------------ */
+
+.sensor-editor {
+  position: sticky;
+  top: 0;
+}
+
+.sensor-editor-header h2 {
+  margin: 0 0 var(--space-1);
+  color: var(--base-palette-not-quite-gray);
+  font-size: var(--services-inspector-title);
+}
+
+.sensor-editor-header p {
+  margin: 0 0 var(--space-3);
+  color: var(--color-page-muted);
+  font-size: var(--text-sm);
+}
+
+.sensor-editor-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.sensor-editor-form label {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  color: var(--color-page-muted);
+  font-size: var(--text-sm);
+}
+
+.sensor-editor-form input,
+.sensor-editor-form select {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  height: var(--vehicle-control-height);
+  padding-inline: var(--space-2);
+  border: var(--border-width) solid var(--color-page-border);
+  border-radius: var(--graph-control-radius);
+  background: var(--color-page-control);
+  color: var(--color-page-text);
+  font: inherit;
+  font-size: var(--text-md);
+}
+
+.sensor-editor-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-2);
+}
+
+.sensor-editor-form button {
+  box-sizing: border-box;
+  height: var(--vehicle-control-height);
+  border: 0;
+  border-radius: var(--graph-control-radius);
+  background: var(--base-palette-blue);
+  color: var(--color-launch-bg);
+  font: inherit;
+  font-size: var(--text-md);
+  font-weight: 600;
+}
+
+/* the whole fieldset is parked until sdf editing ships; header says why */
+.sensor-editor-form:disabled input,
+.sensor-editor-form:disabled select {
+  color: var(--color-status-stopped);
+}
+
+.sensor-editor-form:disabled button {
+  background: var(--color-status-stopped-soft);
+  color: var(--color-status-stopped);
+  cursor: not-allowed;
+}
+
+@media (width <= 72rem) {
+  .sensors-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .sensor-editor {
+    position: static;
+  }
+}

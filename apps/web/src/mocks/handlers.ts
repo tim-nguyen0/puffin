@@ -18,6 +18,10 @@ const lifecycleStates = new Map<string, Schemas["LifecycleState"]["state"]>();
 
 const ack: Schemas["Ack"] = { ok: true, detail: "mock" };
 
+let mockMission: Schemas["MissionRequest"] | null = null;
+const mockMissionNodes = new Set<string>();
+const mockForge = new Map<string, Schemas["ForgeStatus"]["state"]>();
+
 const processes: Schemas["ProcessInfo"][] = [
   { name: "gz-server", state: "RUNNING", uptime_s: 512 },
   { name: "gz-gui", state: "RUNNING", uptime_s: 510 },
@@ -151,14 +155,75 @@ export const handlers = [
   http.post("/api/vehicle/disarm", () => HttpResponse.json(ack)),
   http.post("/api/vehicle/takeoff", () => HttpResponse.json(ack)),
   http.post("/api/vehicle/land", () => HttpResponse.json(ack)),
+  // mission mock: priming latches the plan and births a named executor
+  // node, exactly like the sim-side mission host
+  http.get("/api/mission", () =>
+    HttpResponse.json({
+      ...(mockMission ? { node: mockMission.name ?? "mission" } : {}),
+      state: mockMission ? "ready" : "idle",
+      current_index: null,
+      total: mockMission?.waypoints.length ?? 0,
+      detail: mockMission
+        ? `primed; run /${mockMission.name ?? "mission"} to fly`
+        : "no mission primed",
+    } satisfies Schemas["MissionStatus"]),
+  ),
+  http.post("/api/mission", async ({ request }) => {
+    mockMission = (await request.json()) as Schemas["MissionRequest"];
+    const node = mockMission.name ?? "mission";
+    mockMissionNodes.add(node);
+    lifecycleStates.set(node, "inactive");
+    return HttpResponse.json(
+      { ok: true, detail: `mission primed on /${node} (${mockMission.waypoints.length} waypoints)` } satisfies Schemas["Ack"],
+      { status: 202 },
+    );
+  }),
+  // forge mock: a build that finishes on the second status poll
+  http.post("/api/mission/forge", async ({ request }) => {
+    const body = (await request.json()) as Schemas["MissionRequest"];
+    const node = body.name ?? "mission";
+    mockForge.set(node, "building");
+    return HttpResponse.json(
+      { ok: true, detail: `forging /${node}; watch its build status` } satisfies Schemas["Ack"],
+      { status: 202 },
+    );
+  }),
+  http.get("/api/mission/forge/:name", ({ params }) => {
+    const node = String(params.name);
+    const state = mockForge.get(node) ?? "unknown";
+    if (state === "building") {
+      mockForge.set(node, "done");
+      mockMissionNodes.add(node);
+      lifecycleStates.set(node, "inactive");
+    }
+    return HttpResponse.json({
+      name: node,
+      state,
+      detail:
+        state === "done"
+          ? `package ${node} built; supervised program running`
+          : state === "building"
+            ? "colcon building"
+            : state === "unknown"
+              ? "no forge spec for that name"
+              : state,
+    } satisfies Schemas["ForgeStatus"]);
+  }),
   http.get("/api/ros/services", () =>
-    HttpResponse.json([
-      { name: "/offboard_demo/change_state", type: "lifecycle_msgs/srv/ChangeState" },
-    ] satisfies Schemas["RosService"][]),
+    HttpResponse.json(
+      [
+        { name: "/offboard_demo/change_state", type: "lifecycle_msgs/srv/ChangeState" },
+        { name: "/teleop/change_state", type: "lifecycle_msgs/srv/ChangeState" },
+        ...[...mockMissionNodes].map((node) => ({
+          name: `/${node}/change_state`,
+          type: "lifecycle_msgs/srv/ChangeState",
+        })),
+      ] satisfies Schemas["RosService"][],
+    ),
   ),
   http.get("/api/ros/graph", () =>
     HttpResponse.json({
-      nodes: ["/puffin_api", "/offboard_demo", "/px4_xrce_agent"],
+      nodes: ["/puffin_api", "/offboard_demo", "/teleop", "/mission_host", "/px4_xrce_agent"],
       topics: [
         {
           name: "/fmu/out/vehicle_status_v1",
@@ -183,6 +248,18 @@ export const handlers = [
           type: "px4_msgs/msg/VehicleCommand",
           publishers: ["/puffin_api", "/offboard_demo"],
           subscribers: ["/px4_xrce_agent"],
+        },
+        {
+          name: "/puffin/mission",
+          type: "std_msgs/msg/String",
+          publishers: ["/puffin_api"],
+          subscribers: ["/mission_host"],
+        },
+        {
+          name: "/puffin/mission/status",
+          type: "std_msgs/msg/String",
+          publishers: ["/mission_host"],
+          subscribers: ["/puffin_api"],
         },
       ],
     } satisfies Schemas["RosGraph"]),

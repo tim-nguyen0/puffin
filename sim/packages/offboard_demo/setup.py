@@ -17,7 +17,9 @@ setup(
     entry_points={
         "console_scripts": [
             "offboard_demo_node = offboard_demo.node:main",
+            "mission_node = offboard_demo.mission_node:main",
             "teleop_node = offboard_demo.teleop:main",
+            "forge_watcher = offboard_demo.forge_watcher:main",
             "dummy_flight = offboard_demo.dummy_flight:main",
         ],
     },

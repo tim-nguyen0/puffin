@@ -8,6 +8,7 @@ life of the process. Graph queries need no spinning, but the node must be
 long-lived anyway: DDS discovery is gossip, and a fresh node knows nothing.
 """
 
+import json
 import os
 import threading
 from typing import Any
@@ -56,6 +57,28 @@ def fmu_out_qos() -> Any:
     )
 
 
+def latched_qos() -> Any:
+    """QoS for the /puffin/mission* topics, mirroring the sim-side node.
+
+    RELIABLE + TRANSIENT_LOCAL + KEEP_LAST(1) - a mission latched before
+    mission_node activates still arrives, and this api sees the last
+    status even if it subscribed late.
+    """
+    from rclpy.qos import (
+        DurabilityPolicy,
+        HistoryPolicy,
+        QoSProfile,
+        ReliabilityPolicy,
+    )
+
+    return QoSProfile(
+        reliability=ReliabilityPolicy.RELIABLE,
+        durability=DurabilityPolicy.TRANSIENT_LOCAL,
+        history=HistoryPolicy.KEEP_LAST,
+        depth=1,
+    )
+
+
 class RosAdapter:
     def __init__(self) -> None:
         self._init_lock = threading.Lock()
@@ -67,6 +90,7 @@ class RosAdapter:
         self._latest: dict[str, Any] = {}
         self._nav_states: dict[int, str] = {}
         self._telemetry_ready = False
+        self._mission_ready = False
         self._acks: dict[int, Any] = {}
         self._ack_cond = threading.Condition()
 
@@ -354,12 +378,82 @@ class RosAdapter:
         # px4_msgs timestamps are microseconds from the node clock (gotcha #7).
         return int(self._node.get_clock().now().nanoseconds // 1000)
 
+    # -- mission ------------------------------------------------------------
+
+    def _ensure_mission(self) -> None:
+        if self._mission_ready:
+            return
+        from std_msgs.msg import String
+
+        node = self._ensure_node()
+        with self._init_lock:
+            if self._mission_ready:
+                return
+
+            def store(msg: Any) -> None:
+                # the topic has one latched publisher per executor plus the
+                # host; on late join their samples replay in arbitrary order.
+                # never let the host's node-less "idle" shadow a real
+                # executor's status - only a fresher executor message wins
+                try:
+                    parsed = json.loads(msg.data)
+                except json.JSONDecodeError:
+                    return
+                with self._data_lock:
+                    current = self._latest.get("mission_status")
+                    if (
+                        parsed.get("node") is None
+                        and current is not None
+                        and current.get("node") is not None
+                    ):
+                        return
+                    self._latest["mission_status"] = parsed
+
+            node.create_subscription(String, "/puffin/mission/status", store, latched_qos())
+            self._clients["mission"] = node.create_publisher(
+                String, "/puffin/mission", latched_qos()
+            )
+            self._mission_ready = True
+
+    def publish_mission(self, mission_json: str) -> AdapterResult:
+        try:
+            from std_msgs.msg import String
+
+            self._ensure_mission()
+            msg = String()
+            msg.data = mission_json
+            self._clients["mission"].publish(msg)
+        except Exception as exc:  # noqa: BLE001 - clean {ok, detail} at the boundary
+            return AdapterResult(ok=False, detail=f"mission publish failed: {exc}")
+        return AdapterResult(ok=True, detail="mission latched; activate mission_node to fly")
+
+    def mission_status(self) -> AdapterResult:
+        try:
+            self._ensure_mission()
+            with self._data_lock:
+                status = self._latest.get("mission_status")
+        except Exception as exc:  # noqa: BLE001 - clean {ok, detail} at the boundary
+            return AdapterResult(ok=False, detail=f"mission status unavailable: {exc}")
+        if status is None:
+            # nothing published yet - mission host not up or nothing primed
+            return AdapterResult(
+                ok=True,
+                data={"state": "idle", "current_index": None, "total": 0,
+                      "detail": "no mission status yet"},
+            )
+        return AdapterResult(ok=True, data=status)
+
     # -- telemetry ----------------------------------------------------------
 
     def _ensure_telemetry(self) -> None:
         if self._telemetry_ready:
             return
-        from px4_msgs.msg import BatteryStatus, VehicleLocalPosition, VehicleStatus
+        from px4_msgs.msg import (
+            BatteryStatus,
+            VehicleAttitude,
+            VehicleLocalPosition,
+            VehicleStatus,
+        )
 
         node = self._ensure_node()
         with self._init_lock:
@@ -386,6 +480,7 @@ class RosAdapter:
             subscribe("status", VehicleStatus, "vehicle_status")
             subscribe("local_position", VehicleLocalPosition, "vehicle_local_position")
             subscribe("battery", BatteryStatus, "battery_status")
+            subscribe("attitude", VehicleAttitude, "vehicle_attitude")
             self._telemetry_ready = True
 
     def latest_telemetry(self) -> AdapterResult:
@@ -397,6 +492,7 @@ class RosAdapter:
                 status = self._latest.get("status")
                 local_position = self._latest.get("local_position")
                 battery = self._latest.get("battery")
+                attitude = self._latest.get("attitude")
             if status is None:
                 return AdapterResult(ok=False, detail="no telemetry received yet")
             sample = {
@@ -409,6 +505,12 @@ class RosAdapter:
                     "z": float(local_position.z) if local_position else 0.0,
                 },
                 "battery_v": float(battery.voltage_v) if battery else 0.0,
+                # px4 q is [w, x, y, z], body FRD -> NED
+                "attitude_q": (
+                    [float(value) for value in attitude.q]
+                    if attitude is not None
+                    else [1.0, 0.0, 0.0, 0.0]
+                ),
             }
         except Exception as exc:  # noqa: BLE001 - clean {ok, detail} at the boundary
             return AdapterResult(ok=False, detail=f"telemetry unavailable: {exc}")

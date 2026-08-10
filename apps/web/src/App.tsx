@@ -9,12 +9,16 @@ import { LauncherScreen } from "./screens/launcher/LauncherScreen";
 import { RosGraphScreen } from "./screens/ros-graph/RosGraphScreen";
 import { ConsoleDashboardScreen } from "./screens/console-dashboard/ConsoleDashboardScreen";
 import { RosServicesScreen } from "./screens/ros-services/RosServicesScreen";
-import { SimulationScreen } from "./screens/simulation/SimulationScreen";
 import { SettingsScreen } from "./screens/settings/SettingsScreen";
+import { SensorsScreen } from "./screens/sensors/SensorsScreen";
+import { VehiclesScreen } from "./screens/vehicles/VehiclesScreen";
+import { MissionPlannerScreen } from "./screens/mission-planner/MissionPlannerScreen";
 
 const SCREENS = [
   { path: "/dashboard", element: <DashboardScreen /> },
-  { path: "/simulation", element: <SimulationScreen /> },
+  { path: "/vehicles", element: <VehiclesScreen /> },
+  { path: "/sensors", element: <SensorsScreen /> },
+  { path: "/mission-planner", element: <MissionPlannerScreen /> },
   { path: "/ros-services", element: <RosServicesScreen /> },
   { path: "/ros-graph", element: <RosGraphScreen /> },
   { path: "/settings", element: <SettingsScreen /> },

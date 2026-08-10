@@ -4,6 +4,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from puffin_api.adapters import AdapterResult
+from puffin_api.adapters.forge import ForgeAdapter
 from puffin_api.main import create_app
 
 
@@ -37,6 +38,8 @@ class FakeRos:
         self.lifecycle = {"offboard_demo": "inactive"}
         self.telemetry: dict | None = None
         self.teleop_frames: list[tuple[float, float, float, float]] = []
+        self.missions: list[str] = []
+        self.mission_state: dict | None = None
 
     def send_vehicle_command(
         self, command: int, param1: float = 0.0, param7: float = 0.0
@@ -98,6 +101,19 @@ class FakeRos:
             return AdapterResult(ok=False, detail="no telemetry received yet")
         return AdapterResult(ok=True, data=self.telemetry)
 
+    def publish_mission(self, mission_json: str) -> AdapterResult:
+        self.missions.append(mission_json)
+        return AdapterResult(ok=True, detail="mission latched; activate mission_node to fly")
+
+    def mission_status(self) -> AdapterResult:
+        if self.mission_state is None:
+            return AdapterResult(
+                ok=True,
+                data={"state": "idle", "current_index": None, "total": 0,
+                      "detail": "no mission status yet"},
+            )
+        return AdapterResult(ok=True, data=self.mission_state)
+
 
 class FakeGz:
     def __init__(self) -> None:
@@ -131,16 +147,30 @@ def fake_gz() -> FakeGz:
 
 
 @pytest.fixture
+def forge_dir(tmp_path: Path) -> Path:
+    return tmp_path / "forge"
+
+
+@pytest.fixture
+def forge_adapter(forge_dir: Path) -> ForgeAdapter:
+    # the real adapter, pointed at an isolated tmp dir - forge is just
+    # filesystem plumbing, no need to fake it
+    return ForgeAdapter(str(forge_dir))
+
+
+@pytest.fixture
 def client(
     fake_supervisor: FakeSupervisor,
     fake_ros: FakeRos,
     fake_gz: FakeGz,
+    forge_adapter: ForgeAdapter,
     tmp_path: Path,
 ) -> TestClient:
     app = create_app(
         supervisor=fake_supervisor,
         ros_adapter=fake_ros,
         gz=fake_gz,
+        forge=forge_adapter,
         db_path=str(tmp_path / "test.db"),
     )
     return TestClient(app)

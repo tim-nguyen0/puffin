@@ -1,23 +1,217 @@
+import type { components } from "@puffin/api-types";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { AppIcon } from "../../components/app-icon";
 import { Button } from "../../components/button";
 import { DashboardPanel } from "../../components/dashboard-panel";
-import { LifecycleQuickPanel } from "../../components/lifecycle";
+import {
+  actionsForState,
+  lifecycleNodeNames,
+  toneForState,
+  transitionForAction,
+  type LifecycleStateName,
+  type ServiceNodeAction,
+  type TransitionName,
+} from "../../components/lifecycle";
 import { MetricCard } from "../../components/metric-card";
+import { SceneViewport } from "../../components/scene-viewport";
 import { SimViewport } from "../../components/sim-viewport";
 import { StatusTag } from "../../components/status-tag";
 import { TeleopPad } from "../../components/teleop";
 import { api } from "../../lib/api";
+import { climbRate, nedToLatLon } from "../../lib/geo";
 import { useSettingsStore } from "../../lib/settingsStore";
 import { connectTelemetry, disconnectTelemetry, useTelemetryStore } from "../../lib/telemetryStore";
+import { describeNode, healthSummary, isForgeCandidate } from "./nodeCards";
 import "./dashboard.css";
+
+type ProcessInfo = components["schemas"]["ProcessInfo"];
 
 const M_TO_FT = 3.28084;
 
+const NODE_ACTION_LABELS: Record<ServiceNodeAction, string> = {
+  arm: "Arm",
+  run: "Run",
+  stop: "Stop",
+};
+
+// supervisord's roster at a glance; the processes panel below has the
+// uptimes and the start/stop controls
+function ServiceHealthStrip({ processes }: { processes: readonly ProcessInfo[] }) {
+  const { running, total, healthy } = healthSummary(processes);
+
+  return (
+    <div className="dashboard-health-strip" aria-label="Service health">
+      <strong>Service Health</strong>
+      {processes.map((proc) => (
+        <span
+          key={proc.name}
+          className={`dashboard-health-chip${proc.state === "RUNNING" ? "" : " is-down"}`}
+        >
+          <i />
+          {proc.name}
+        </span>
+      ))}
+      {total === 0 ? <span className="dashboard-health-chip is-down">no processes reported</span> : null}
+      <b className={`dashboard-health-total${healthy ? " is-healthy" : ""}`}>
+        <i />
+        {running} / {total} healthy
+      </b>
+    </div>
+  );
+}
+
+interface GpsHudProps {
+  altitude: number | null;
+  climb: number | null;
+  fix: { lat: number; lon: number } | null;
+  live: boolean;
+}
+
+// pinned over the 3d scene rather than owning a panel - a fix is context
+// for what you are watching, not a readout you go looking for
+function GpsHud({ altitude, climb, fix, live }: GpsHudProps) {
+  return (
+    <div className="gps-hud">
+      <span className="gps-hud-head">
+        <i className={`gps-hud-dot${live ? " is-live" : ""}`} />
+        {live ? "3d fix (sim)" : "no fix"}
+      </span>
+      <span>lat {fix ? fix.lat.toFixed(6) : "—"}</span>
+      <span>lon {fix ? fix.lon.toFixed(6) : "—"}</span>
+      <span>alt {altitude === null ? "—" : `${altitude.toFixed(2)} m`}</span>
+      <span>climb {climb === null ? "—" : `${climb.toFixed(2)} m/s`}</span>
+    </div>
+  );
+}
+
+function LifecycleNodeCards() {
+  const services = useQuery({
+    queryKey: ["ros-services"],
+    queryFn: async () => {
+      const { data, error } = await api.GET("/ros/services");
+      if (error) throw new Error("Failed to fetch services");
+      return data;
+    },
+    refetchInterval: 5000,
+  });
+
+  const nodes = lifecycleNodeNames(services.data ?? []);
+
+  if (services.isError) {
+    return <p className="dashboard-error">Could not reach the API.</p>;
+  }
+  if (nodes.length === 0) {
+    return <p className="dashboard-empty">No lifecycle nodes found.</p>;
+  }
+  return (
+    <div className="node-card-grid">
+      {nodes.map((name) => (
+        <NodeCard key={name} nodeName={name} />
+      ))}
+    </div>
+  );
+}
+
+function NodeCard({ nodeName }: { nodeName: string }) {
+  const queryClient = useQueryClient();
+  const [actionError, setActionError] = useState<string | null>(null);
+  const pathName = nodeName.replace(/^\//, "");
+
+  const lifecycle = useQuery({
+    queryKey: ["ros-lifecycle", pathName],
+    queryFn: async () => {
+      const { data, error } = await api.GET("/ros/lifecycle/{nodeName}", {
+        params: { path: { nodeName: pathName } },
+      });
+      if (error) throw new Error("Failed to fetch lifecycle state");
+      return data;
+    },
+    refetchInterval: 5000,
+  });
+
+  // one lookup for nodes the metadata map has never heard of; a build
+  // result does not change under us, so it never repolls
+  const forge = useQuery({
+    queryKey: ["mission-forge", pathName],
+    queryFn: async () => {
+      const { data, error } = await api.GET("/mission/forge/{name}", {
+        params: { path: { name: pathName } },
+      });
+      if (error) throw new Error("Failed to fetch forge status");
+      return data;
+    },
+    enabled: isForgeCandidate(nodeName),
+    staleTime: Infinity,
+    retry: false,
+  });
+
+  const transition = useMutation({
+    mutationFn: async (name: TransitionName) => {
+      const { data, error } = await api.POST("/ros/lifecycle/{nodeName}/transition", {
+        params: { path: { nodeName: pathName } },
+        body: { transition: name },
+      });
+      if (error || !data.ok) throw new Error(data?.detail ?? "Transition failed");
+      return data;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["ros-lifecycle", pathName] }),
+    onError: (err) => setActionError(err instanceof Error ? err.message : "Transition failed"),
+  });
+
+  const state = lifecycle.data?.state as LifecycleStateName | undefined;
+  const actions = actionsForState(state);
+
+  return (
+    <article className="node-card">
+      <header className="node-card-head">
+        <code>{nodeName}</code>
+        <StatusTag
+          status={toneForState(state)}
+          label={lifecycle.isError ? "unreachable" : (state ?? "…")}
+        />
+      </header>
+      <p className="node-card-desc">{describeNode(nodeName, forge.data?.state).description}</p>
+      <div className="node-card-actions">
+        {actions.length === 0 ? (
+          <span className="node-card-idle">no transition from {state ?? "unknown"}</span>
+        ) : (
+          actions.map((action) => {
+            const next = transitionForAction(action, state);
+            return (
+              <button
+                key={action}
+                type="button"
+                className={`node-card-button node-card-${action}`}
+                aria-label={`${NODE_ACTION_LABELS[action]} ${nodeName}`}
+                disabled={next === null || transition.isPending}
+                onClick={() => {
+                  if (!next) return;
+                  setActionError(null);
+                  transition.mutate(next);
+                }}
+              >
+                {NODE_ACTION_LABELS[action]}
+              </button>
+            );
+          })
+        )}
+      </div>
+      {actionError ? (
+        <p className="node-card-error" role="alert">
+          {actionError}
+        </p>
+      ) : null}
+    </article>
+  );
+}
+
 export function DashboardScreen() {
   const queryClient = useQueryClient();
-  const { connected, latest } = useTelemetryStore();
+  const { connected, latest, history } = useTelemetryStore();
+  const live = connected && latest !== null;
+  const gpsFix = latest ? nedToLatLon(latest.ned.x, latest.ned.y) : null;
+  const climb = climbRate(history);
   const units = useSettingsStore((state) => state.units);
   const toLength = (meters: number) => (units === "imperial" ? meters * M_TO_FT : meters);
   const lengthUnit = units === "imperial" ? "ft" : "m";
@@ -160,6 +354,8 @@ export function DashboardScreen() {
   return (
     <div className="dashboard-screen">
       <div className="dashboard-grid">
+        <ServiceHealthStrip processes={simStatus.data?.processes ?? []} />
+
         <DashboardPanel
           className="viewport-panel"
           title="Simulation View"
@@ -172,7 +368,16 @@ export function DashboardScreen() {
           }
         >
           <div className="viewport-body">
-            <SimViewport variant="clean" />
+            <SceneViewport
+              hud={
+                <GpsHud
+                  altitude={latest ? -latest.ned.z : null}
+                  climb={latest ? climb : null}
+                  fix={gpsFix}
+                  live={live}
+                />
+              }
+            />
           </div>
         </DashboardPanel>
 
@@ -357,7 +562,21 @@ export function DashboardScreen() {
           icon={<AppIcon name="sensors" />}
         >
           <div className="panel-pad">
-            <LifecycleQuickPanel />
+            <LifecycleNodeCards />
+          </div>
+        </DashboardPanel>
+
+        <DashboardPanel
+          className="qgc-panel"
+          title="QGroundControl"
+          icon={<AppIcon name="globe" />}
+          headerAction={<span className="viewport-stats">:6081</span>}
+        >
+          <div className="viewport-body">
+            <SimViewport
+              variant="qgc"
+              hint="stream offline — is the qgc container up? (docker compose up -d qgc)"
+            />
           </div>
         </DashboardPanel>
       </div>

@@ -7,6 +7,7 @@ from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from .adapters.compose import ComposeAdapter
+from .adapters.forge import ForgeAdapter
 from .adapters.gz import GzAdapter
 from .adapters.ros_node import RosAdapter
 from .adapters.supervisor import SupervisorAdapter
@@ -30,6 +31,10 @@ def get_ros(request: Request) -> RosAdapter:
 
 def get_compose(request: Request) -> ComposeAdapter:
     return request.app.state.compose
+
+
+def get_forge(request: Request) -> ForgeAdapter:
+    return request.app.state.forge
 
 
 def get_db(request: Request) -> Iterator[sqlite3.Connection]:
