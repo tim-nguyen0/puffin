@@ -13,7 +13,12 @@ from typing import Any
 
 import pytest
 
-from puffin_api.adapters.ros_node import TELEMETRY_STALE_S, RosAdapter
+from puffin_api.adapters import AdapterResult
+from puffin_api.adapters.ros_node import (
+    TELEMETRY_STALE_S,
+    VEHICLE_CMD_NAV_LAND,
+    RosAdapter,
+)
 
 # -- fake ros ---------------------------------------------------------------
 
@@ -64,14 +69,19 @@ class FakeNode:
         # per service name: what the next created client should behave like
         self.available = True
         self.answers = True
+        # node name -> lifecycle state; anything absent reads "inactive"
+        self.states: dict[str, str] = {}
+        # node names that refuse every transition
+        self.refuses: set[str] = set()
 
     def create_client(self, srv_type: Any, service_name: str) -> FakeClient:
         client = FakeClient(service_name, available=self.available, answers=self.answers)
+        node_name = service_name.strip("/").rsplit("/", 1)[0]
         # a healthy node: inactive, and it accepts what it is asked to do
         client.response = (
-            state_response("inactive")
+            state_response(self.states.get(node_name, "inactive"))
             if service_name.endswith("get_state")
-            else change_response(True)
+            else change_response(node_name not in self.refuses)
         )
         self.clients.append(client)
         return client
@@ -79,6 +89,13 @@ class FakeNode:
     def destroy_client(self, client: FakeClient) -> None:
         client.destroyed = True
         self.destroyed.append(client)
+
+    def get_service_names_and_types(self) -> list[tuple[str, list[str]]]:
+        services: list[tuple[str, list[str]]] = []
+        for name in self.states:
+            services.append((f"/{name}/change_state", ["lifecycle_msgs/srv/ChangeState"]))
+            services.append((f"/{name}/get_state", ["lifecycle_msgs/srv/GetState"]))
+        return services
 
 
 def state_response(label: str) -> Any:
@@ -277,6 +294,104 @@ def test_stale_position_drops_out_of_a_fresh_sample(adapter: RosAdapter) -> None
         age_s=TELEMETRY_STALE_S + 1,
     )
     assert adapter.latest_telemetry().data["ned"] == {"x": 0.0, "y": 0.0, "z": 0.0}
+
+
+# -- land: the flight has to end, not just descend ---------------------------
+
+
+def trace_land(adapter: RosAdapter) -> list[str]:
+    """One ordered log across both halves of a land - releasing the setpoint
+    stream and the command itself - so a test can assert they happen in that
+    order and not the other one."""
+    trace: list[str] = []
+    transition = adapter.lifecycle_transition
+
+    def traced_transition(node_name: str, name: str) -> Any:
+        result = transition(node_name, name)
+        trace.append(f"{name} {node_name}" if result.ok else f"{name} {node_name} refused")
+        return result
+
+    def traced_command(command: int, **params: float) -> AdapterResult:
+        trace.append(f"command {command}")
+        return AdapterResult(ok=True, detail=f"vehicle_command {command} accepted")
+
+    adapter.lifecycle_transition = traced_transition  # type: ignore[method-assign]
+    adapter.send_vehicle_command = traced_command  # type: ignore[method-assign]
+    return trace
+
+
+def test_land_releases_the_streaming_node_first(adapter: RosAdapter, node: FakeNode) -> None:
+    # the reported bug: land while offboard_demo streams and px4 lands, then
+    # takes OFFBOARD straight back on the touchdown disarm - so the next arm
+    # flies. the stream has to be let go before the vehicle comes down.
+    node.states = {"offboard_demo": "active", "teleop": "inactive"}
+    trace = trace_land(adapter)
+
+    result = adapter.nav_land()
+
+    assert trace == ["deactivate offboard_demo", f"command {VEHICLE_CMD_NAV_LAND}"]
+    assert result.ok is True
+    assert result.detail.endswith("released offboard_demo")
+
+
+def test_land_releases_every_active_node(adapter: RosAdapter, node: FakeNode) -> None:
+    # a mission executor and the demo can both be active; either one left
+    # streaming is enough to reclaim the vehicle
+    node.states = {"mission_1": "active", "offboard_demo": "active", "teleop": "inactive"}
+    trace = trace_land(adapter)
+
+    assert adapter.nav_land().ok is True
+    assert trace == [
+        "deactivate mission_1",
+        "deactivate offboard_demo",
+        f"command {VEHICLE_CMD_NAV_LAND}",
+    ]
+
+
+def test_land_with_nothing_streaming_is_just_the_command(
+    adapter: RosAdapter, node: FakeNode
+) -> None:
+    node.states = {"offboard_demo": "inactive", "teleop": "inactive"}
+    trace = trace_land(adapter)
+
+    result = adapter.nav_land()
+
+    assert trace == [f"command {VEHICLE_CMD_NAV_LAND}"]
+    assert result.detail == f"vehicle_command {VEHICLE_CMD_NAV_LAND} accepted"
+
+
+def test_land_refuses_when_a_node_will_not_release(adapter: RosAdapter, node: FakeNode) -> None:
+    # landing under a stream that would not let go is the bug, not the fix:
+    # say so instead of commanding a descent the node will fly back out of
+    node.states = {"offboard_demo": "active"}
+    node.refuses = {"offboard_demo"}
+    trace = trace_land(adapter)
+
+    result = adapter.nav_land()
+
+    assert trace == ["deactivate offboard_demo refused"]
+    assert result.ok is False
+    assert result.detail == "not landing: still streaming setpoints: offboard_demo"
+
+
+def test_land_waits_for_the_loiter_handoff(adapter: RosAdapter, node: FakeNode) -> None:
+    # deactivate makes the node hand px4 to AUTO.LOITER, but that command and
+    # this one come from different publishers - land before it applies and the
+    # loiter cancels the landing
+    node.states = {"offboard_demo": "active"}
+    modes = ["offboard", "offboard", "auto_loiter"]
+    seen: list[str] = []
+
+    def telemetry() -> AdapterResult:
+        mode = modes[len(seen)] if len(seen) < len(modes) else modes[-1]
+        seen.append(mode)
+        return AdapterResult(ok=True, data={"mode": mode})
+
+    adapter.latest_telemetry = telemetry  # type: ignore[method-assign]
+    trace_land(adapter)
+
+    assert adapter.nav_land().ok is True
+    assert seen == ["offboard", "offboard", "auto_loiter"]
 
 
 def test_takeoff_refuses_a_stale_reference_altitude(adapter: RosAdapter) -> None:
