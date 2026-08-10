@@ -32,6 +32,10 @@ const M_TO_FT = 3.28084;
 // below this the vehicle reads as "on the ground" even with a little ned
 // noise; above it, takeoff swaps for land
 const AIRBORNE_ALTITUDE_M = 0.5;
+// the gap between a takeoff ack and altitude actually crossing the airborne
+// threshold - the vehicle is committed to leaving the ground, disarm is not
+// a safe undo. a rejected/failed climb still has to let go eventually.
+const CLIMB_TIMEOUT_MS = 15_000;
 
 const NODE_ACTION_LABELS: Record<ServiceNodeAction, string> = {
   arm: "Arm",
@@ -226,6 +230,10 @@ export function DashboardScreen() {
     ok: boolean;
     detail: string;
   } | null>(null);
+  // true from a successful takeoff ack until altitude actually crosses the
+  // airborne threshold (or the timeout gives up on it) - the window where
+  // the vehicle is climbing out but telemetry still reads "grounded"
+  const [climbing, setClimbing] = useState(false);
 
   useEffect(() => {
     connectTelemetry();
@@ -320,7 +328,11 @@ export function DashboardScreen() {
       if (error || !data.ok) throw new Error(data?.detail ?? "Takeoff failed");
       return data;
     },
-    ...vehicleResult("takeoff"),
+    onSuccess: (data) => {
+      vehicleResult("takeoff").onSuccess(data);
+      setClimbing(true);
+    },
+    onError: vehicleResult("takeoff").onError,
   });
 
   function handleTakeoff() {
@@ -362,6 +374,20 @@ export function DashboardScreen() {
   const altitudeM = latest ? -latest.ned.z : null;
   const airborne = live && altitudeM !== null && altitudeM > AIRBORNE_ALTITUDE_M;
 
+  // climbing ends the honest way - altitude actually crosses the threshold -
+  // or the dishonest-but-necessary way, a timeout, so a takeoff that never
+  // left the ground (rejected mode change, PX4 refusal) doesn't strand the
+  // toggle disabled forever.
+  useEffect(() => {
+    if (!climbing) return;
+    if (airborne) {
+      setClimbing(false);
+      return;
+    }
+    const timer = setTimeout(() => setClimbing(false), CLIMB_TIMEOUT_MS);
+    return () => clearTimeout(timer);
+  }, [climbing, airborne]);
+
   const takeoffTitle = !live
     ? "no telemetry - waiting for a live sample"
     : offboardActive
@@ -380,14 +406,19 @@ export function DashboardScreen() {
   // ever valid for the current state. locked airborne: disarming mid-flight
   // drops the vehicle, and the disarmed-but-airborne case (motors already
   // cut) has no business re-arming until it's back on the ground either.
+  // locked climbing too: telemetry still reads "grounded" right after a
+  // takeoff ack, but the vehicle is already committed to leaving - see the
+  // climbing effect above.
   const armToggleTitle = offboardActive
     ? manualLockTitle
     : airborne
       ? armed
         ? "disarming mid-air drops the vehicle - land first"
         : "vehicle is airborne - land before arming"
-      : undefined;
-  const armToggleDisabled = anyPending || offboardActive || airborne;
+      : climbing
+        ? "taking off - land to disarm"
+        : undefined;
+  const armToggleDisabled = anyPending || offboardActive || airborne || climbing;
 
   return (
     <div className="dashboard-screen">
