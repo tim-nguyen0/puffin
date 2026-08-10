@@ -5,6 +5,8 @@ type AppIconName =
   | "map-pin"
   | "network"
   | "pipeline"
+  | "radar"
+  | "search"
   | "sensors"
   | "vehicle";
 
@@ -51,6 +53,18 @@ const paths: Record<AppIconName, ReactNode> = {
   pipeline: (
     <>
       <path d="M3 4.5h4v3H3zM9 8.5h4v3H9zM7 6h2v4M4 12.5h3M9 3.5h3" />
+    </>
+  ),
+  radar: (
+    <>
+      <circle cx="8" cy="8" r="1.2" />
+      <path d="M8 8l4-4M12.7 8a4.7 4.7 0 1 1-1.4-3.3M8 1.5a6.5 6.5 0 1 1-4.6 1.9" />
+    </>
+  ),
+  search: (
+    <>
+      <circle cx="7" cy="7" r="4.5" />
+      <path d="m10.3 10.3 3.2 3.2" />
     </>
   ),
   sensors: (

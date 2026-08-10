@@ -50,13 +50,24 @@ RUN git clone --branch "${PX4_MSGS_REF}" --depth 1 \
       https://github.com/PX4/px4_msgs.git /ros_ws/src/px4_msgs \
     && bash -c "source /opt/ros/jazzy/setup.bash && cd /ros_ws && colcon build --symlink-install"
 
-# offboard_demo last: demo edits rebuild only this layer, never px4_msgs
-COPY offboard_demo/ /ros_ws/src/offboard_demo/
+# user packages last: anything with a package.xml dropped into
+# sim/packages/ builds here, and edits rebuild only this layer, never
+# px4_msgs (which is skipped - its install from the layer above stands)
+COPY packages/ /ros_ws/src/
 RUN bash -c "source /opt/ros/jazzy/setup.bash && cd /ros_ws \
-      && colcon build --symlink-install --packages-select offboard_demo"
+      && colcon build --symlink-install --packages-skip px4_msgs"
+
+# supervisord's drop-in dir: the forge writes program blocks here at runtime,
+# and a forged package that was persisted back into sim/packages/ brings its
+# block along as forge.conf, so baking it into the image also restores it.
+RUN mkdir -p /etc/supervisor/conf.d \
+    && for f in /ros_ws/src/*/forge.conf; do \
+         [ -e "$f" ] || continue; \
+         cp "$f" "/etc/supervisor/conf.d/$(basename "$(dirname "$f")").conf"; \
+       done
 
 COPY supervisord.conf /etc/supervisor/conf.d/puffin.conf
-COPY gui_minimal.config /gui_minimal.config
+COPY qgc_link.sh /qgc_link.sh
 COPY worlds/ /worlds/
 
 # full gz gui, pinned to the 1280x720 screen: take gazebo's default gui
@@ -70,6 +81,6 @@ RUN cfg=$(find /usr/share/gz -maxdepth 3 -name gui.config | head -1) \
 ENV PX4_GZ_WORLD=puffin \
     GZ_SIM_RESOURCE_PATH=/px4/Tools/simulation/gz/models:/px4/Tools/simulation/gz/worlds:/worlds
 
-EXPOSE 6080 8000 5173
+EXPOSE 6080 6081 8000 5173
 
 CMD ["supervisord", "-n", "-c", "/etc/supervisor/supervisord.conf"]

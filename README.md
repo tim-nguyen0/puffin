@@ -51,6 +51,15 @@ curl -X POST localhost:8000/api/vehicle/land
 
 Shut down with `make down`.
 
+### Fly your own plan
+
+The Mission Planner screen builds a NED waypoint list and flies it:
+**Start Offboard** latches the plan (`POST /api/mission`), arms, and
+activates `mission_node`, which climbs to the takeoff altitude, walks the
+waypoints (holding where asked), and returns to origin. **Abort**
+deactivates the node — PX4 holds in loiter. Progress streams back through
+`GET /api/mission`.
+
 ## Frontend development (no Docker)
 
 ```bash
@@ -68,8 +77,51 @@ everything else works against the MSW fixtures.
 pnpm typecheck && pnpm lint && pnpm test    # web
 cd services/api && pytest                   # api (fake adapters, no ros needed)
 python3 scripts/lint_worlds.py sim/worlds   # world sanity
-cd sim/offboard_demo && python3 -m pytest   # square-flight geometry
+cd sim/packages/offboard_demo && python3 -m pytest   # square-flight geometry
 ```
+
+## Project docs
+
+The documentation site lives in `apps/docs` (VitePress, wearing the
+console design):
+
+```bash
+pnpm --filter @puffin/docs dev     # local docs at :5174
+pnpm --filter @puffin/docs build
+```
+
+## QGroundControl
+
+Two ways to fly with a real GCS:
+
+- **Embedded**: the `qgc` compose service runs QGroundControl headless and
+  the dashboard shows it on :6081 next to the Gazebo viewport. The
+  container is pinned `linux/amd64` (QGC ships no arm64 build) - on Apple
+  silicon, Rosetta emulates just this one container while the sim stays
+  native.
+- **Desktop**: the sim also streams MAVLink to the docker host on udp
+  14550, so a locally installed QGroundControl auto-connects the moment
+  it opens.
+
+Both are control channels to the same vehicle: the one-pilot rule
+applies. (Cloud deploys can't carry either link - the tunnel/proxy path
+is http-only.)
+
+## Adding your own ROS package
+
+Drop the package into `sim/packages/` (anything with a `package.xml` -
+python or c++), then:
+
+```bash
+docker compose up -d --build sim && docker compose up -d --force-recreate api web
+```
+
+colcon discovers and builds it automatically. Lifecycle nodes appear on
+the ROS Nodes screen with full controls, no frontend changes; add a
+supervisord program if it should autostart. Two rules of the house:
+subscriptions to `/fmu/out/*` need the shared best-effort QoS profile or
+they silently receive nothing, and only one node should stream setpoints
+at a time.
 
 ## When something doesn't work
 

@@ -1,4 +1,4 @@
-import type { StatusTone } from "../../components/status-tag";
+import type { StatusTone } from "../status-tag";
 
 // the design's three states map cleanly onto the ros 2 lifecycle:
 // stopped = unconfigured/finalized, armed = inactive (configured),
@@ -78,4 +78,18 @@ export function metaForNode(name: string): ServiceNodeMeta {
       subscribes: "—",
     }
   );
+}
+
+// forged nodes (POST /mission/forge) are runtime-built packages named after
+// themselves: package, executable, and node name are all the same string,
+// and the plan they fly is baked into the build rather than subscribed to
+export function forgedNodeMeta(name: string): ServiceNodeMeta {
+  const bare = name.replace(/^\//, "");
+  return {
+    description: "forged mission node · flies its baked-in plan",
+    package: bare,
+    executable: bare,
+    publishes: "/puffin/mission/status",
+    subscribes: "—",
+  };
 }

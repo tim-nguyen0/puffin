@@ -1,18 +1,20 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useState } from "react";
 import { Button } from "../../components/button";
-import { lifecycleNodeNames } from "../../components/lifecycle";
-import { StatusIndicator } from "../../components/status-indicator";
-import { StatusTag } from "../../components/status-tag";
-import { api } from "../../lib/api";
 import {
   actionsForState,
+  forgedNodeMeta,
+  lifecycleNodeNames,
   metaForNode,
   toneForState,
   transitionForAction,
   type LifecycleStateName,
   type ServiceNodeAction,
-} from "./serviceNodes";
+  type ServiceNodeMeta,
+} from "../../components/lifecycle";
+import { StatusIndicator } from "../../components/status-indicator";
+import { StatusTag } from "../../components/status-tag";
+import { api } from "../../lib/api";
 import "./ros-services.css";
 
 const ACTION_LABELS: Record<ServiceNodeAction, string> = {
@@ -34,6 +36,39 @@ function useNodeState(nodeName: string) {
     },
     refetchInterval: 5000,
   });
+}
+
+// metaForNode's generic fallback is the only shape with an em-dash package -
+// known nodes always name a real one
+function isGenericMeta(meta: ServiceNodeMeta): boolean {
+  return meta.package === "—";
+}
+
+// forged-ness doesn't change while the screen is open, so this fetches once
+// and never polls; only asked for nodes metaForNode can't already explain
+function useForgeStatus(nodeName: string, enabled: boolean) {
+  const pathName = nodeName.replace(/^\//, "");
+  return useQuery({
+    queryKey: ["mission-forge-status", pathName],
+    queryFn: async () => {
+      const { data, error } = await api.GET("/mission/forge/{name}", {
+        params: { path: { name: pathName } },
+      });
+      if (error) throw new Error("Failed to fetch forge status");
+      return data;
+    },
+    enabled,
+    staleTime: Infinity,
+  });
+}
+
+// known metadata wins; otherwise a forge that reports "done" explains the
+// node for real, and anything else keeps the generic lifecycle description
+function useNodeMeta(nodeName: string): { meta: ServiceNodeMeta; isForged: boolean } {
+  const knownMeta = metaForNode(nodeName);
+  const forge = useForgeStatus(nodeName, isGenericMeta(knownMeta));
+  const isForged = forge.data?.state === "done";
+  return { meta: isForged ? forgedNodeMeta(nodeName) : knownMeta, isForged };
 }
 
 function useTransition(onDone: (message: string) => void) {
@@ -83,6 +118,7 @@ function ServiceNodeRow({
   const lifecycle = useNodeState(nodeName);
   const state = lifecycle.data?.state as LifecycleStateName | undefined;
   const tone = toneForState(state);
+  const { meta } = useNodeMeta(nodeName);
 
   useEffect(() => {
     onState(nodeName, state);
@@ -99,7 +135,7 @@ function ServiceNodeRow({
         <span className={`service-node-dot service-node-dot-${tone}`} />
         <span className="service-node-copy">
           <strong>{nodeName}</strong>
-          <small>{metaForNode(nodeName).description}</small>
+          <small>{meta.description}</small>
         </span>
       </button>
 
@@ -147,14 +183,21 @@ function NodeInspector({ nodeName, onAction }: NodeInspectorProps) {
   const lifecycle = useNodeState(nodeName);
   const state = lifecycle.data?.state as LifecycleStateName | undefined;
   const tone = toneForState(state);
-  const meta = metaForNode(nodeName);
+  const { meta, isForged } = useNodeMeta(nodeName);
   const legal = actionsForState(state);
 
   return (
     <aside className="node-inspector" aria-label="Selected node details">
       <header className="node-inspector-header">
         <span>Selected node</span>
-        <h2>{nodeName}</h2>
+        <div className="node-inspector-title-row">
+          <h2>{nodeName}</h2>
+          {isForged ? (
+            <span className="node-inspector-forged-tag">
+              <StatusTag label="forged" showDot={false} status="stopped" />
+            </span>
+          ) : null}
+        </div>
         <p>{meta.description}</p>
       </header>
 

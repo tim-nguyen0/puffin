@@ -16,12 +16,10 @@ type NavItem = { label: string; icon: string | ReactNode; path: string | null };
 // they render disabled until they do
 const NAV_ITEMS: NavItem[] = [
   { label: "Dashboard", icon: cpu, path: "/dashboard" },
-  // full-gazebo operations view stays private for the public demo
-  { label: "Simulation", icon: <AppIcon name="pipeline" />, path: null },
-  { label: "Vehicles", icon: <AppIcon name="vehicle" />, path: null },
+  { label: "Vehicles", icon: <AppIcon name="vehicle" />, path: "/vehicles" },
   { label: "World Editor", icon: <AppIcon name="globe" />, path: null },
-  { label: "Sensors", icon: <AppIcon name="sensors" />, path: null },
-  { label: "Mission Planner", icon: <AppIcon name="map-pin" />, path: null },
+  { label: "Sensors", icon: <AppIcon name="sensors" />, path: "/sensors" },
+  { label: "Mission Planner", icon: <AppIcon name="map-pin" />, path: "/mission-planner" },
   { label: "ROS Nodes", icon: ros2Services, path: "/ros-services" },
   { label: "ROS2 Graph", icon: gitBranch, path: "/ros-graph" },
   { label: "Settings", icon: settings, path: "/settings" },

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   actionsForState,
+  forgedNodeMeta,
   metaForNode,
   toneForState,
   transitionForAction,
@@ -34,5 +35,31 @@ describe("service node mapping", () => {
     expect(metaForNode("/offboard_demo").package).toBe("offboard_demo");
     expect(metaForNode("/teleop").executable).toBe("teleop_node");
     expect(metaForNode("/mystery").package).toBe("—");
+  });
+
+  it("gives forged nodes real metadata keyed off their own name", () => {
+    const meta = forgedNodeMeta("/patrol_demo");
+    expect(meta.package).toBe("patrol_demo");
+    expect(meta.executable).toBe("patrol_demo");
+    expect(meta.publishes).toBe("/puffin/mission/status");
+    expect(meta.subscribes).toBe("—");
+    expect(meta.description).toContain("forged");
+  });
+
+  it("does not mutate metaForNode's fallback for known or unknown nodes", () => {
+    expect(metaForNode("/offboard_demo")).toEqual({
+      description: "lifecycle node · 10 m square via offboard setpoints",
+      package: "offboard_demo",
+      executable: "offboard_demo_node",
+      publishes: "/fmu/in/trajectory_setpoint",
+      subscribes: "/fmu/out/vehicle_local_position",
+    });
+    expect(metaForNode("/mystery")).toEqual({
+      description: "ros 2 lifecycle node",
+      package: "—",
+      executable: "—",
+      publishes: "—",
+      subscribes: "—",
+    });
   });
 });

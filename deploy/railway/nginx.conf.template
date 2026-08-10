@@ -30,7 +30,10 @@ server {
         proxy_set_header Connection "upgrade";
     }
 
-    location /novnc-clean/ {
+    # the clean second gazebo stream is gone (client-side 3d replaced it);
+    # 6081 now belongs to qgroundcontrol, which the cloud image doesn't run -
+    # the dashboard panel shows its offline hint until something listens.
+    location /qgc/ {
         proxy_pass http://127.0.0.1:6081/;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;

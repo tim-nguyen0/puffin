@@ -5,12 +5,24 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from .adapters.compose import ComposeAdapter
+from .adapters.forge import ForgeAdapter
 from .adapters.gz import GzAdapter
 from .adapters.ros_node import RosAdapter
 from .adapters.supervisor import SupervisorAdapter
 from .adapters.terminal import PtySession
 from .db import default_db_path, init_db
-from .domains import auth, ros, settings, sim, system, telemetry, teleop, terminal, vehicle
+from .domains import (
+    auth,
+    mission,
+    ros,
+    settings,
+    sim,
+    system,
+    telemetry,
+    teleop,
+    terminal,
+    vehicle,
+)
 
 
 @asynccontextmanager
@@ -26,6 +38,7 @@ def create_app(
     ros_adapter: RosAdapter | None = None,
     compose: ComposeAdapter | None = None,
     gz: GzAdapter | None = None,
+    forge: ForgeAdapter | None = None,
     terminal_factory: type[PtySession] | None = None,
     db_path: str | None = None,
 ) -> FastAPI:
@@ -34,6 +47,7 @@ def create_app(
     app.state.ros = ros_adapter or RosAdapter()
     app.state.compose = compose or ComposeAdapter()
     app.state.gz = gz or GzAdapter()
+    app.state.forge = forge or ForgeAdapter()
     app.state.terminal_factory = terminal_factory or PtySession
     app.state.db_path = db_path or default_db_path()
     init_db(app.state.db_path)
@@ -41,6 +55,7 @@ def create_app(
         system.router,
         sim.router,
         vehicle.router,
+        mission.router,
         ros.router,
         auth.router,
         settings.router,

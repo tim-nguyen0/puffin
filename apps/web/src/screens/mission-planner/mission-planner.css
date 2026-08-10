@@ -1,0 +1,459 @@
+/* State selectors stay next to their components for readable interaction styling. */
+/* stylelint-disable no-descending-specificity */
+
+.mission-screen {
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  min-height: calc(100vh - var(--topbar-height));
+  margin: calc(var(--space-4) * -1);
+  padding: var(--graph-page-gap);
+  background: var(--color-page-bg);
+  color: var(--color-page-text);
+}
+
+.mission-layout {
+  display: grid;
+  flex: 1;
+  min-height: 0;
+  grid-template-columns: minmax(0, 1fr) var(--vehicles-inspector-width);
+  gap: var(--space-3);
+  align-items: start;
+}
+
+.mission-main,
+.mission-builder {
+  box-sizing: border-box;
+  min-width: 0;
+  padding: var(--space-4);
+  border-radius: var(--graph-card-radius);
+  background: var(--color-page-surface);
+}
+
+.mission-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.mission-header h1 {
+  margin: 0 0 var(--space-1);
+  color: var(--base-palette-not-quite-gray);
+  font-size: var(--text-xl);
+}
+
+.mission-header p {
+  margin: 0;
+  color: var(--color-page-muted);
+  font-size: var(--text-sm);
+}
+
+.mission-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  margin-top: var(--space-3);
+  color: var(--color-page-muted);
+  font-size: var(--text-sm);
+}
+
+.mission-stats strong {
+  color: var(--color-page-text);
+  font-family: var(--font-mono);
+}
+
+.mission-stats-status strong {
+  color: var(--color-status-running);
+}
+
+/* --- builder ----------------------------------------------------------- */
+
+.mission-builder {
+  position: sticky;
+  top: 0;
+}
+
+.mission-builder-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.mission-builder-header h2 {
+  margin: 0;
+  color: var(--base-palette-not-quite-gray);
+  font-size: var(--services-inspector-title);
+}
+
+.mission-rate-tag {
+  color: var(--color-inspector-kicker);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+}
+
+.mission-step {
+  margin-bottom: var(--space-2);
+  padding: var(--space-3);
+  border: var(--border-width) solid var(--color-page-border);
+  border-radius: var(--graph-control-radius);
+  background: var(--color-page-control);
+}
+
+.mission-step > header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+  font-size: var(--text-md);
+}
+
+.mission-step-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--mission-step-number-size);
+  height: var(--mission-step-number-size);
+  border-radius: 50%;
+  background: var(--base-palette-blue);
+  color: var(--color-launch-bg);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+}
+
+.mission-wp-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mission-wp-active {
+  border-color: var(--color-services-selected-border);
+  background: var(--color-services-selected);
+}
+
+.mission-wp-reached .mission-step-number {
+  background: var(--color-status-running);
+}
+
+.mission-wp-tone {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  text-transform: uppercase;
+}
+
+.mission-tone-reached {
+  color: var(--color-status-running);
+}
+
+.mission-tone-active {
+  color: var(--color-service-blue);
+}
+
+.mission-wp-remove {
+  margin-left: auto;
+  border: 0;
+  background: none;
+  color: var(--color-page-muted);
+  font-size: var(--text-lg);
+  line-height: 1;
+  cursor: pointer;
+}
+
+.mission-wp-remove:hover {
+  color: var(--color-danger-strong);
+}
+
+.mission-field-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(var(--mission-field-min), 1fr));
+  gap: var(--space-2);
+}
+
+.mission-field-row label {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  color: var(--color-page-muted);
+  font-size: var(--text-sm);
+}
+
+.mission-field-row input {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  height: var(--mission-input-height);
+  padding-inline: var(--space-2);
+  border: var(--border-width) solid var(--color-page-border);
+  border-radius: var(--vehicle-chip-radius);
+  background: var(--color-page-surface);
+  color: var(--color-page-text);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+}
+
+.mission-field-row input[aria-invalid="true"] {
+  border-color: var(--color-danger-strong);
+}
+
+.mission-name-error {
+  margin: var(--space-2) 0 0;
+  color: var(--color-danger-strong);
+  font-size: var(--text-sm);
+}
+
+.mission-builder-buttons {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin: var(--space-3) 0;
+}
+
+.mission-builder-buttons > button {
+  height: var(--btn-h-sm);
+  padding-inline: var(--space-3);
+  border: var(--border-width) solid var(--color-page-border);
+  border-radius: var(--graph-control-radius);
+  background: var(--color-page-surface);
+  color: var(--color-page-text);
+  font: inherit;
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+
+.mission-builder-buttons > button:hover {
+  background: var(--color-page-control-hover);
+}
+
+.mission-return-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-page-muted);
+  font-size: var(--text-sm);
+}
+
+.mission-preflight {
+  margin: 0 0 var(--space-3);
+  padding: 0;
+  list-style: none;
+}
+
+.mission-preflight li {
+  display: flex;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  border-left: var(--mission-preflight-rule) solid var(--color-status-running);
+  font-size: var(--text-sm);
+}
+
+.mission-preflight li.is-bad {
+  border-left-color: var(--color-danger-strong);
+}
+
+.mission-preflight strong {
+  min-width: var(--mission-preflight-label);
+  font-family: var(--font-mono);
+}
+
+.mission-preflight span {
+  color: var(--color-page-muted);
+}
+
+/* --- control panel: any lifecycle node, not just the primed one -------- */
+
+.mission-control-panel {
+  padding: var(--space-3);
+  border: var(--border-width) solid var(--color-page-border);
+  border-radius: var(--graph-control-radius);
+  background: var(--color-page-control);
+  margin-bottom: var(--space-3);
+}
+
+.mission-control-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+.mission-control-header h2 {
+  margin: 0;
+  color: var(--base-palette-not-quite-gray);
+  font-size: var(--text-md);
+}
+
+.mission-control-select-label {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  color: var(--color-page-muted);
+  font-size: var(--text-sm);
+}
+
+.mission-control-select {
+  box-sizing: border-box;
+  width: 100%;
+  height: var(--mission-input-height);
+  padding-inline: var(--space-2);
+  border: var(--border-width) solid var(--color-page-border);
+  border-radius: var(--vehicle-chip-radius);
+  background: var(--color-page-surface);
+  color: var(--color-page-text);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+}
+
+.mission-control-actions {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.mission-control-button {
+  flex: 1;
+  height: var(--btn-h-sm);
+  border: var(--border-width) solid var(--color-page-border);
+  border-radius: var(--graph-control-radius);
+  background: var(--color-page-surface);
+  color: var(--color-page-text);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.mission-control-button:disabled {
+  color: var(--color-status-stopped);
+  cursor: not-allowed;
+}
+
+.mission-control-arm {
+  border-color: var(--base-palette-blue);
+  color: var(--base-palette-blue);
+}
+
+.mission-control-run {
+  border-color: var(--color-status-running);
+  color: var(--color-status-running);
+}
+
+.mission-control-stop {
+  border-color: var(--color-danger-border);
+  background: var(--color-danger-soft);
+  color: var(--color-danger-strong);
+}
+
+.mission-control-button:hover:not(:disabled) {
+  background: var(--color-page-control-hover);
+}
+
+.mission-control-empty {
+  margin: 0;
+  color: var(--color-page-muted);
+  font-size: var(--text-sm);
+}
+
+.mission-actions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.mission-actions button {
+  flex: 1;
+  height: var(--vehicle-control-height);
+  border: var(--border-width) solid var(--color-page-border);
+  border-radius: var(--graph-control-radius);
+  background: var(--color-page-surface);
+  color: var(--color-page-text);
+  font: inherit;
+  font-size: var(--text-md);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.mission-actions button:disabled {
+  color: var(--color-status-stopped);
+  cursor: not-allowed;
+}
+
+.mission-prime {
+  border: 0;
+  background: var(--base-palette-blue);
+  color: var(--color-launch-bg);
+}
+
+.mission-prime:hover:not(:disabled) {
+  background: var(--color-button-primary-hover);
+}
+
+.mission-prime:disabled {
+  background: var(--color-status-stopped-soft);
+}
+
+.mission-forge {
+  border-color: var(--base-palette-blue);
+  color: var(--base-palette-blue);
+}
+
+.mission-clear:hover:not(:disabled),
+.mission-actions button:not(.mission-prime):hover {
+  background: var(--color-page-control-hover);
+}
+
+.mission-forge-status {
+  margin: var(--space-2) 0 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+}
+
+.mission-forge-tone-queued,
+.mission-forge-tone-building {
+  color: var(--color-status-armed);
+}
+
+.mission-forge-tone-done {
+  color: var(--color-status-running);
+}
+
+.mission-forge-tone-failed {
+  color: var(--color-danger-strong);
+}
+
+.mission-forge-tone-building {
+  animation: mission-forge-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes mission-forge-pulse {
+  50% {
+    opacity: 0.5;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mission-forge-tone-building {
+    animation: none;
+  }
+}
+
+.mission-announcement {
+  min-height: var(--space-3);
+  margin: var(--space-2) 0 0;
+  color: var(--color-page-muted);
+  font-size: var(--text-sm);
+}
+
+@media (width <= 72rem) {
+  .mission-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .mission-builder {
+    position: static;
+  }
+}

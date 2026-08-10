@@ -9,13 +9,19 @@
   color: var(--color-page-text);
 }
 
-/* named areas: the capped viewport and telemetry stack on the left,
-   controls and nodes in the middle, the tall process list as a right
-   rail - everything on screen at once */
+/* named areas: health across the top as the system-monitoring band, then
+   the capped viewport and telemetry stack on the left with controls and
+   the process list beside them. the node cards want width, so they share
+   the bottom row with qgc in the capped column - everything on screen at
+   once. */
 .dashboard-grid {
   display: grid;
   grid-template:
-    "viewport control processes" auto "telemetry control processes" auto "telemetry nodes processes" 1fr / minmax(0, var(--sim-viewport-max-width)) minmax(0, 1fr) minmax(0, 1fr);
+    "health health health" auto
+    "viewport control processes" auto
+    "telemetry control processes" auto
+    "qgc nodes nodes" 1fr
+    / minmax(0, var(--sim-viewport-max-width)) minmax(0, 1fr) minmax(0, 1fr);
   gap: var(--graph-page-gap);
   align-items: stretch;
 }
@@ -45,13 +51,33 @@
   grid-area: nodes;
 }
 
+
+/* qgc gets the same dark surface treatment as the primary viewport panel */
+.qgc-panel {
+  border-color: var(--color-graph-border);
+  background: var(--color-graph-surface);
+}
+
+.qgc-panel .dashboard-panel-header {
+  background: var(--color-graph-surface);
+}
+
+.qgc-panel .dashboard-panel-header h2 {
+  color: var(--color-graph-text);
+}
+
+.dashboard-grid > .qgc-panel {
+  grid-area: qgc;
+}
+
 @media (width <= 74rem) {
   .dashboard-grid {
     grid-template:
+      "health health"
       "viewport control"
       "telemetry control"
-      "telemetry nodes"
-      "processes processes"
+      "nodes nodes"
+      "processes qgc"
       / repeat(2, minmax(0, 1fr));
   }
 }
@@ -59,11 +85,13 @@
 @media (width <= 48rem) {
   .dashboard-grid {
     grid-template-areas:
+      "health"
       "viewport"
       "telemetry"
       "control"
       "nodes"
-      "processes";
+      "processes"
+      "qgc";
     grid-template-columns: minmax(0, 1fr);
   }
 }
@@ -121,6 +149,193 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--dashboard-metric-min-width)), 1fr));
   gap: var(--space-2);
+}
+
+/* -- service health strip ------------------------------------------------ */
+.dashboard-health-strip {
+  display: flex;
+  flex-wrap: wrap;
+  min-height: var(--dashboard-health-strip-height);
+  box-sizing: border-box;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border: var(--graph-border-width) solid var(--color-page-border);
+  border-radius: var(--dashboard-panel-radius);
+  background: var(--color-page-surface);
+  grid-area: health;
+}
+
+.dashboard-health-strip strong {
+  margin-right: var(--space-2);
+  color: var(--color-page-text);
+  font-size: var(--text-graph-micro);
+  letter-spacing: var(--services-kicker-letter-spacing);
+  text-transform: uppercase;
+}
+
+.dashboard-health-chip,
+.dashboard-health-total {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-2);
+  background: var(--color-page-control);
+  color: var(--color-page-muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-graph-micro);
+  font-weight: 500;
+}
+
+.dashboard-health-chip i,
+.dashboard-health-total i {
+  width: var(--services-status-dot-size);
+  height: var(--services-status-dot-size);
+  border-radius: 50%;
+  background: var(--color-status-running);
+}
+
+/* the tally sits at the far end of the strip and only goes green when
+   every supervised program is up */
+.dashboard-health-total {
+  margin-left: auto;
+  background: var(--color-status-stopped-soft);
+}
+
+.dashboard-health-total i {
+  background: var(--color-status-stopped);
+}
+
+.dashboard-health-chip.is-down {
+  color: var(--color-danger-strong);
+}
+
+.dashboard-health-chip.is-down i {
+  background: var(--color-danger-strong);
+}
+
+.dashboard-health-total.is-healthy {
+  background: var(--color-discovery-soft);
+  color: var(--color-status-running);
+}
+
+.dashboard-health-total.is-healthy i {
+  background: var(--color-status-running);
+}
+
+/* -- gps hud (rides on the dark scene surface) --------------------------- */
+.gps-hud {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.gps-hud-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--color-graph-subtle);
+}
+
+.gps-hud-dot {
+  width: var(--services-status-dot-size);
+  height: var(--services-status-dot-size);
+  border-radius: 50%;
+  background: var(--color-status-stopped);
+}
+
+.gps-hud-dot.is-live {
+  background: var(--color-status-running);
+}
+
+/* -- lifecycle node cards ------------------------------------------------ */
+.node-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--dashboard-node-card-min-width)), 1fr));
+  gap: var(--space-2);
+}
+
+.node-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: var(--graph-border-width) solid var(--color-page-border);
+  border-radius: var(--services-row-radius);
+  background: var(--color-page-control);
+}
+
+.node-card-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.node-card-head code {
+  overflow: hidden;
+  color: var(--color-page-text);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.node-card-desc {
+  margin: 0;
+  color: var(--color-page-muted);
+  font-size: var(--text-sm);
+}
+
+/* pinned to the bottom so cards of different description lengths still
+   line their buttons up */
+.node-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: auto;
+}
+
+.node-card-button {
+  min-width: var(--services-action-min-width);
+  min-height: var(--services-action-height);
+  padding: 0 var(--space-3);
+  border: var(--graph-border-width) solid var(--color-page-border);
+  border-radius: var(--services-control-radius);
+  background: var(--color-page-surface);
+  color: var(--color-page-text);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--text-sm);
+}
+
+.node-card-button:disabled {
+  color: var(--color-status-stopped);
+  cursor: not-allowed;
+}
+
+.node-card-button:hover:not(:disabled) {
+  border-color: var(--color-services-selected-border);
+  background: var(--color-page-control-hover);
+}
+
+.node-card-stop:not(:disabled) {
+  border-color: var(--color-danger-border);
+  color: var(--color-danger-strong);
+}
+
+.node-card-idle {
+  color: var(--color-page-muted);
+  font-size: var(--text-sm);
+}
+
+.node-card-error {
+  margin: 0;
+  color: var(--color-danger-strong);
+  font-size: var(--text-sm);
 }
 
 /* -- shared bits on the light surface ------------------------------------ */
@@ -239,44 +454,12 @@
 }
 
 /* -- light-surface overrides for components styled for the dark theme ---- */
-.dashboard-screen .lifecycle-quick-row {
-  border-color: var(--color-page-border);
-}
-
-.dashboard-screen .lifecycle-quick-name {
-  color: var(--color-page-text);
-}
-
-.dashboard-screen .lifecycle-quick-state {
-  color: var(--color-page-muted);
-}
-
-.dashboard-screen .lifecycle-quick-state-active {
-  color: var(--color-status-running);
-}
-
-.dashboard-screen .lifecycle-quick-state-unconfigured,
-.dashboard-screen .lifecycle-quick-state-unknown {
-  color: var(--color-status-armed);
-}
-
-.dashboard-screen .lifecycle-quick-button,
 .dashboard-screen .teleop-button {
-  background: var(--color-page-control);
   border-color: var(--color-page-border);
+  background: var(--color-page-control);
   color: var(--color-page-text);
 }
 
-.dashboard-screen .lifecycle-quick-button:disabled {
-  color: var(--color-status-stopped);
-}
-
-.dashboard-screen .lifecycle-quick-kill:not(:disabled) {
-  border-color: var(--color-danger-border);
-  color: var(--color-danger-strong);
-}
-
-.dashboard-screen .lifecycle-quick-empty,
 .dashboard-screen .teleop-hint {
   color: var(--color-page-muted);
 }
@@ -292,8 +475,4 @@
 
 .dashboard-screen .teleop-dot.is-ok {
   background: var(--color-discovery);
-}
-
-.dashboard-screen .lifecycle-quick-error {
-  color: var(--color-danger-strong);
 }
