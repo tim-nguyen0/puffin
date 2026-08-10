@@ -10,6 +10,8 @@ interface SparklineProps {
 }
 
 function Sparkline({ label, values }: SparklineProps) {
+  // an empty plot on the dark trace background read as a broken black bar
+  const hasTrace = values.length > 1;
   const min = Math.min(...values, 0);
   const max = Math.max(...values, 0);
   const span = max - min || 1;
@@ -22,11 +24,15 @@ function Sparkline({ label, values }: SparklineProps) {
     .join(" ");
 
   return (
-    <div className="sensor-sparkline">
+    <div className={`sensor-sparkline${hasTrace ? "" : " is-empty"}`}>
       <span>{label}</span>
-      <svg viewBox="0 0 100 32" preserveAspectRatio="none" aria-hidden="true">
-        {values.length > 1 ? <polyline points={points} /> : null}
-      </svg>
+      {hasTrace ? (
+        <svg viewBox="0 0 100 32" preserveAspectRatio="none" aria-hidden="true">
+          <polyline points={points} />
+        </svg>
+      ) : (
+        <span className="sensor-sparkline-empty">no samples yet</span>
+      )}
       <strong>{values.length ? values[values.length - 1].toFixed(1) : "—"}</strong>
     </div>
   );
@@ -217,9 +223,11 @@ export function SensorsScreen() {
               Topic name
               <input type="text" placeholder="/camera/image_raw" />
             </label>
-            <button type="button" title="sdf editing is not wired up yet">
-              Save to model &amp; respawn
-            </button>
+            {/* the fieldset disables it, and disabled controls swallow the
+                hover that would show a title */}
+            <span title="sdf editing is not wired up yet">
+              <button type="button">Save to model &amp; respawn</button>
+            </span>
           </fieldset>
         </aside>
       </div>

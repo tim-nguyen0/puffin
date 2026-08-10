@@ -158,6 +158,7 @@ export function FloatingTerminal() {
     >
       <div
         className="terminal-header"
+        title="drag to move · it floats over the page"
         onPointerDown={startDragging}
         onPointerMove={moveTerminal}
         onPointerUp={stopDragging}
@@ -181,6 +182,7 @@ export function FloatingTerminal() {
             persistLayout(position.x, position.y, next);
           }}
           aria-label={minimized ? "Restore terminal" : "Minimize terminal"}
+          title={minimized ? "Restore terminal" : "Minimize terminal"}
           aria-expanded={!minimized}
         >
           {minimized ? "+" : "−"}

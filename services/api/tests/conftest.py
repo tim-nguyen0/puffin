@@ -5,11 +5,14 @@ from fastapi.testclient import TestClient
 
 from puffin_api.adapters import AdapterResult
 from puffin_api.adapters.forge import ForgeAdapter
+from puffin_api.adapters.vehicle_env import VehicleEnvAdapter
 from puffin_api.main import create_app
 
 
 class FakeSupervisor:
-    def __init__(self) -> None:
+    # trace is shared with FakeGz so a test can assert the order of a
+    # sequence that crosses both adapters (see test_replace_vehicle)
+    def __init__(self, trace: list[str] | None = None) -> None:
         self.procs = [
             {"name": "gz-server", "state": "RUNNING", "uptime_s": 120},
             {"name": "gz-gui", "state": "RUNNING", "uptime_s": 118},
@@ -17,8 +20,15 @@ class FakeSupervisor:
             {"name": "px4", "state": "RUNNING", "uptime_s": 115},
         ]
         self.calls: list[str] = []
+        self.trace = trace if trace is not None else []
+        self.stop_error: str | None = None
+        self.start_error: str | None = None
+        self.list_error: str | None = None
+        self.restart_errors: dict[str, str] = {}
 
     def list_processes(self) -> AdapterResult:
+        if self.list_error is not None:
+            return AdapterResult(ok=False, detail=self.list_error)
         return AdapterResult(ok=True, data=self.procs)
 
     def start_sim(self) -> AdapterResult:
@@ -29,11 +39,30 @@ class FakeSupervisor:
         self.calls.append("stop")
         return AdapterResult(ok=True, detail="stopped: px4, xrce-agent, gz-gui, gz-server")
 
+    def start_program(self, name: str) -> AdapterResult:
+        self.trace.append(f"start {name}")
+        if self.start_error is not None:
+            return AdapterResult(ok=False, detail=self.start_error)
+        return AdapterResult(ok=True, detail=f"started: {name}")
+
+    def stop_program(self, name: str) -> AdapterResult:
+        self.trace.append(f"stop {name}")
+        if self.stop_error is not None:
+            return AdapterResult(ok=False, detail=self.stop_error)
+        return AdapterResult(ok=True, detail=f"stopped: {name}")
+
+    def restart_program(self, name: str) -> AdapterResult:
+        self.trace.append(f"restart {name}")
+        if name in self.restart_errors:
+            return AdapterResult(ok=False, detail=self.restart_errors[name])
+        return AdapterResult(ok=True, detail=f"restarted: {name}")
+
 
 class FakeRos:
     def __init__(self) -> None:
         self.commands: list[tuple[int, float, float]] = []
         self.takeoffs: list[float] = []
+        self.lands = 0
         self.transitions: list[tuple[str, str]] = []
         self.lifecycle = {"offboard_demo": "inactive"}
         self.telemetry: dict | None = None
@@ -50,6 +79,12 @@ class FakeRos:
     def nav_takeoff(self, altitude_m: float) -> AdapterResult:
         self.takeoffs.append(altitude_m)
         return AdapterResult(ok=True, detail="vehicle_command 22 published")
+
+    def nav_land(self) -> AdapterResult:
+        # the release-then-land sequence lives in the real adapter; see
+        # test_ros_adapter
+        self.lands += 1
+        return AdapterResult(ok=True, detail="vehicle_command 21 published")
 
     def list_services(self) -> AdapterResult:
         return AdapterResult(
@@ -116,13 +151,30 @@ class FakeRos:
 
 
 class FakeGz:
-    def __init__(self) -> None:
+    def __init__(self, trace: list[str] | None = None) -> None:
         self.resets = 0
         self.poses: list[tuple[float, float, float, float]] = []
+        self.removed: list[str] = []
+        self.trace = trace if trace is not None else []
+        self.remove_error: str | None = None
+        self.world_ready_error: str | None = None
 
     def reset_world(self) -> AdapterResult:
         self.resets += 1
         return AdapterResult(ok=True, detail="world puffin reset")
+
+    def world_ready(self, timeout_s: float = 20.0) -> AdapterResult:
+        self.trace.append("await world")
+        if self.world_ready_error is not None:
+            return AdapterResult(ok=False, detail=self.world_ready_error)
+        return AdapterResult(ok=True, detail="world puffin is up")
+
+    def remove_entity(self, name: str) -> AdapterResult:
+        self.trace.append(f"remove {name}")
+        if self.remove_error is not None:
+            return AdapterResult(ok=False, detail=self.remove_error)
+        self.removed.append(name)
+        return AdapterResult(ok=True, detail=f"{name} removed from world puffin")
 
     def set_vehicle_pose(
         self, x: float, y: float, z: float = 0.3, yaw_deg: float = 0.0
@@ -132,8 +184,14 @@ class FakeGz:
 
 
 @pytest.fixture
-def fake_supervisor() -> FakeSupervisor:
-    return FakeSupervisor()
+def call_trace() -> list[str]:
+    # one ordered log for the adapters a single request drives in sequence
+    return []
+
+
+@pytest.fixture
+def fake_supervisor(call_trace: list[str]) -> FakeSupervisor:
+    return FakeSupervisor(call_trace)
 
 
 @pytest.fixture
@@ -142,8 +200,8 @@ def fake_ros() -> FakeRos:
 
 
 @pytest.fixture
-def fake_gz() -> FakeGz:
-    return FakeGz()
+def fake_gz(call_trace: list[str]) -> FakeGz:
+    return FakeGz(call_trace)
 
 
 @pytest.fixture
@@ -159,11 +217,23 @@ def forge_adapter(forge_dir: Path) -> ForgeAdapter:
 
 
 @pytest.fixture
+def vehicle_env_path(tmp_path: Path) -> Path:
+    return tmp_path / "shm" / "vehicle.env"
+
+
+@pytest.fixture
+def vehicle_env_adapter(vehicle_env_path: Path) -> VehicleEnvAdapter:
+    # real adapter on a tmp path, same reasoning as forge: it is only a file
+    return VehicleEnvAdapter(str(vehicle_env_path))
+
+
+@pytest.fixture
 def client(
     fake_supervisor: FakeSupervisor,
     fake_ros: FakeRos,
     fake_gz: FakeGz,
     forge_adapter: ForgeAdapter,
+    vehicle_env_adapter: VehicleEnvAdapter,
     tmp_path: Path,
 ) -> TestClient:
     app = create_app(
@@ -171,6 +241,7 @@ def client(
         ros_adapter=fake_ros,
         gz=fake_gz,
         forge=forge_adapter,
+        vehicle_env=vehicle_env_adapter,
         db_path=str(tmp_path / "test.db"),
     )
     return TestClient(app)

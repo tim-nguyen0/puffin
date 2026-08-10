@@ -28,11 +28,25 @@
   gap: var(--space-2);
 }
 
+/* the inputs defaulted to the browser's white, which punched holes in the
+   dark card */
 .auth-card input {
   padding: var(--space-3);
   border: var(--border-width) solid var(--color-border);
   border-radius: var(--radius-1);
+  background: var(--color-bg);
+  color: var(--color-text);
   font: inherit;
+}
+
+.auth-card input:focus-visible {
+  outline: var(--graph-control-focus-width) solid var(--color-accent);
+  outline-offset: var(--graph-control-focus-offset);
+}
+
+.auth-hint {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
 }
 
 .auth-card a {

@@ -58,6 +58,33 @@
   border-radius: var(--radius-1);
 }
 
+/* the swatches echo the canvas: cyan-ringed ellipse for a node, plain slab
+   for a topic */
+.ros-graph-legend-shape {
+  display: inline-block;
+  width: var(--space-4);
+  height: var(--space-3);
+  margin-left: var(--space-2);
+  border: var(--graph-border-width) solid var(--color-graph-border);
+  background: var(--color-graph-surface-raised);
+}
+
+.ros-graph-legend-node {
+  border-color: var(--color-service-cyan);
+  border-radius: var(--recent-folders-radius);
+  background: var(--color-graph-surface);
+}
+
+.ros-graph-legend-topic {
+  border-radius: var(--radius-1);
+}
+
+.ros-graph-count {
+  color: var(--color-page-muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-graph-micro);
+}
+
 .ros-graph-legend-pub {
   background: var(--color-service-blue);
 }

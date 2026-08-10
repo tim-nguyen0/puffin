@@ -135,8 +135,23 @@ def test_supervisord_block_runs_the_forged_entry_point() -> None:
     assert conf.startswith("[program:survey_2]")
     assert "ros2 run survey_2 survey_2" in conf
     assert "source /ros_ws/install/setup.bash" in conf
+    # first build flies once on its own
     assert "autostart = true" in conf
-    assert "autorestart = true" in conf
+
+
+def test_supervisord_block_reads_a_finished_mission_as_a_clean_exit() -> None:
+    # the node autokills with 0 once the plan is flown; unconditional
+    # autorestart would respawn it into the same flight forever
+    conf = render_supervisord_conf("survey_2")
+    assert "autorestart = unexpected" in conf
+    assert "exitcodes = 0" in conf
+    assert "autorestart = true" not in conf
+
+
+def test_forged_node_advertises_its_one_shot_lifetime() -> None:
+    node_py = render_package(plan())["survey_2/node.py"]
+    assert "one-shot" in node_py
+    assert "supervisorctl start survey_2" in node_py
 
 
 def test_supervisord_block_refuses_a_bad_name() -> None:

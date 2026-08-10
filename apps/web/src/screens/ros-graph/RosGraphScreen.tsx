@@ -19,9 +19,15 @@ export function RosGraphScreen() {
 
   const layout = graph.data ? layoutGraph(graph.data, rosOnly) : null;
 
+  // the filter hides boxes, so the count has to come off the laid-out graph
+  const shown = layout?.boxes ?? [];
+  const nodeCount = shown.filter((box) => box.kind === "node").length;
+  const topicCount = shown.length - nodeCount;
+
   return (
     <div className="ros-graph-screen">
-      <h1>ROS Graph</h1>
+      {/* matches the sidebar and the breadcrumb, which both say ROS2 Graph */}
+      <h1>ROS2 Graph</h1>
 
       <section className="ros-graph-section">
         <div className="ros-graph-toolbar">
@@ -33,7 +39,15 @@ export function RosGraphScreen() {
             />
             ROS system only (hide puffin_api and system topics)
           </label>
+          {layout ? (
+            <span className="ros-graph-count">
+              {nodeCount} nodes · {topicCount} topics · refreshed every 5s
+            </span>
+          ) : null}
+          {/* the shapes carried meaning that only the edge colours explained */}
           <span className="ros-graph-legend">
+            <span className="ros-graph-legend-shape ros-graph-legend-node" /> node
+            <span className="ros-graph-legend-shape ros-graph-legend-topic" /> topic
             <span className="ros-graph-legend-swatch ros-graph-legend-pub" /> publish
             <span className="ros-graph-legend-swatch ros-graph-legend-sub" /> subscribe
           </span>

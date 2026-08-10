@@ -1,10 +1,11 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { AppIcon } from "../../components/app-icon";
 import { StatusTag } from "../../components/status-tag";
 import { api } from "../../lib/api";
 import { useTelemetryStore } from "../../lib/telemetryStore";
 import {
+  DEFAULT_SPAWNED_MODEL,
   fmuTopics,
   searchVehicles,
   statusFor,
@@ -145,14 +146,55 @@ function VehicleInspector({ status, vehicle }: VehicleInspectorProps) {
 
 export function VehiclesScreen() {
   const [query, setQuery] = useState("");
-  const [selected, setSelected] = useState<string>("x500");
+  const [selected, setSelected] = useState<string>(DEFAULT_SPAWNED_MODEL);
+  const [announcement, setAnnouncement] = useState("");
+  const queryClient = useQueryClient();
   const telemetryLive = useTelemetryStore(
     (state) => state.connected && state.latest !== null,
   );
 
+  const simStatus = useQuery({
+    queryKey: ["sim-status"],
+    queryFn: async () => {
+      const { data, error } = await api.GET("/sim/status");
+      if (error) throw new Error("Failed to fetch sim status");
+      return data;
+    },
+    refetchInterval: 3000,
+  });
+  // one vehicle flies at a time; the api names it, we only tag cards by it
+  const spawnedModel = simStatus.data?.vehicle ?? DEFAULT_SPAWNED_MODEL;
+
   const visible = searchVehicles(VEHICLES, query);
   const selectedVehicle =
     visible.find((v) => v.model === selected) ?? visible[0] ?? null;
+  const selectedStatus = selectedVehicle
+    ? statusFor(selectedVehicle, telemetryLive, spawnedModel)
+    : null;
+
+  const replace = useMutation({
+    mutationFn: async (model: string) => {
+      const { data, error } = await api.POST("/sim/vehicle", { body: { model } });
+      if (error || !data.ok) throw new Error(data?.detail ?? "Replace failed");
+      return data;
+    },
+    onSuccess: (data) => {
+      setAnnouncement(data.detail);
+      void queryClient.invalidateQueries({ queryKey: ["sim-status"] });
+    },
+    onError: (err) =>
+      setAnnouncement(err instanceof Error ? err.message : "Replace failed"),
+  });
+
+  // disabled always says why: the same button carries the refusal
+  const replaceRefusal =
+    selectedVehicle === null
+      ? "select a vehicle to replace the flying one"
+      : selectedStatus === "not-installed"
+        ? `${selectedVehicle.model} is not baked into this px4 image`
+        : selectedStatus === "spawned"
+          ? `${selectedVehicle.model} is already the flying vehicle`
+          : null;
 
   return (
     <section className="vehicles-screen">
@@ -161,7 +203,7 @@ export function VehiclesScreen() {
           <header className="vehicles-header">
             <div>
               <h1 id="vehicles-title">Vehicle Library</h1>
-              <p>airframes baked into the sim image · px4 boots attached to x500</p>
+              <p>airframes baked into the sim image · px4 is attached to {spawnedModel}</p>
             </div>
             <div className="vehicles-controls">
               <label className="vehicles-search">
@@ -175,14 +217,21 @@ export function VehiclesScreen() {
               </label>
               <button
                 type="button"
-                className="vehicles-add"
-                disabled
-                title="spawning extra vehicles is on the roadmap — the stack boots with x500"
+                className="vehicles-replace"
+                disabled={replaceRefusal !== null || replace.isPending}
+                title={replaceRefusal ?? `swap ${spawnedModel} for ${selectedVehicle?.model}`}
+                onClick={() => selectedVehicle && replace.mutate(selectedVehicle.model)}
               >
-                + Add Vehicle
+                {replace.isPending ? "Replacing…" : "Replace vehicle"}
               </button>
             </div>
           </header>
+
+          <p className="vehicles-announcement" aria-live="polite">
+            {replace.isPending
+              ? `replacing ${spawnedModel} with ${selectedVehicle?.model}; px4 restarts`
+              : announcement}
+          </p>
 
           {visible.length === 0 ? (
             <p className="vehicles-empty">No models match “{query}”.</p>
@@ -192,7 +241,7 @@ export function VehiclesScreen() {
               <VehicleCard
                 key={vehicle.model}
                 vehicle={vehicle}
-                status={statusFor(vehicle, telemetryLive)}
+                status={statusFor(vehicle, telemetryLive, spawnedModel)}
                 isSelected={vehicle.model === selectedVehicle?.model}
                 onSelect={() => setSelected(vehicle.model)}
               />
@@ -200,11 +249,8 @@ export function VehiclesScreen() {
           </ul>
         </section>
 
-        {selectedVehicle ? (
-          <VehicleInspector
-            vehicle={selectedVehicle}
-            status={statusFor(selectedVehicle, telemetryLive)}
-          />
+        {selectedVehicle && selectedStatus ? (
+          <VehicleInspector vehicle={selectedVehicle} status={selectedStatus} />
         ) : null}
       </div>
     </section>

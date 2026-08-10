@@ -48,6 +48,33 @@ class SupervisorAdapter:
     def stop_sim(self) -> AdapterResult:
         return self._batch("stopProcess", "stopped", reverse=True)
 
+    def start_program(self, name: str) -> AdapterResult:
+        return self._one("startProcess", name, "started")
+
+    def stop_program(self, name: str) -> AdapterResult:
+        return self._one("stopProcess", name, "stopped")
+
+    def restart_program(self, name: str) -> AdapterResult:
+        stopped = self._one("stopProcess", name, "stopped")
+        if not stopped.ok:
+            return stopped
+        started = self._one("startProcess", name, "started")
+        if not started.ok:
+            return started
+        return AdapterResult(ok=True, detail=f"restarted: {name}")
+
+    def _one(self, method: str, name: str, verb: str) -> AdapterResult:
+        # supervisor's start/stopProcess block until the program settles, which
+        # is what makes a stop -> gz work -> start sequence safe to write inline
+        try:
+            getattr(self._proxy().supervisor, method)(name)
+        except xmlrpc.client.Fault as exc:
+            if "ALREADY_STARTED" not in exc.faultString and "NOT_RUNNING" not in exc.faultString:
+                return AdapterResult(ok=False, detail=f"{name}: {exc.faultString}")
+        except Exception as exc:  # noqa: BLE001
+            return AdapterResult(ok=False, detail=f"supervisor unreachable: {exc}")
+        return AdapterResult(ok=True, detail=f"{verb}: {name}")
+
     def _batch(self, method: str, verb: str, reverse: bool = False) -> AdapterResult:
         programs = tuple(reversed(SIM_PROGRAMS)) if reverse else SIM_PROGRAMS
         done: list[str] = []

@@ -32,10 +32,9 @@
   color: var(--color-accent);
 }
 
+/* a flex row made every word its own item, so the sentence broke at random
+   points - it wraps as prose now */
 .teleop-hint {
-  display: flex;
-  gap: var(--space-1);
-  align-items: center;
   margin: 0;
   color: var(--color-text-muted);
   font-size: var(--text-sm);
@@ -46,10 +45,13 @@
 }
 
 .teleop-dot {
+  display: inline-block;
   width: var(--space-2);
   height: var(--space-2);
+  margin-right: var(--space-1);
   border-radius: 50%;
   background: var(--color-text-muted);
+  vertical-align: middle;
 }
 
 .teleop-dot.is-ok {
