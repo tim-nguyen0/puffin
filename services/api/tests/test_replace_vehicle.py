@@ -31,8 +31,72 @@ def test_second_replace_removes_the_model_now_flying(
 ) -> None:
     client.post("/api/sim/vehicle", json={"model": "r1_rover"})
     call_trace.clear()
-    client.post("/api/sim/vehicle", json={"model": "x500_depth"})
+    client.post("/api/sim/vehicle", json={"model": "lawnmower"})
     assert call_trace == ["stop px4", "remove r1_rover_0", "start px4"]
+
+
+def test_depth_camera_model_reloads_the_world_instead_of_editing_it(
+    client: TestClient, call_trace: list[str], fake_gz: FakeGz
+) -> None:
+    # ogre2 builds one depth camera per gz-server process; a spawn into the
+    # running world would abort the server instead of swapping the vehicle
+    body = client.post("/api/sim/vehicle", json={"model": "x500_depth"}).json()
+    assert body["ok"] is True
+    assert "world reloaded" in body["detail"]
+    assert call_trace == [
+        "stop px4",
+        "restart gz-server",
+        "await world",
+        "restart gz-gui",
+        "start px4",
+    ]
+    # the reload takes the old entity with it, so nothing is removed by hand
+    assert fake_gz.removed == []
+
+
+def test_leaving_a_depth_camera_model_reloads_the_world_too(
+    client: TestClient, call_trace: list[str]
+) -> None:
+    client.post("/api/sim/vehicle", json={"model": "x500_depth"})
+    call_trace.clear()
+    client.post("/api/sim/vehicle", json={"model": "x500"})
+    assert call_trace == [
+        "stop px4",
+        "restart gz-server",
+        "await world",
+        "restart gz-gui",
+        "start px4",
+    ]
+
+
+def test_world_that_never_comes_back_leaves_px4_stopped(
+    client: TestClient, call_trace: list[str], fake_gz: FakeGz
+) -> None:
+    fake_gz.world_ready_error = "world puffin not up in 20.0s: no reply"
+    body = client.post("/api/sim/vehicle", json={"model": "x500_depth"}).json()
+    assert body["ok"] is False
+    assert "reload world" in body["detail"]
+    assert "px4 left stopped" in body["detail"]
+    assert call_trace == ["stop px4", "restart gz-server", "await world"]
+
+
+def test_dead_gz_server_fails_the_swap(client: TestClient, fake_supervisor: FakeSupervisor) -> None:
+    fake_supervisor.restart_errors = {"gz-server": "gz-server: SPAWN_ERROR"}
+    body = client.post("/api/sim/vehicle", json={"model": "x500_depth"}).json()
+    assert body["ok"] is False
+    assert "reload world: gz-server: SPAWN_ERROR" in body["detail"]
+    assert "px4 left stopped" in body["detail"]
+
+
+def test_dead_viewport_does_not_fail_the_swap(
+    client: TestClient, fake_supervisor: FakeSupervisor, call_trace: list[str]
+) -> None:
+    # gz-gui is the disposable half: losing pixels must not cost us the flight
+    fake_supervisor.restart_errors = {"gz-gui": "gz-gui: SPAWN_ERROR"}
+    body = client.post("/api/sim/vehicle", json={"model": "x500_depth"}).json()
+    assert body["ok"] is True
+    assert "viewport stale" in body["detail"]
+    assert call_trace[-1] == "start px4"
 
 
 def test_unknown_model_refused_before_anything_moves(

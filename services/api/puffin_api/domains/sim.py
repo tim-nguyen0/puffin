@@ -2,10 +2,11 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends
 
+from ..adapters import AdapterResult
 from ..adapters.gz import GzAdapter, entity_name
 from ..adapters.ros_node import RosAdapter, world_name
 from ..adapters.supervisor import SIM_PROGRAMS, SupervisorAdapter
-from ..adapters.vehicle_env import AIRFRAMES, VehicleEnvAdapter
+from ..adapters.vehicle_env import AIRFRAMES, VehicleEnvAdapter, needs_fresh_world
 from ..deps import get_gz, get_ros, get_supervisor, get_vehicle_env
 from ..models import Ack, ProcessInfo, SimStatus, VehiclePoseRequest, VehicleReplaceRequest
 
@@ -17,6 +18,8 @@ Ros = Annotated[RosAdapter, Depends(get_ros)]
 Vehicles = Annotated[VehicleEnvAdapter, Depends(get_vehicle_env)]
 
 PX4_PROGRAM = "px4"
+GZ_SERVER_PROGRAM = "gz-server"
+GZ_GUI_PROGRAM = "gz-gui"
 
 
 @router.get("/sim/status")
@@ -49,6 +52,21 @@ def reset_sim(gz: Gz) -> Ack:
     return Ack(ok=result.ok, detail=result.detail)
 
 
+def _reload_world(supervisor: SupervisorAdapter, gz: GzAdapter) -> AdapterResult:
+    """Take gz-server down and back up, which clears the world of every entity.
+    The viewport does not follow: it keeps rendering the scene the dead server
+    left it, so gz-gui is cycled too - it is the disposable half by design."""
+    restarted = supervisor.restart_program(GZ_SERVER_PROGRAM)
+    if not restarted.ok:
+        return restarted
+    ready = gz.world_ready()
+    if not ready.ok:
+        return ready
+    gui = supervisor.restart_program(GZ_GUI_PROGRAM)
+    note = "world reloaded" if gui.ok else f"world reloaded (viewport stale: {gui.detail})"
+    return AdapterResult(ok=True, detail=note)
+
+
 @router.post("/sim/vehicle", status_code=202)
 def replace_vehicle(
     body: VehicleReplaceRequest, supervisor: Supervisor, gz: Gz, vehicles: Vehicles
@@ -67,11 +85,16 @@ def replace_vehicle(
     if not stopped.ok:
         return Ack(ok=False, detail=f"stop px4: {stopped.detail}")
 
-    removed = gz.remove_entity(old_entity)
-    if not removed.ok:
+    # a depth camera can only be built once per gz-server process, so a swap
+    # touching one reloads the world instead of editing the running one
+    if needs_fresh_world(previous, body.model):
+        step, cleared = "reload world", _reload_world(supervisor, gz)
+    else:
+        step, cleared = f"remove {old_entity}", gz.remove_entity(old_entity)
+    if not cleared.ok:
         # px4 stays down on purpose: restarting it now would spawn the new
         # model next to the old one, and single-vehicle is the whole contract
-        return Ack(ok=False, detail=f"remove {old_entity}: {removed.detail}; px4 left stopped")
+        return Ack(ok=False, detail=f"{step}: {cleared.detail}; px4 left stopped")
 
     started = supervisor.start_program(PX4_PROGRAM)
     if not started.ok:
@@ -82,7 +105,7 @@ def replace_vehicle(
         detail=(
             f"replaced {previous} with {body.model} "
             f"(SYS_AUTOSTART {AIRFRAMES[body.model]}); "
-            f"{old_entity} removed, px4 restarting"
+            f"{cleared.detail}, px4 restarting"
         ),
     )
 
