@@ -331,7 +331,19 @@
   color: var(--color-danger-strong);
 }
 
+/* the title lives on the wrapper: a disabled button swallows hover, so the
+   reason a gated action is unavailable would never be readable on it */
+.node-card-gate {
+  display: inline-flex;
+}
+
 .node-card-idle {
+  color: var(--color-page-muted);
+  font-size: var(--text-sm);
+}
+
+.node-card-note {
+  margin: 0;
   color: var(--color-page-muted);
   font-size: var(--text-sm);
 }
@@ -394,6 +406,30 @@
   margin-left: auto;
   color: var(--color-page-muted);
   font-family: var(--font-mono);
+}
+
+/* only rendered for a program that is down, so it never competes with the
+   uptime of a running one */
+.dashboard-process-start {
+  min-height: var(--services-action-height);
+  padding: 0 var(--space-2);
+  border: var(--graph-border-width) solid var(--color-page-border);
+  border-radius: var(--services-control-radius);
+  background: var(--color-page-surface);
+  color: var(--color-page-text);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--text-sm);
+}
+
+.dashboard-process-start:disabled {
+  color: var(--color-status-stopped);
+  cursor: not-allowed;
+}
+
+.dashboard-process-start:hover:not(:disabled) {
+  border-color: var(--color-services-selected-border);
+  background: var(--color-page-control-hover);
 }
 
 /* -- control panel groups (flight / teleop) ------------------------------ */

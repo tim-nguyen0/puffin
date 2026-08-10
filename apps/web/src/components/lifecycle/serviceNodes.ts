@@ -1,4 +1,7 @@
+import type { components } from "@puffin/api-types";
 import type { StatusTone } from "../status-tag";
+
+type ProcessInfo = components["schemas"]["ProcessInfo"];
 
 // the design's three states map cleanly onto the ros 2 lifecycle:
 // stopped = unconfigured/finalized, armed = inactive (configured),
@@ -39,6 +42,33 @@ export function transitionForAction(
   if (action === "stop" && state === "active") return "deactivate";
   if (action === "stop" && state === "inactive") return "cleanup";
   return null;
+}
+
+export interface ReplayTarget {
+  // supervisord program name. a forged node's package, executable, program
+  // and node name are all the same string, so the bare node name is it.
+  program: string;
+  // exit 0 is the forge template's "flight finished"; anything else stopped
+  // it some other way and shouldn't be dressed up as success
+  completed: boolean;
+}
+
+// a forged mission node is a one-shot: it exits when the flight is done and
+// its lifecycle services go with it, leaving a card that reads unknown with
+// no transition to offer. the supervised program of the same name outlives
+// the node, so starting it again is the way to fly it a second time.
+export function replayTarget(
+  nodeName: string,
+  nodeDown: boolean,
+  processes: readonly ProcessInfo[],
+): ReplayTarget | null {
+  if (!nodeDown) return null;
+  const program = nodeName.replace(/^\//, "");
+  const proc = processes.find((entry) => entry.name === program);
+  // STARTING is already on its way back up - offering replay would queue a
+  // second start against a process that is about to answer for itself
+  if (!proc || proc.state === "RUNNING" || proc.state === "STARTING") return null;
+  return { program, completed: proc.state === "EXITED" };
 }
 
 export interface ServiceNodeMeta {

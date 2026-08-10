@@ -324,6 +324,13 @@
   cursor: not-allowed;
 }
 
+/* takes the flex slot the button used to hold, so a disabled Fly still has
+   something hoverable to carry its reason */
+.mission-fly-gate {
+  display: flex;
+  flex: 1;
+}
+
 .mission-fly {
   border: 0;
   background: var(--base-palette-blue);
