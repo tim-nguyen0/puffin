@@ -469,6 +469,19 @@
   background-color: var(--color-danger-strong-hover);
 }
 
+/* the arm/disarm toggle reads "Disarm" once armed - amber instead of the
+   default blue so the state is legible without reading the label */
+.control-panel .dashboard-armed-button {
+  background-color: var(--color-status-armed);
+  color: var(--base-palette-not-quite-gray);
+}
+
+.control-panel .dashboard-armed-button:hover:not(:disabled),
+.control-panel .dashboard-armed-button:active:not(:disabled) {
+  background-color: var(--color-status-armed);
+  filter: brightness(92%);
+}
+
 .dashboard-vehicle-status {
   display: flex;
   flex-wrap: wrap;
@@ -487,6 +500,12 @@
   color: var(--color-page-muted);
 }
 
+/* armed is the one state on this page you cannot afford to misread as
+   neutral - amber text to match the dot, not the default muted gray */
+.dashboard-status-chip.is-armed {
+  color: var(--color-status-armed);
+}
+
 /* the failure chip borrowed the block error's margin and sat a row lower
    than its neighbours */
 .dashboard-status-chip.dashboard-error {
@@ -502,7 +521,7 @@
 }
 
 .dashboard-status-dot.is-armed {
-  background: var(--color-status-running);
+  background: var(--color-status-armed);
 }
 
 /* -- light-surface overrides for components styled for the dark theme ---- */
