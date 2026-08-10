@@ -70,6 +70,17 @@
   color: var(--color-page-muted);
 }
 
+.settings-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.settings-hint {
+  color: var(--color-page-muted);
+  font-size: var(--text-sm);
+}
+
 .settings-save-button {
   min-height: auto;
   padding: var(--space-3) var(--space-4);
@@ -81,7 +92,8 @@
   white-space: normal;
 }
 
+/* read-only, and nothing the save button reaches - the wider gap says so */
 .settings-system-section {
   padding: var(--space-3);
-  margin-top: var(--space-2);
+  margin-top: var(--space-4);
 }

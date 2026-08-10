@@ -264,31 +264,13 @@
   color: var(--color-page-muted);
 }
 
-/* --- control panel: any lifecycle node, not just the primed one -------- */
+/* --- forge name: the permanent node this plan can also become --------- */
 
-.mission-control-panel {
-  padding: var(--space-3);
-  border: var(--border-width) solid var(--color-page-border);
-  border-radius: var(--graph-control-radius);
-  background: var(--color-page-control);
-  margin-bottom: var(--space-3);
-}
-
-.mission-control-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2);
+.mission-forge-name {
   margin-bottom: var(--space-2);
 }
 
-.mission-control-header h2 {
-  margin: 0;
-  color: var(--base-palette-not-quite-gray);
-  font-size: var(--text-md);
-}
-
-.mission-control-select-label {
+.mission-forge-name label {
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
@@ -296,7 +278,7 @@
   font-size: var(--text-sm);
 }
 
-.mission-control-select {
+.mission-forge-name input {
   box-sizing: border-box;
   width: 100%;
   height: var(--mission-input-height);
@@ -309,53 +291,13 @@
   font-size: var(--text-sm);
 }
 
-.mission-control-actions {
-  display: flex;
-  gap: var(--space-2);
-  margin-top: var(--space-2);
+.mission-forge-name input[aria-invalid="true"] {
+  border-color: var(--color-danger-strong);
 }
 
-.mission-control-button {
-  flex: 1;
-  height: var(--btn-h-sm);
-  border: var(--border-width) solid var(--color-page-border);
-  border-radius: var(--graph-control-radius);
-  background: var(--color-page-surface);
-  color: var(--color-page-text);
-  font: inherit;
-  font-size: var(--text-sm);
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.mission-control-button:disabled {
-  color: var(--color-status-stopped);
-  cursor: not-allowed;
-}
-
-.mission-control-arm {
-  border-color: var(--base-palette-blue);
-  color: var(--base-palette-blue);
-}
-
-.mission-control-run {
-  border-color: var(--color-status-running);
-  color: var(--color-status-running);
-}
-
-.mission-control-stop {
-  border-color: var(--color-danger-border);
-  background: var(--color-danger-soft);
-  color: var(--color-danger-strong);
-}
-
-.mission-control-button:hover:not(:disabled) {
-  background: var(--color-page-control-hover);
-}
-
-.mission-control-empty {
-  margin: 0;
-  color: var(--color-page-muted);
+.mission-edited-hint {
+  margin: 0 0 var(--space-2);
+  color: var(--color-status-armed);
   font-size: var(--text-sm);
 }
 
@@ -382,18 +324,33 @@
   cursor: not-allowed;
 }
 
-.mission-prime {
+/* takes the flex slot the button used to hold, so a disabled Fly still has
+   something hoverable to carry its reason */
+.mission-fly-gate {
+  display: flex;
+  flex: 1;
+}
+
+.mission-fly {
   border: 0;
   background: var(--base-palette-blue);
   color: var(--color-launch-bg);
 }
 
-.mission-prime:hover:not(:disabled) {
+.mission-fly:hover:not(:disabled) {
   background: var(--color-button-primary-hover);
 }
 
-.mission-prime:disabled {
+.mission-fly:disabled {
   background: var(--color-status-stopped-soft);
+}
+
+.mission-fly-stop {
+  background: var(--color-danger-strong);
+}
+
+.mission-fly-stop:hover:not(:disabled) {
+  background: var(--color-danger-strong-hover);
 }
 
 .mission-forge {
@@ -402,7 +359,7 @@
 }
 
 .mission-clear:hover:not(:disabled),
-.mission-actions button:not(.mission-prime):hover {
+.mission-actions button:not(.mission-fly):hover {
   background: var(--color-page-control-hover);
 }
 

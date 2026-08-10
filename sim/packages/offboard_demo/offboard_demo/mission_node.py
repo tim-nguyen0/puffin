@@ -36,6 +36,24 @@ from .square import reached
 # offboard_demo (gotcha #4), scaled to the plan's rate
 WARMUP_S = 1.2
 
+# standalone only: how long the stream stays up after the last step, so px4
+# settles on the final target while it is still being fed. the loiter handover
+# happens at the end of this, never during it.
+GRACE_S = 5.0
+
+# rclpy.shutdown() is deferred by this much so the loiter command, the final
+# status and any lifecycle reply are on the wire before the context closes
+EXIT_DELAY_S = 0.5
+
+
+def grace_ticks(rate_hz: float) -> int:
+    """setpoint ticks a standalone node streams between "done" and exiting.
+
+    never zero: cutting the stream on the same tick that reports done would
+    leave px4 with nothing between the last setpoint and the loiter.
+    """
+    return max(1, int(GRACE_S * rate_hz))
+
 
 def latched_qos() -> Any:
     # /puffin/mission* topics: reliable + transient-local so late joiners
@@ -70,7 +88,9 @@ def executor_class() -> Any:
         the plan is fixed at construction - the host rebuilds the node to
         change it, so nothing here re-reads a shared latch mid-flight.
         standalone means this node owns its process (a forged node) rather
-        than sharing the host's.
+        than sharing the host's, which also makes it a one-shot: it loiters
+        and exits when the mission ends instead of holding the last target
+        forever. a host child has no process to end, so it holds.
         """
 
         def __init__(
@@ -93,6 +113,8 @@ def executor_class() -> Any:
             self._ticks = 0
             self._warmup_ticks = 0
             self._hold_ticks = 0
+            self._grace_ticks = 0
+            self._exiting = False
             self._rate_hz = plan["rate_hz"]
             self._target: tuple[float, float, float] = (0.0, 0.0, 0.0)
             self._state = "ready"
@@ -163,16 +185,15 @@ def executor_class() -> Any:
             return result
 
         def on_deactivate(self, state: Any) -> TransitionCallbackReturn:
-            # loiter before the stream stops, or px4 failsafes on setpoint loss
-            self._cmd_pub.publish(
-                make_vehicle_command(
-                    self, VEHICLE_CMD_DO_SET_MODE, 1.0, MAIN_MODE_AUTO, SUB_MODE_AUTO_LOITER
-                )
-            )
+            self._loiter()
             self._destroy_timer()
             self.is_flying = False
             if self._phase != "done":
                 self._publish_status("aborted", None, "deactivated mid-mission")
+            # a forged node is a one-shot, abort included: ending the process
+            # here means the next start replays the plan from the top
+            if self._standalone:
+                self._exit_process()
             return super().on_deactivate(state)
 
         def on_cleanup(self, state: Any) -> TransitionCallbackReturn:
@@ -185,12 +206,10 @@ def executor_class() -> Any:
             self.is_flying = False
             # a host child must not call rclpy.shutdown(): it is one of many
             # nodes in the host process, and the host outlives it. a forged
-            # node owns its process, so it exits and supervisord respawns it
-            # fresh (configure -> inactive), making a ui kill a clean restart.
+            # node owns its process, so a ui kill ends it - it parks at
+            # EXITED and `supervisorctl start <name>` brings it back.
             if self._standalone:
-                import rclpy
-
-                self.create_timer(0.5, rclpy.shutdown)
+                self._exit_process()
             return TransitionCallbackReturn.SUCCESS
 
         def _destroy_timer(self) -> None:
@@ -198,6 +217,35 @@ def executor_class() -> Any:
                 self._timer.cancel()
                 self.destroy_timer(self._timer)
                 self._timer = None
+
+        def _loiter(self) -> None:
+            # px4 failsafes on setpoint loss, so it goes to AUTO.LOITER before
+            # the stream stops. every path that stops the timer comes here first.
+            self._cmd_pub.publish(
+                make_vehicle_command(
+                    self, VEHICLE_CMD_DO_SET_MODE, 1.0, MAIN_MODE_AUTO, SUB_MODE_AUTO_LOITER
+                )
+            )
+
+        def _exit_process(self) -> None:
+            """standalone only: end this process cleanly, once."""
+            if self._exiting:
+                return
+            self._exiting = True
+            import rclpy
+
+            # deferred, not immediate: shutting the context down inside this
+            # callback would cut whatever it was called from mid-publish
+            self.create_timer(EXIT_DELAY_S, rclpy.shutdown)
+
+        def _autokill(self) -> None:
+            """end of the post-mission grace: hand px4 over and exit 0."""
+            self._loiter()
+            self._destroy_timer()
+            self.is_flying = False
+            self._publish_status("done", None, "mission complete; node exiting")
+            self.get_logger().info("mission complete; loitering and exiting")
+            self._exit_process()
 
         def report_refusal(self, detail: str) -> None:
             # re-states the phase this node is already in; only detail says
@@ -232,8 +280,14 @@ def executor_class() -> Any:
             self._step += 1
             if self._step >= len(self._steps):
                 self._phase = "done"
-                self._publish_status("done", None, "mission complete, holding")
-                self.get_logger().info("mission complete, holding last target")
+                if self._standalone:
+                    self._grace_ticks = grace_ticks(self._rate_hz)
+                    hold = f"holding {GRACE_S:.0f}s, then loitering and exiting"
+                    self._publish_status("done", None, f"mission complete; {hold}")
+                    self.get_logger().info(f"mission complete; {hold}")
+                else:
+                    self._publish_status("done", None, "mission complete, holding")
+                    self.get_logger().info("mission complete, holding last target")
             else:
                 self._announce_step()
 
@@ -268,6 +322,12 @@ def executor_class() -> Any:
                         )
                     else:
                         self._advance()
+            elif self._phase == "done" and self._standalone:
+                # the stream above keeps running through the whole grace; only
+                # when it runs out does this node let go of px4 and exit
+                self._grace_ticks -= 1
+                if self._grace_ticks <= 0:
+                    self._autokill()
 
     return MissionExecutor
 
@@ -277,16 +337,21 @@ def run_executor(name: str, plan: dict[str, Any]) -> None:
 
     same contract as a host child: it configures itself to inactive at boot,
     reports on /puffin/mission/status under `name`, and waits for the api to
-    activate it.
+    activate it. unlike a host child it is a one-shot - the executor shuts the
+    context down once the mission ends or is aborted, so this returns and the
+    process exits 0, which supervisord reads as EXITED rather than a crash.
     """
     import rclpy
+    from rclpy.executors import ExternalShutdownException
 
     rclpy.init()
     node = executor_class()(name, plan, standalone=True)
     node.trigger_configure()
     try:
         rclpy.spin(node)
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt, ExternalShutdownException):
+        # ctrl-c, or this node's own shutdown timer. either way the terminal
+        # status is already published, so returning here is the clean exit
         pass
 
 

@@ -1,9 +1,6 @@
 from fastapi.testclient import TestClient
 
-from puffin_api.adapters.ros_node import (
-    VEHICLE_CMD_ARM_DISARM,
-    VEHICLE_CMD_NAV_LAND,
-)
+from puffin_api.adapters.ros_node import VEHICLE_CMD_ARM_DISARM
 from tests.conftest import FakeRos
 
 
@@ -29,5 +26,7 @@ def test_takeoff_rejects_out_of_range_altitude(client: TestClient) -> None:
 
 
 def test_land(client: TestClient, fake_ros: FakeRos) -> None:
+    # land goes through the adapter, not a bare command: it has to release the
+    # setpoint stream on the way down
     assert client.post("/api/vehicle/land").json()["ok"] is True
-    assert fake_ros.commands == [(VEHICLE_CMD_NAV_LAND, 0.0, 0.0)]
+    assert (fake_ros.lands, fake_ros.commands) == (1, [])

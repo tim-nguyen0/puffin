@@ -24,6 +24,11 @@ export function RecentFolders({
   return (
     <section className={classes} aria-label={title}>
       <h2 className="recent-folders-title">{title}</h2>
+      {/* every button parks inert without a handler; say so once here rather
+          than leaving a panel of dead controls unexplained */}
+      {onFolderSelect ? null : (
+        <p className="recent-folders-note">reopening a recent package isn&apos;t wired up yet</p>
+      )}
       <ul className="recent-folders-list">
         {folders.map((folder) => (
           <li key={folder.id} className="recent-folders-item">

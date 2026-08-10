@@ -131,6 +131,25 @@ paths:
               schema:
                 $ref: "#/components/schemas/Ack"
 
+  # single-vehicle sim: selecting a model REPLACES the flying one. the api
+  # writes the airframe env px4 boots with, restarts px4 and drops the old
+  # gz entity - seconds of work, so the ack is fire-and-report
+  /sim/vehicle:
+    post:
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VehicleReplaceRequest"
+      responses:
+        "202":
+          description: Replace sequence run; detail narrates each step
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Ack"
+
   /sim/vehicle/pose:
     post:
       requestBody:
@@ -158,6 +177,25 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/ProcessInfo"
+
+  # a forged mission node is a one-shot: it exits 0 when its flight finishes
+  # and its lifecycle services go with it, so there is nothing left to
+  # transition. starting the program again is the only way to replay it.
+  /procs/{name}/start:
+    post:
+      parameters:
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Ack"
 
   /vehicle/arm:
     post:
@@ -516,10 +554,23 @@ components:
           type: boolean
         world:
           type: string
+        # gz model px4 is booted with; absent only from an api that predates
+        # /sim/vehicle. defaults to the image's x500
+        vehicle:
+          type: string
         processes:
           type: array
           items:
             $ref: "#/components/schemas/ProcessInfo"
+
+    VehicleReplaceRequest:
+      type: object
+      required: [model]
+      properties:
+        # gz model name. the api holds the model -> SYS_AUTOSTART map for the
+        # airframes baked into the image and 422s anything else
+        model:
+          type: string
 
     TakeoffRequest:
       type: object
@@ -612,7 +663,7 @@ components:
     TelemetrySample:
       # ws frame. t_us = px4 clock in microseconds, ned z is negative up
       type: object
-      required: [t_us, armed, mode, ned, battery_v, attitude_q]
+      required: [t_us, armed, mode, landed, ned, battery_v, attitude_q]
       properties:
         t_us:
           type: integer
@@ -620,6 +671,12 @@ components:
           type: boolean
         mode:
           type: string
+        # px4's landing detector. the honest "is it on the ground" signal —
+        # ned z drifts with the ekf origin (metres, across a few flights), so
+        # it can never answer this. true until a sample arrives: a vehicle we
+        # know nothing about is parked, not flying.
+        landed:
+          type: boolean
         # px4 vehicle attitude quaternion [w, x, y, z], body FRD -> NED;
         # identity until the first attitude sample arrives
         attitude_q:

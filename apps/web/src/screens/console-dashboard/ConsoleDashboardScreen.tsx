@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "../../components/button";
 import { DashboardPanel } from "../../components/dashboard-panel";
 import { MetricCard } from "../../components/metric-card";
@@ -36,12 +36,23 @@ function formatUptime(seconds: number | undefined): string {
 
 export function ConsoleDashboardScreen() {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const { connected, latest } = useTelemetryStore();
 
   useEffect(() => {
     connectTelemetry();
     return () => disconnectTelemetry();
   }, []);
+
+  // the immersive screen hides the sidebar, so escape is the way out that
+  // costs nothing to discover
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") navigate("/dashboard");
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [navigate]);
 
   const simStatus = useQuery({
     queryKey: ["sim-status"],
@@ -107,7 +118,9 @@ export function ConsoleDashboardScreen() {
           <i>/</i>
           <strong>console</strong>
           <i>/</i>
-          <Link to="/dashboard">exit</Link>
+          <Link to="/dashboard" title="back to the dashboard (Esc)">
+            exit ↩
+          </Link>
         </nav>
         <div className="console-controls">
           <Button
@@ -117,17 +130,15 @@ export function ConsoleDashboardScreen() {
           >
             Run
           </Button>
-          <button
-            type="button"
-            aria-label="Pause simulation"
-            title="Pause is not available yet"
-            disabled
-          >
-            Ⅱ
-          </button>
+          <span title="Pause is not available yet">
+            <button type="button" aria-label="Pause simulation" disabled>
+              Ⅱ
+            </button>
+          </span>
           <button
             type="button"
             aria-label="Stop simulation"
+            title="Stop the simulation"
             onClick={() => stop.mutate()}
             disabled={start.isPending || stop.isPending}
           >
@@ -214,7 +225,9 @@ export function ConsoleDashboardScreen() {
                   <li key={proc.name}>
                     <i />
                     <strong>{proc.name}</strong>
-                    <span>up {formatUptime(proc.uptime_s)}</span>
+                    {/* the row already ends in the state, so the uptime just
+                        gives the duration */}
+                    <span>{formatUptime(proc.uptime_s)}</span>
                     <b>{proc.state === "RUNNING" ? "up" : proc.state.toLowerCase()}</b>
                   </li>
                 ))}

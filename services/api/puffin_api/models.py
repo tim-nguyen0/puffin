@@ -2,7 +2,9 @@
 
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+
+from .adapters.vehicle_env import AIRFRAMES
 
 ProcessState = Literal[
     "STOPPED", "STARTING", "RUNNING", "BACKOFF", "STOPPING", "EXITED", "FATAL", "UNKNOWN"
@@ -32,7 +34,22 @@ class ProcessInfo(BaseModel):
 class SimStatus(BaseModel):
     running: bool
     world: str
+    # gz model px4 is booted with, read from the vehicle env override
+    vehicle: str | None = None
     processes: list[ProcessInfo]
+
+
+class VehicleReplaceRequest(BaseModel):
+    model: str
+
+    @field_validator("model")
+    @classmethod
+    def known_airframe(cls, value: str) -> str:
+        # the airframe map is server truth; an unknown model has no
+        # SYS_AUTOSTART to boot, so refuse before touching the running sim
+        if value not in AIRFRAMES:
+            raise ValueError(f"{value} is not baked into this px4 image")
+        return value
 
 
 class TakeoffRequest(BaseModel):

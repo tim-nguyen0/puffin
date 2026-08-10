@@ -145,10 +145,19 @@
 }
 
 /* -- telemetry ----------------------------------------------------------- */
+
+/* four readouts on a three-up grid left one card stranded on its own row;
+   two-up keeps them balanced */
 .telemetry-metrics {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--dashboard-metric-min-width)), 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--space-2);
+}
+
+@media (width <= 54rem) {
+  .telemetry-metrics {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 /* -- service health strip ------------------------------------------------ */
@@ -327,7 +336,19 @@
   color: var(--color-danger-strong);
 }
 
+/* the title lives on the wrapper: a disabled button swallows hover, so the
+   reason a gated action is unavailable would never be readable on it */
+.node-card-gate {
+  display: inline-flex;
+}
+
 .node-card-idle {
+  color: var(--color-page-muted);
+  font-size: var(--text-sm);
+}
+
+.node-card-note {
+  margin: 0;
   color: var(--color-page-muted);
   font-size: var(--text-sm);
 }
@@ -392,6 +413,48 @@
   font-family: var(--font-mono);
 }
 
+/* only rendered for a program that is down, so it never competes with the
+   uptime of a running one */
+.dashboard-process-start {
+  min-height: var(--services-action-height);
+  padding: 0 var(--space-2);
+  border: var(--graph-border-width) solid var(--color-page-border);
+  border-radius: var(--services-control-radius);
+  background: var(--color-page-surface);
+  color: var(--color-page-text);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--text-sm);
+}
+
+.dashboard-process-start:disabled {
+  color: var(--color-status-stopped);
+  cursor: not-allowed;
+}
+
+.dashboard-process-start:hover:not(:disabled) {
+  border-color: var(--color-services-selected-border);
+  background: var(--color-page-control-hover);
+}
+
+/* -- control panel groups (flight / teleop) ------------------------------ */
+
+/* each group is its own heading + content; the divider is a top border on
+   every group after the first rather than a standalone hr element */
+.control-group + .control-group {
+  margin-top: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: var(--graph-border-width) solid var(--color-page-border);
+}
+
+.control-group-heading {
+  margin: 0;
+  color: var(--color-page-muted);
+  font-size: var(--text-graph-micro);
+  letter-spacing: var(--services-kicker-letter-spacing);
+  text-transform: uppercase;
+}
+
 .dashboard-actions {
   display: flex;
   flex-wrap: wrap;
@@ -424,6 +487,42 @@
   font-size: var(--text-md);
 }
 
+/* greyed while airborne - the wrapping label carries the "why" title since
+   a disabled input never fires the hover that would show its own */
+.dashboard-field input:disabled {
+  background: var(--color-page-surface);
+  color: var(--color-page-muted);
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+/* land takes over the takeoff slot once airborne - filled danger like the
+   ros-services stop button, not just an outlined warning */
+.control-panel .dashboard-land-button {
+  background-color: var(--color-danger-strong);
+}
+
+.control-panel .dashboard-land-button:hover:not(:disabled) {
+  background-color: var(--color-danger-strong-hover);
+}
+
+.control-panel .dashboard-land-button:active:not(:disabled) {
+  background-color: var(--color-danger-strong-hover);
+}
+
+/* the arm/disarm toggle reads "Disarm" once armed - amber instead of the
+   default blue so the state is legible without reading the label */
+.control-panel .dashboard-armed-button {
+  background-color: var(--color-status-armed);
+  color: var(--base-palette-not-quite-gray);
+}
+
+.control-panel .dashboard-armed-button:hover:not(:disabled),
+.control-panel .dashboard-armed-button:active:not(:disabled) {
+  background-color: var(--color-status-armed);
+  filter: brightness(92%);
+}
+
 .dashboard-vehicle-status {
   display: flex;
   flex-wrap: wrap;
@@ -442,6 +541,19 @@
   color: var(--color-page-muted);
 }
 
+/* armed is the one state on this page you cannot afford to misread as
+   neutral - amber text to match the dot, not the default muted gray */
+.dashboard-status-chip.is-armed {
+  color: var(--color-status-armed);
+}
+
+/* the failure chip borrowed the block error's margin and sat a row lower
+   than its neighbours */
+.dashboard-status-chip.dashboard-error {
+  margin-top: 0;
+  font-size: inherit;
+}
+
 .dashboard-status-dot {
   width: var(--space-2);
   height: var(--space-2);
@@ -450,7 +562,7 @@
 }
 
 .dashboard-status-dot.is-armed {
-  background: var(--color-status-running);
+  background: var(--color-status-armed);
 }
 
 /* -- light-surface overrides for components styled for the dark theme ---- */

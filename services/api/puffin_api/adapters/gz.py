@@ -8,16 +8,26 @@ PURPOSE — never through ROS or PX4 (CLAUDE.md: three channels).
 
 import math
 import os
+import time
 from typing import Any
 
 from . import AdapterResult
 
 REQUEST_TIMEOUT_MS = 2000
+WORLD_READY_TIMEOUT_S = 20.0
+
+
+def entity_name(model: str) -> str:
+    # PX4's standalone gz bridge spawns the airframe as <model>_<instance>.
+    return f"{model}_0"
 
 
 def vehicle_model_name() -> str:
-    # PX4's standalone gz bridge spawns the airframe as <model>_<instance>.
-    return os.environ.get("PUFFIN_VEHICLE_MODEL", "x500_0")
+    from .vehicle_env import VehicleEnvAdapter
+
+    # follows whatever /sim/vehicle last selected, so this stays right after a
+    # replace instead of pointing at the airframe the image booted with
+    return os.environ.get("PUFFIN_VEHICLE_MODEL", entity_name(VehicleEnvAdapter().current_model()))
 
 
 class GzAdapter:
@@ -58,6 +68,43 @@ class GzAdapter:
         if not response.data:
             return AdapterResult(ok=False, detail="world reset rejected by gz")
         return AdapterResult(ok=True, detail=f"world {self._world} reset")
+
+    def world_ready(self, timeout_s: float = WORLD_READY_TIMEOUT_S) -> AdapterResult:
+        """Block until the world answers again. A restarted gz-server is gone
+        from the bus for a second or two, and px4's bridge gets exactly one
+        shot at spawning its model, so callers must wait before starting it."""
+        deadline = time.monotonic() + timeout_s
+        detail = "no reply"
+        while time.monotonic() < deadline:
+            try:
+                from gz.msgs10.empty_pb2 import Empty
+                from gz.msgs10.stringmsg_v_pb2 import StringMsg_V
+
+                response = self._request("/gazebo/worlds", Empty(), Empty, StringMsg_V)
+                if self._world in response.data:
+                    return AdapterResult(ok=True, detail=f"world {self._world} is up")
+                detail = f"gz serves {list(response.data)}, not {self._world}"
+            except Exception as exc:  # noqa: BLE001 - clean {ok, detail} at the boundary
+                detail = str(exc)
+            time.sleep(0.25)
+        return AdapterResult(
+            ok=False, detail=f"world {self._world} not up in {timeout_s}s: {detail}"
+        )
+
+    def remove_entity(self, name: str) -> AdapterResult:
+        try:
+            from gz.msgs10.boolean_pb2 import Boolean
+            from gz.msgs10.entity_pb2 import Entity
+
+            request = Entity()
+            request.name = name
+            request.type = Entity.MODEL
+            response = self._request(f"/world/{self._world}/remove", request, Entity, Boolean)
+        except Exception as exc:  # noqa: BLE001 - clean {ok, detail} at the boundary
+            return AdapterResult(ok=False, detail=f"remove {name} failed: {exc}")
+        if not response.data:
+            return AdapterResult(ok=False, detail=f"gz found no entity named {name}")
+        return AdapterResult(ok=True, detail=f"{name} removed from world {self._world}")
 
     def set_vehicle_pose(
         self, x: float, y: float, z: float = 0.3, yaw_deg: float = 0.0

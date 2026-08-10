@@ -2,8 +2,9 @@ import type { components } from "@puffin/api-types";
 
 type RosGraph = components["schemas"]["RosGraph"];
 
-// the stack boots px4 attached to this gz model (see sim/supervisord.conf)
-export const SPAWNED_MODEL = "x500";
+// what px4 boots with before anything replaces it; only a fallback for
+// before /sim/status answers - the live model comes from SimStatus.vehicle
+export const DEFAULT_SPAWNED_MODEL = "x500";
 
 export type VehicleStatus = "spawned" | "available" | "not-installed";
 
@@ -202,9 +203,13 @@ export const VEHICLES: Vehicle[] = [
   },
 ];
 
-export function statusFor(vehicle: Vehicle, telemetryLive: boolean): VehicleStatus {
+export function statusFor(
+  vehicle: Vehicle,
+  telemetryLive: boolean,
+  spawnedModel: string,
+): VehicleStatus {
   if (vehicle.airframe === null) return "not-installed";
-  if (vehicle.model === SPAWNED_MODEL && telemetryLive) return "spawned";
+  if (vehicle.model === spawnedModel && telemetryLive) return "spawned";
   return "available";
 }
 

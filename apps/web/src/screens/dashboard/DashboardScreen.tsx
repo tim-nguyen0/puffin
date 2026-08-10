@@ -7,6 +7,7 @@ import { DashboardPanel } from "../../components/dashboard-panel";
 import {
   actionsForState,
   lifecycleNodeNames,
+  replayTarget,
   toneForState,
   transitionForAction,
   type LifecycleStateName,
@@ -19,6 +20,7 @@ import { SimViewport } from "../../components/sim-viewport";
 import { StatusTag } from "../../components/status-tag";
 import { TeleopPad } from "../../components/teleop";
 import { api } from "../../lib/api";
+import { isAirborne, runGateTitle } from "../../lib/flightState";
 import { climbRate, nedToLatLon } from "../../lib/geo";
 import { useSettingsStore } from "../../lib/settingsStore";
 import { connectTelemetry, disconnectTelemetry, useTelemetryStore } from "../../lib/telemetryStore";
@@ -28,6 +30,10 @@ import "./dashboard.css";
 type ProcessInfo = components["schemas"]["ProcessInfo"];
 
 const M_TO_FT = 3.28084;
+// the gap between a takeoff ack and the land detector letting go - the
+// vehicle is committed to leaving the ground, disarm is not a safe undo. a
+// rejected/failed climb still has to let go eventually.
+const CLIMB_TIMEOUT_MS = 15_000;
 
 const NODE_ACTION_LABELS: Record<ServiceNodeAction, string> = {
   arm: "Arm",
@@ -85,7 +91,13 @@ function GpsHud({ altitude, climb, fix, live }: GpsHudProps) {
   );
 }
 
-function LifecycleNodeCards() {
+function LifecycleNodeCards({
+  airborne,
+  processes,
+}: {
+  airborne: boolean;
+  processes: readonly ProcessInfo[];
+}) {
   const services = useQuery({
     queryKey: ["ros-services"],
     queryFn: async () => {
@@ -107,15 +119,24 @@ function LifecycleNodeCards() {
   return (
     <div className="node-card-grid">
       {nodes.map((name) => (
-        <NodeCard key={name} nodeName={name} />
+        <NodeCard key={name} nodeName={name} airborne={airborne} processes={processes} />
       ))}
     </div>
   );
 }
 
-function NodeCard({ nodeName }: { nodeName: string }) {
+function NodeCard({
+  nodeName,
+  airborne,
+  processes,
+}: {
+  nodeName: string;
+  airborne: boolean;
+  processes: readonly ProcessInfo[];
+}) {
   const queryClient = useQueryClient();
   const [actionError, setActionError] = useState<string | null>(null);
+  const [note, setNote] = useState<string | null>(null);
   const pathName = nodeName.replace(/^\//, "");
 
   const lifecycle = useQuery({
@@ -159,8 +180,32 @@ function NodeCard({ nodeName }: { nodeName: string }) {
     onError: (err) => setActionError(err instanceof Error ? err.message : "Transition failed"),
   });
 
+  // replay starts the supervised program again; the node boots itself back to
+  // inactive and the existing polls pick the card back up from there
+  const replay = useMutation({
+    mutationFn: async (program: string) => {
+      const { data, error } = await api.POST("/procs/{name}/start", {
+        params: { path: { name: program } },
+      });
+      if (error || !data.ok) throw new Error(data?.detail ?? "Replay failed");
+      return data;
+    },
+    onSuccess: (data) => {
+      setNote(data.detail);
+      void queryClient.invalidateQueries({ queryKey: ["ros-lifecycle", pathName] });
+      void queryClient.invalidateQueries({ queryKey: ["ros-services"] });
+      void queryClient.invalidateQueries({ queryKey: ["sim-status"] });
+    },
+    onError: (err) => setActionError(err instanceof Error ? err.message : "Replay failed"),
+  });
+
   const state = lifecycle.data?.state as LifecycleStateName | undefined;
   const actions = actionsForState(state);
+  // the node is gone, not merely idle: either its lifecycle service stopped
+  // answering or it answered "unknown"
+  const nodeDown = lifecycle.isError || state === "unknown";
+  const stopped = replayTarget(nodeName, nodeDown, processes);
+  const gateTitle = runGateTitle(airborne);
 
   return (
     <article className="node-card">
@@ -168,35 +213,65 @@ function NodeCard({ nodeName }: { nodeName: string }) {
         <code>{nodeName}</code>
         <StatusTag
           status={toneForState(state)}
-          label={lifecycle.isError ? "unreachable" : (state ?? "…")}
+          label={
+            stopped
+              ? stopped.completed
+                ? "completed"
+                : "stopped"
+              : lifecycle.isError
+                ? "unreachable"
+                : (state ?? "…")
+          }
         />
       </header>
       <p className="node-card-desc">{describeNode(nodeName, forge.data?.state).description}</p>
       <div className="node-card-actions">
-        {actions.length === 0 ? (
+        {stopped ? (
+          <button
+            type="button"
+            className="node-card-button node-card-replay"
+            aria-label={`Replay ${nodeName}`}
+            disabled={replay.isPending}
+            onClick={() => {
+              setActionError(null);
+              replay.mutate(stopped.program);
+            }}
+            title={`starts the ${stopped.program} program again`}
+          >
+            Replay
+          </button>
+        ) : actions.length === 0 ? (
           <span className="node-card-idle">no transition from {state ?? "unknown"}</span>
         ) : (
           actions.map((action) => {
             const next = transitionForAction(action, state);
+            // only activation waits on the vehicle being up; stop never does
+            const gated = action === "run" && !airborne;
             return (
-              <button
-                key={action}
-                type="button"
-                className={`node-card-button node-card-${action}`}
-                aria-label={`${NODE_ACTION_LABELS[action]} ${nodeName}`}
-                disabled={next === null || transition.isPending}
-                onClick={() => {
-                  if (!next) return;
-                  setActionError(null);
-                  transition.mutate(next);
-                }}
-              >
-                {NODE_ACTION_LABELS[action]}
-              </button>
+              <span key={action} className="node-card-gate" title={gated ? gateTitle : undefined}>
+                <button
+                  type="button"
+                  className={`node-card-button node-card-${action}`}
+                  aria-label={`${NODE_ACTION_LABELS[action]} ${nodeName}`}
+                  disabled={next === null || transition.isPending || gated}
+                  onClick={() => {
+                    if (!next) return;
+                    setActionError(null);
+                    transition.mutate(next);
+                  }}
+                >
+                  {NODE_ACTION_LABELS[action]}
+                </button>
+              </span>
             );
           })
         )}
       </div>
+      {note ? (
+        <p className="node-card-note" role="status">
+          {note}
+        </p>
+      ) : null}
       {actionError ? (
         <p className="node-card-error" role="alert">
           {actionError}
@@ -222,6 +297,10 @@ export function DashboardScreen() {
     ok: boolean;
     detail: string;
   } | null>(null);
+  // true from a successful takeoff ack until altitude actually crosses the
+  // airborne threshold (or the timeout gives up on it) - the window where
+  // the vehicle is climbing out but telemetry still reads "grounded"
+  const [climbing, setClimbing] = useState(false);
 
   useEffect(() => {
     connectTelemetry();
@@ -283,6 +362,25 @@ export function DashboardScreen() {
     onError: onCommandError,
   });
 
+  // a forged one-shot that already flew is EXITED, and once ros has dropped
+  // its services it has no node card left to replay from - the process table
+  // is the one place it is still visible, so the handle lives here too
+  const startProc = useMutation({
+    mutationFn: async (name: string) => {
+      const { data, error } = await api.POST("/procs/{name}/start", {
+        params: { path: { name } },
+      });
+      if (error || !data.ok) throw new Error(data?.detail ?? "Start failed");
+      return data;
+    },
+    onSuccess: (data, name) => {
+      setLastCommand({ label: `start ${name}`, ok: true, detail: data.detail });
+      invalidateSimStatus();
+      void queryClient.invalidateQueries({ queryKey: ["ros-services"] });
+    },
+    onError: onCommandError,
+  });
+
   const arm = useMutation({
     mutationFn: async () => {
       const { data, error } = await api.POST("/vehicle/arm");
@@ -316,7 +414,11 @@ export function DashboardScreen() {
       if (error || !data.ok) throw new Error(data?.detail ?? "Takeoff failed");
       return data;
     },
-    ...vehicleResult("takeoff"),
+    onSuccess: (data) => {
+      vehicleResult("takeoff").onSuccess(data);
+      setClimbing(true);
+    },
+    onError: vehicleResult("takeoff").onError,
   });
 
   function handleTakeoff() {
@@ -350,6 +452,58 @@ export function DashboardScreen() {
   const manualLockTitle = offboardActive
     ? "offboard node in control - deactivate it on the ROS Services screen"
     : undefined;
+
+  // airborne is derived, not tracked: one signal that swaps the takeoff/land
+  // button and locks the altitude field. see flightState for why it reads
+  // px4's land detector instead of an altitude threshold.
+  const armed = latest?.armed ?? false;
+  const airborne = isAirborne(live, latest);
+
+  // climbing ends the honest way - the detector letting go of the ground -
+  // or the dishonest-but-necessary way, a timeout, so a takeoff that never
+  // left the ground (rejected mode change, PX4 refusal) doesn't strand the
+  // toggle disabled forever.
+  useEffect(() => {
+    if (!climbing) return;
+    if (airborne) {
+      setClimbing(false);
+      return;
+    }
+    const timer = setTimeout(() => setClimbing(false), CLIMB_TIMEOUT_MS);
+    return () => clearTimeout(timer);
+  }, [climbing, airborne]);
+
+  const takeoffTitle = !live
+    ? "no telemetry - waiting for a live sample"
+    : offboardActive
+      ? manualLockTitle
+      : !armed
+        ? "arm the vehicle before takeoff"
+        : undefined;
+  const takeoffDisabled = anyPending || offboardActive || !armed;
+  // land is the escape hatch even under offboard, so it only waits on a
+  // command already in flight
+  const landTitle = offboardActive ? "overrides offboard and lands" : undefined;
+  const landDisabled = anyPending;
+  const altitudeLockedTitle = airborne ? "vehicle is airborne - land to change altitude" : undefined;
+
+  // arm and disarm collapse into one toggle - only one of the two verbs is
+  // ever valid for the current state. locked airborne: disarming mid-flight
+  // drops the vehicle, and the disarmed-but-airborne case (motors already
+  // cut) has no business re-arming until it's back on the ground either.
+  // locked climbing too: telemetry still reads "grounded" right after a
+  // takeoff ack, but the vehicle is already committed to leaving - see the
+  // climbing effect above.
+  const armToggleTitle = offboardActive
+    ? manualLockTitle
+    : airborne
+      ? armed
+        ? "disarming mid-air drops the vehicle - land first"
+        : "vehicle is airborne - land before arming"
+      : climbing
+        ? "taking off - land to disarm"
+        : undefined;
+  const armToggleDisabled = anyPending || offboardActive || airborne || climbing;
 
   return (
     <div className="dashboard-screen">
@@ -430,74 +584,90 @@ export function DashboardScreen() {
           icon={<AppIcon name="pipeline" />}
         >
           <div className="panel-pad">
-            <div className="dashboard-actions">
-              <Button
-                onClick={() => runAction(arm.mutate)}
-                disabled={anyPending || offboardActive}
-                title={manualLockTitle}
-              >
-                Arm
-              </Button>
-              <Button
-                onClick={() => runAction(disarm.mutate)}
-                disabled={anyPending || offboardActive}
-                title={manualLockTitle}
-              >
-                Disarm
-              </Button>
-              <Button
-                onClick={() => runAction(land.mutate)}
-                disabled={anyPending}
-                title={offboardActive ? "overrides offboard and lands" : undefined}
-              >
-                Land
-              </Button>
-            </div>
-            <label className="dashboard-field">
-              Takeoff altitude (m)
-              <input
-                type="number"
-                min={1}
-                max={50}
-                value={altitude}
-                onChange={(e) => setAltitude(e.target.value)}
-              />
-            </label>
-            <div className="dashboard-actions">
-              <Button
-                onClick={handleTakeoff}
-                disabled={anyPending || offboardActive}
-                title={manualLockTitle}
-              >
-                Takeoff
-              </Button>
-            </div>
-            {actionError ? (
-              <p className="dashboard-error" role="alert">
-                {actionError}
-              </p>
-            ) : null}
-            <TeleopPad />
-            <div className="dashboard-vehicle-status">
-              <span className="dashboard-status-chip">
-                <span className={`dashboard-status-dot ${latest?.armed ? "is-armed" : ""}`} />
-                {latest ? (latest.armed ? "Armed" : "Disarmed") : "No telemetry"}
-              </span>
-              <span className="dashboard-status-chip">Mode: {latest?.mode ?? "—"}</span>
-              {offboardActive ? (
-                <span className="dashboard-status-chip dashboard-warn">
-                  offboard node in control - manual controls locked
+            {/* flight: everything that arms, lifts, and sets the vehicle down.
+                takeoff and land share one slot instead of two buttons that are
+                never both valid at once - see the airborne derivation above. */}
+            <section className="control-group" aria-labelledby="control-flight-heading">
+              <h3 id="control-flight-heading" className="control-group-heading">
+                Flight
+              </h3>
+              <div className="dashboard-actions">
+                <span title={armToggleTitle}>
+                  <Button
+                    className={armed ? "dashboard-armed-button" : undefined}
+                    onClick={() => runAction(armed ? disarm.mutate : arm.mutate)}
+                    disabled={armToggleDisabled}
+                  >
+                    {armed ? "Disarm" : "Arm"}
+                  </Button>
                 </span>
+              </div>
+              <label className="dashboard-field" title={altitudeLockedTitle}>
+                Takeoff altitude (m)
+                <input
+                  type="number"
+                  min={1}
+                  max={50}
+                  value={altitude}
+                  onChange={(e) => setAltitude(e.target.value)}
+                  disabled={airborne}
+                />
+              </label>
+              <div className="dashboard-actions">
+                {airborne ? (
+                  <span title={landTitle}>
+                    <Button
+                      className="dashboard-land-button"
+                      onClick={() => runAction(land.mutate)}
+                      disabled={landDisabled}
+                    >
+                      Land
+                    </Button>
+                  </span>
+                ) : (
+                  <span title={takeoffTitle}>
+                    <Button onClick={handleTakeoff} disabled={takeoffDisabled}>
+                      Takeoff
+                    </Button>
+                  </span>
+                )}
+              </div>
+              {actionError ? (
+                <p className="dashboard-error" role="alert">
+                  {actionError}
+                </p>
               ) : null}
-              {lastCommand ? (
-                <span
-                  className={`dashboard-status-chip ${lastCommand.ok ? "dashboard-ok" : "dashboard-error"}`}
-                  role="status"
-                >
-                  {lastCommand.label}: {lastCommand.detail}
+              <div className="dashboard-vehicle-status">
+                <span className={`dashboard-status-chip${armed ? " is-armed" : ""}`}>
+                  <span className={`dashboard-status-dot${armed ? " is-armed" : ""}`} />
+                  {latest ? (armed ? "Armed" : "Disarmed") : "No telemetry"}
                 </span>
-              ) : null}
-            </div>
+                <span className="dashboard-status-chip">Mode: {latest?.mode ?? "—"}</span>
+                {offboardActive ? (
+                  <span className="dashboard-status-chip dashboard-warn">
+                    offboard node in control - manual controls locked
+                  </span>
+                ) : null}
+                {lastCommand ? (
+                  <span
+                    className={`dashboard-status-chip ${lastCommand.ok ? "dashboard-ok" : "dashboard-error"}`}
+                    role="status"
+                  >
+                    {lastCommand.label}: {lastCommand.detail}
+                  </span>
+                ) : null}
+              </div>
+            </section>
+
+            {/* teleop: the d-pad and gamepad hint, walled off from the flight
+                commands above by its own heading and a divider rather than
+                just trailing after them. */}
+            <section className="control-group" aria-labelledby="control-teleop-heading">
+              <h3 id="control-teleop-heading" className="control-group-heading">
+                Teleop
+              </h3>
+              <TeleopPad />
+            </section>
           </div>
         </DashboardPanel>
 
@@ -536,6 +706,18 @@ export function DashboardScreen() {
                           status={proc.state === "RUNNING" ? "running" : "stopped"}
                           label={proc.state}
                         />
+                        {proc.state === "RUNNING" || proc.state === "STARTING" ? null : (
+                          <button
+                            type="button"
+                            className="dashboard-process-start"
+                            aria-label={`Start ${proc.name}`}
+                            disabled={startProc.isPending}
+                            onClick={() => runAction(() => startProc.mutate(proc.name))}
+                            title={`supervisorctl start ${proc.name}`}
+                          >
+                            Start
+                          </button>
+                        )}
                       </li>
                     ))}
                   </ul>
@@ -562,7 +744,10 @@ export function DashboardScreen() {
           icon={<AppIcon name="sensors" />}
         >
           <div className="panel-pad">
-            <LifecycleNodeCards />
+            <LifecycleNodeCards
+              airborne={airborne}
+              processes={simStatus.data?.processes ?? []}
+            />
           </div>
         </DashboardPanel>
 
@@ -573,9 +758,11 @@ export function DashboardScreen() {
           headerAction={<span className="viewport-stats">:6081</span>}
         >
           <div className="viewport-body">
+            {/* the hint renders whatever the stream is doing, so it asks
+                rather than declaring the stream dead */}
             <SimViewport
               variant="qgc"
-              hint="stream offline — is the qgc container up? (docker compose up -d qgc)"
+              hint="frame stays blank? the qgc container may be down — docker compose up -d qgc"
             />
           </div>
         </DashboardPanel>

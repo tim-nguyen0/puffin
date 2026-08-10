@@ -383,6 +383,45 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/sim/vehicle": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["VehicleReplaceRequest"];
+                };
+            };
+            responses: {
+                /** @description Replace sequence run; detail narrates each step */
+                202: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Ack"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/sim/vehicle/pose": {
         parameters: {
             query?: never;
@@ -451,6 +490,43 @@ export interface paths {
         };
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/procs/{name}/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    name: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Ack"];
+                    };
+                };
+            };
+        };
         delete?: never;
         options?: never;
         head?: never;
@@ -963,7 +1039,11 @@ export interface components {
         SimStatus: {
             running: boolean;
             world: string;
+            vehicle?: string;
             processes: components["schemas"]["ProcessInfo"][];
+        };
+        VehicleReplaceRequest: {
+            model: string;
         };
         TakeoffRequest: {
             altitude_m: number;
@@ -1003,6 +1083,7 @@ export interface components {
             t_us: number;
             armed: boolean;
             mode: string;
+            landed: boolean;
             attitude_q: number[];
             ned: {
                 x: number;

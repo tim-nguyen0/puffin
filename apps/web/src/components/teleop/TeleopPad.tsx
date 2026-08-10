@@ -9,13 +9,14 @@ import "./teleop-pad.css";
 
 const STREAM_INTERVAL_MS = 100;
 
-const PAD: { direction: TeleopDirection; label: string; area: string }[] = [
-  { direction: "forward", label: "↑", area: "forward" },
-  { direction: "left", label: "←", area: "left" },
-  { direction: "back", label: "↓", area: "back" },
-  { direction: "right", label: "→", area: "right" },
-  { direction: "up", label: "Up", area: "up" },
-  { direction: "down", label: "Down", area: "down" },
+// arrows read as up/down on screen but fly north/east - the hint says which
+const PAD: { direction: TeleopDirection; label: string; area: string; hint: string }[] = [
+  { direction: "forward", label: "↑", area: "forward", hint: "forward (north)" },
+  { direction: "left", label: "←", area: "left", hint: "left (west)" },
+  { direction: "back", label: "↓", area: "back", hint: "back (south)" },
+  { direction: "right", label: "→", area: "right", hint: "right (east)" },
+  { direction: "up", label: "Up", area: "up", hint: "climb" },
+  { direction: "down", label: "Down", area: "down", hint: "descend" },
 ];
 
 export function TeleopPad() {
@@ -102,12 +103,13 @@ export function TeleopPad() {
   return (
     <div className="teleop-pad">
       <div className="teleop-grid">
-        {PAD.map(({ direction, label, area }) => (
+        {PAD.map(({ direction, label, area, hint }) => (
           <button
             key={direction}
             type="button"
             className={`teleop-button${active === direction ? " teleop-button-held" : ""}`}
             style={{ gridArea: area }}
+            title={`hold to fly ${hint}`}
             onPointerDown={() => press(direction)}
             onPointerUp={() => release(direction)}
             onPointerLeave={() => release(direction)}

@@ -27,10 +27,10 @@ second. For each new or changed spec it:
 2. Runs a live `colcon build --symlink-install --packages-select {name}`
    in the workspace.
 3. Drops a `[program:{name}]` block into supervisord's config
-   directory and tells it to `reread` and `update`. If a node with
-   that name was already running (a re-forge), it's deactivated first
-   — so PX4 gets a clean loiter instead of a dropped setpoint stream —
-   then restarted.
+   directory and tells it to `reread` and `update`. On a re-forge —
+   a name that already has a block — the old node is deactivated
+   first, so PX4 gets a clean loiter instead of a dropped setpoint
+   stream, then stopped and started on the new build.
 
 The forged node is deliberately thin: `node.py` imports
 `mission_node.run_executor` and hands it the embedded plan, so a
@@ -82,3 +82,32 @@ once the build lands, with the same arm → run → stop controls
 described in [flying missions](/guide/missions#flying-it). Stopping it
 deactivates the same way, too — PX4 loiters, nothing falls out of the
 sky.
+
+## One-shot lifetime
+
+Where a plan primed into `mission_host` holds its last target
+indefinitely, a forged node is a **one-shot**. It owns its process, so
+it can end it. When the last step completes it:
+
+1. Keeps streaming setpoints for a 5 s grace, so PX4 settles onto the
+   final target while it's still being fed.
+2. Hands PX4 back to `AUTO.LOITER` via `DO_SET_MODE` — the same
+   discipline as a deactivate, so the stream is never dropped
+   unguarded.
+3. Publishes a final `{"state": "done", "detail": "mission complete;
+   node exiting"}` and exits 0.
+
+Aborting mid-flight takes the same exit: loiter, publish `aborted`,
+end the process.
+
+The program block is written with `autorestart = unexpected` and
+`exitcodes = 0`, so supervisord reads that clean exit as *finished*
+rather than *crashed*. A flown node parks at `EXITED` in `supervisorctl
+status` instead of respawning into the same flight forever — and
+
+```
+supervisorctl start <name>
+```
+
+replays the mission on demand. A genuine crash is still an unexpected
+exit, so it's still restarted.
