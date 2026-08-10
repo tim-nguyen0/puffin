@@ -24,6 +24,27 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/* \
     && rm -f /etc/nginx/sites-enabled/default
 
+# qgroundcontrol: railway is amd64, so the appimage runs natively here (no
+# sidecar needed - one container anyway). same unsquashfs carve as
+# services/qgc: the appimage's static runtime is never executed. runs as
+# the ubuntu user via supervisord - qgc refuses root.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      binutils squashfs-tools \
+      libxcb-cursor0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 \
+      libxcb-randr0 libxcb-render-util0 libxcb-shape0 libxcb-xinerama0 \
+      libxcb-xkb1 libxkbcommon-x11-0 libpulse0 libsdl2-2.0-0 libspeechd2 \
+      libgstreamer1.0-0 libgstreamer-plugins-base1.0-0 \
+    && curl -fsSL -o /tmp/qgc.AppImage \
+      https://github.com/mavlink/qgroundcontrol/releases/download/v5.1.0/QGroundControl-x86_64.AppImage \
+    && offset=$(readelf -h /tmp/qgc.AppImage | awk \
+        '/Start of section headers/{o=$5} /Size of section headers/{s=$5} \
+         /Number of section headers/{n=$5} END{print o+s*n}') \
+    && mkdir -p /opt/qgc \
+    && unsquashfs -o "$offset" -d /opt/qgc/squashfs-root /tmp/qgc.AppImage \
+    && rm /tmp/qgc.AppImage \
+    && rm -rf /var/lib/apt/lists/* \
+    && id ubuntu >/dev/null 2>&1 || useradd -m ubuntu
+
 COPY services/api/pyproject.toml /app/pyproject.toml
 COPY services/api/puffin_api/ /app/puffin_api/
 # ignore-installed: apt-managed python packages (typing_extensions) have
