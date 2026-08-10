@@ -1046,6 +1046,7 @@ export interface components {
             t_us: number;
             armed: boolean;
             mode: string;
+            landed: boolean;
             attitude_q: number[];
             ned: {
                 x: number;

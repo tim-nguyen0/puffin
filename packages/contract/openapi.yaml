@@ -644,7 +644,7 @@ components:
     TelemetrySample:
       # ws frame. t_us = px4 clock in microseconds, ned z is negative up
       type: object
-      required: [t_us, armed, mode, ned, battery_v, attitude_q]
+      required: [t_us, armed, mode, landed, ned, battery_v, attitude_q]
       properties:
         t_us:
           type: integer
@@ -652,6 +652,12 @@ components:
           type: boolean
         mode:
           type: string
+        # px4's landing detector. the honest "is it on the ground" signal —
+        # ned z drifts with the ekf origin (metres, across a few flights), so
+        # it can never answer this. true until a sample arrives: a vehicle we
+        # know nothing about is parked, not flying.
+        landed:
+          type: boolean
         # px4 vehicle attitude quaternion [w, x, y, z], body FRD -> NED;
         # identity until the first attitude sample arrives
         attitude_q:

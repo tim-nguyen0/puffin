@@ -23,18 +23,16 @@ import { api } from "../../lib/api";
 import { climbRate, nedToLatLon } from "../../lib/geo";
 import { useSettingsStore } from "../../lib/settingsStore";
 import { connectTelemetry, disconnectTelemetry, useTelemetryStore } from "../../lib/telemetryStore";
+import { isAirborne } from "./flightState";
 import { describeNode, healthSummary, isForgeCandidate } from "./nodeCards";
 import "./dashboard.css";
 
 type ProcessInfo = components["schemas"]["ProcessInfo"];
 
 const M_TO_FT = 3.28084;
-// below this the vehicle reads as "on the ground" even with a little ned
-// noise; above it, takeoff swaps for land
-const AIRBORNE_ALTITUDE_M = 0.5;
-// the gap between a takeoff ack and altitude actually crossing the airborne
-// threshold - the vehicle is committed to leaving the ground, disarm is not
-// a safe undo. a rejected/failed climb still has to let go eventually.
+// the gap between a takeoff ack and the land detector letting go - the
+// vehicle is committed to leaving the ground, disarm is not a safe undo. a
+// rejected/failed climb still has to let go eventually.
 const CLIMB_TIMEOUT_MS = 15_000;
 
 const NODE_ACTION_LABELS: Record<ServiceNodeAction, string> = {
@@ -367,14 +365,13 @@ export function DashboardScreen() {
     ? "offboard node in control - deactivate it on the ROS Services screen"
     : undefined;
 
-  // airborne is derived, not tracked: a live sample with altitude (ned z is
-  // down, so up is negated) above the on-ground noise floor. that one signal
-  // swaps the takeoff/land button and locks the altitude field.
+  // airborne is derived, not tracked: one signal that swaps the takeoff/land
+  // button and locks the altitude field. see flightState for why it reads
+  // px4's land detector instead of an altitude threshold.
   const armed = latest?.armed ?? false;
-  const altitudeM = latest ? -latest.ned.z : null;
-  const airborne = live && altitudeM !== null && altitudeM > AIRBORNE_ALTITUDE_M;
+  const airborne = isAirborne(live, latest);
 
-  // climbing ends the honest way - altitude actually crosses the threshold -
+  // climbing ends the honest way - the detector letting go of the ground -
   // or the dishonest-but-necessary way, a timeout, so a takeoff that never
   // left the ground (rejected mode change, PX4 refusal) doesn't strand the
   // toggle disabled forever.
