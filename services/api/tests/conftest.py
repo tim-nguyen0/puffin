@@ -56,6 +56,7 @@ class FakeRos:
     def __init__(self) -> None:
         self.commands: list[tuple[int, float, float]] = []
         self.takeoffs: list[float] = []
+        self.lands = 0
         self.transitions: list[tuple[str, str]] = []
         self.lifecycle = {"offboard_demo": "inactive"}
         self.telemetry: dict | None = None
@@ -72,6 +73,12 @@ class FakeRos:
     def nav_takeoff(self, altitude_m: float) -> AdapterResult:
         self.takeoffs.append(altitude_m)
         return AdapterResult(ok=True, detail="vehicle_command 22 published")
+
+    def nav_land(self) -> AdapterResult:
+        # the release-then-land sequence lives in the real adapter; see
+        # test_ros_adapter
+        self.lands += 1
+        return AdapterResult(ok=True, detail="vehicle_command 21 published")
 
     def list_services(self) -> AdapterResult:
         return AdapterResult(

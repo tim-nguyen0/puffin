@@ -36,6 +36,13 @@ ACK_TIMEOUT_S = 1.5
 LIFECYCLE_CALL_TIMEOUT_S = 3.0
 LIFECYCLE_SERVICE_WAIT_S = 1.0
 LIFECYCLE_STATE_LABELS = {"unconfigured", "inactive", "active", "finalized"}
+LIFECYCLE_CHANGE_STATE_TYPE = "lifecycle_msgs/srv/ChangeState"
+
+# how long to let px4 apply a deactivated node's AUTO.LOITER handoff before
+# landing on top of it. the two commands come from different publishers, so
+# nothing orders them but the wait.
+MODE_HANDOFF_TIMEOUT_S = 2.0
+MODE_HANDOFF_POLL_S = 0.05
 
 # a /fmu/out sample older than this is not telemetry, it is a memory: px4
 # publishes vehicle_status at ~2 Hz, so nothing live is ever this old. px4
@@ -297,6 +304,60 @@ class RosAdapter:
             return AdapterResult(ok=False, detail=f"{node_name}: {transition} rejected")
         return AdapterResult(ok=True, detail=f"{node_name}: {transition} accepted")
 
+    def lifecycle_node_names(self) -> AdapterResult:
+        # a lifecycle node reveals itself through its change_state service -
+        # same derivation the ui does, so both read the same roster
+        services = self.list_services()
+        if not services.ok:
+            return services
+        suffix = "/change_state"
+        return AdapterResult(
+            ok=True,
+            data=sorted(
+                service["name"][: -len(suffix)].lstrip("/")
+                for service in services.data
+                if service["type"] == LIFECYCLE_CHANGE_STATE_TYPE
+                and service["name"].endswith(suffix)
+            ),
+        )
+
+    def release_setpoint_streams(self) -> AdapterResult:
+        """Deactivate every active lifecycle node; data is the ones released.
+
+        Every lifecycle node in this stack flies by streaming setpoints, so an
+        active one owns the vehicle. Deactivating is how ownership comes back:
+        the node hands px4 to AUTO.LOITER itself, before its stream stops.
+        """
+        names = self.lifecycle_node_names()
+        if not names.ok:
+            return names
+        released: list[str] = []
+        refused: list[str] = []
+        for name in names.data:
+            state = self.lifecycle_state(name)
+            if not state.ok or state.data != "active":
+                continue
+            if self.lifecycle_transition(name, "deactivate").ok:
+                released.append(name)
+            else:
+                refused.append(name)
+        if refused:
+            return AdapterResult(
+                ok=False, detail=f"still streaming setpoints: {', '.join(refused)}", data=released
+            )
+        return AdapterResult(ok=True, data=released)
+
+    def _await_mode_change(
+        self, from_mode: str, timeout_s: float = MODE_HANDOFF_TIMEOUT_S
+    ) -> None:
+        # best effort: no telemetry is not a reason to refuse to land
+        deadline = time.monotonic() + timeout_s
+        while time.monotonic() < deadline:
+            telemetry = self.latest_telemetry()
+            if not telemetry.ok or telemetry.data["mode"] != from_mode:
+                return
+            time.sleep(MODE_HANDOFF_POLL_S)
+
     # -- vehicle commands ---------------------------------------------------
 
     def _ensure_cmd_pub(self) -> Any:
@@ -396,6 +457,27 @@ class RosAdapter:
         nan = float("nan")
         return self.send_vehicle_command(
             VEHICLE_CMD_NAV_TAKEOFF, param4=nan, param5=nan, param6=nan, param7=amsl
+        )
+
+    def nav_land(self) -> AdapterResult:
+        # landing has to end the flight, not just lower the vehicle. an active
+        # node keeps streaming setpoints all the way down, and px4 takes
+        # OFFBOARD back the instant the touchdown disarm lands - leaving a
+        # grounded vehicle in offboard with a stale target, so the next arm is
+        # an uncommanded takeoff. release the stream first, then land.
+        #
+        # NAV_LAND itself needs no lat/lon: px4 reads it as "land at current
+        # position" and ignores every param (unlike NAV_TAKEOFF, see above).
+        released = self.release_setpoint_streams()
+        if not released.ok:
+            return AdapterResult(ok=False, detail=f"not landing: {released.detail}")
+        if released.data:
+            self._await_mode_change(from_mode="offboard")
+        result = self.send_vehicle_command(VEHICLE_CMD_NAV_LAND)
+        if not released.data:
+            return result
+        return AdapterResult(
+            ok=result.ok, detail=f"{result.detail}; released {', '.join(released.data)}"
         )
 
     def publish_teleop(

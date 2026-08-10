@@ -2,11 +2,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends
 
-from ..adapters.ros_node import (
-    VEHICLE_CMD_ARM_DISARM,
-    VEHICLE_CMD_NAV_LAND,
-    RosAdapter,
-)
+from ..adapters.ros_node import VEHICLE_CMD_ARM_DISARM, RosAdapter
 from ..deps import get_ros
 from ..models import Ack, TakeoffRequest
 
@@ -36,5 +32,7 @@ def takeoff(body: TakeoffRequest, ros: Ros) -> Ack:
 
 @router.post("/vehicle/land")
 def land(ros: Ros) -> Ack:
-    result = ros.send_vehicle_command(VEHICLE_CMD_NAV_LAND)
+    # the adapter releases whatever node is streaming setpoints before it
+    # lands - a landing that leaves the streamer in charge is not a landing
+    result = ros.nav_land()
     return Ack(ok=result.ok, detail=result.detail)
