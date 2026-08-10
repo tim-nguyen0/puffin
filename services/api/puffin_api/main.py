@@ -10,6 +10,7 @@ from .adapters.gz import GzAdapter
 from .adapters.ros_node import RosAdapter
 from .adapters.supervisor import SupervisorAdapter
 from .adapters.terminal import PtySession
+from .adapters.vehicle_env import VehicleEnvAdapter
 from .db import default_db_path, init_db
 from .domains import (
     auth,
@@ -39,6 +40,7 @@ def create_app(
     compose: ComposeAdapter | None = None,
     gz: GzAdapter | None = None,
     forge: ForgeAdapter | None = None,
+    vehicle_env: VehicleEnvAdapter | None = None,
     terminal_factory: type[PtySession] | None = None,
     db_path: str | None = None,
 ) -> FastAPI:
@@ -48,6 +50,7 @@ def create_app(
     app.state.compose = compose or ComposeAdapter()
     app.state.gz = gz or GzAdapter()
     app.state.forge = forge or ForgeAdapter()
+    app.state.vehicle_env = vehicle_env or VehicleEnvAdapter()
     app.state.terminal_factory = terminal_factory or PtySession
     app.state.db_path = db_path or default_db_path()
     init_db(app.state.db_path)

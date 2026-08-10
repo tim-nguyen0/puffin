@@ -15,9 +15,17 @@ from . import AdapterResult
 REQUEST_TIMEOUT_MS = 2000
 
 
-def vehicle_model_name() -> str:
+def entity_name(model: str) -> str:
     # PX4's standalone gz bridge spawns the airframe as <model>_<instance>.
-    return os.environ.get("PUFFIN_VEHICLE_MODEL", "x500_0")
+    return f"{model}_0"
+
+
+def vehicle_model_name() -> str:
+    from .vehicle_env import VehicleEnvAdapter
+
+    # follows whatever /sim/vehicle last selected, so this stays right after a
+    # replace instead of pointing at the airframe the image booted with
+    return os.environ.get("PUFFIN_VEHICLE_MODEL", entity_name(VehicleEnvAdapter().current_model()))
 
 
 class GzAdapter:
@@ -58,6 +66,21 @@ class GzAdapter:
         if not response.data:
             return AdapterResult(ok=False, detail="world reset rejected by gz")
         return AdapterResult(ok=True, detail=f"world {self._world} reset")
+
+    def remove_entity(self, name: str) -> AdapterResult:
+        try:
+            from gz.msgs10.boolean_pb2 import Boolean
+            from gz.msgs10.entity_pb2 import Entity
+
+            request = Entity()
+            request.name = name
+            request.type = Entity.MODEL
+            response = self._request(f"/world/{self._world}/remove", request, Entity, Boolean)
+        except Exception as exc:  # noqa: BLE001 - clean {ok, detail} at the boundary
+            return AdapterResult(ok=False, detail=f"remove {name} failed: {exc}")
+        if not response.data:
+            return AdapterResult(ok=False, detail=f"gz found no entity named {name}")
+        return AdapterResult(ok=True, detail=f"{name} removed from world {self._world}")
 
     def set_vehicle_pose(
         self, x: float, y: float, z: float = 0.3, yaw_deg: float = 0.0
