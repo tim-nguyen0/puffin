@@ -131,6 +131,25 @@ paths:
               schema:
                 $ref: "#/components/schemas/Ack"
 
+  # single-vehicle sim: selecting a model REPLACES the flying one. the api
+  # writes the airframe env px4 boots with, restarts px4 and drops the old
+  # gz entity - seconds of work, so the ack is fire-and-report
+  /sim/vehicle:
+    post:
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VehicleReplaceRequest"
+      responses:
+        "202":
+          description: Replace sequence run; detail narrates each step
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Ack"
+
   /sim/vehicle/pose:
     post:
       requestBody:
@@ -516,10 +535,23 @@ components:
           type: boolean
         world:
           type: string
+        # gz model px4 is booted with; absent only from an api that predates
+        # /sim/vehicle. defaults to the image's x500
+        vehicle:
+          type: string
         processes:
           type: array
           items:
             $ref: "#/components/schemas/ProcessInfo"
+
+    VehicleReplaceRequest:
+      type: object
+      required: [model]
+      properties:
+        # gz model name. the api holds the model -> SYS_AUTOSTART map for the
+        # airframes baked into the image and 422s anything else
+        model:
+          type: string
 
     TakeoffRequest:
       type: object

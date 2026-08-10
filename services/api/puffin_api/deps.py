@@ -11,6 +11,7 @@ from .adapters.forge import ForgeAdapter
 from .adapters.gz import GzAdapter
 from .adapters.ros_node import RosAdapter
 from .adapters.supervisor import SupervisorAdapter
+from .adapters.vehicle_env import VehicleEnvAdapter
 from .db import connect_db
 from .models import User
 
@@ -35,6 +36,10 @@ def get_compose(request: Request) -> ComposeAdapter:
 
 def get_forge(request: Request) -> ForgeAdapter:
     return request.app.state.forge
+
+
+def get_vehicle_env(request: Request) -> VehicleEnvAdapter:
+    return request.app.state.vehicle_env
 
 
 def get_db(request: Request) -> Iterator[sqlite3.Connection]:
