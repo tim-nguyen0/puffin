@@ -29,6 +29,9 @@ import "./dashboard.css";
 type ProcessInfo = components["schemas"]["ProcessInfo"];
 
 const M_TO_FT = 3.28084;
+// below this the vehicle reads as "on the ground" even with a little ned
+// noise; above it, takeoff swaps for land
+const AIRBORNE_ALTITUDE_M = 0.5;
 
 const NODE_ACTION_LABELS: Record<ServiceNodeAction, string> = {
   arm: "Arm",
@@ -352,6 +355,27 @@ export function DashboardScreen() {
     ? "offboard node in control - deactivate it on the ROS Services screen"
     : undefined;
 
+  // airborne is derived, not tracked: a live sample with altitude (ned z is
+  // down, so up is negated) above the on-ground noise floor. that one signal
+  // swaps the takeoff/land button and locks the altitude field.
+  const armed = latest?.armed ?? false;
+  const altitudeM = latest ? -latest.ned.z : null;
+  const airborne = live && altitudeM !== null && altitudeM > AIRBORNE_ALTITUDE_M;
+
+  const takeoffTitle = !live
+    ? "no telemetry - waiting for a live sample"
+    : offboardActive
+      ? manualLockTitle
+      : !armed
+        ? "arm the vehicle before takeoff"
+        : undefined;
+  const takeoffDisabled = anyPending || offboardActive || !armed;
+  // land is the escape hatch even under offboard, so it only waits on a
+  // command already in flight
+  const landTitle = offboardActive ? "overrides offboard and lands" : undefined;
+  const landDisabled = anyPending;
+  const altitudeLockedTitle = airborne ? "vehicle is airborne - land to change altitude" : undefined;
+
   return (
     <div className="dashboard-screen">
       <div className="dashboard-grid">
@@ -431,74 +455,91 @@ export function DashboardScreen() {
           icon={<AppIcon name="pipeline" />}
         >
           <div className="panel-pad">
-            <div className="dashboard-actions">
-              <Button
-                onClick={() => runAction(arm.mutate)}
-                disabled={anyPending || offboardActive}
-                title={manualLockTitle}
-              >
-                Arm
-              </Button>
-              <Button
-                onClick={() => runAction(disarm.mutate)}
-                disabled={anyPending || offboardActive}
-                title={manualLockTitle}
-              >
-                Disarm
-              </Button>
-              <Button
-                onClick={() => runAction(land.mutate)}
-                disabled={anyPending}
-                title={offboardActive ? "overrides offboard and lands" : undefined}
-              >
-                Land
-              </Button>
-            </div>
-            <label className="dashboard-field">
-              Takeoff altitude (m)
-              <input
-                type="number"
-                min={1}
-                max={50}
-                value={altitude}
-                onChange={(e) => setAltitude(e.target.value)}
-              />
-            </label>
-            <div className="dashboard-actions">
-              <Button
-                onClick={handleTakeoff}
-                disabled={anyPending || offboardActive}
-                title={manualLockTitle}
-              >
-                Takeoff
-              </Button>
-            </div>
-            {actionError ? (
-              <p className="dashboard-error" role="alert">
-                {actionError}
-              </p>
-            ) : null}
-            <TeleopPad />
-            <div className="dashboard-vehicle-status">
-              <span className="dashboard-status-chip">
-                <span className={`dashboard-status-dot ${latest?.armed ? "is-armed" : ""}`} />
-                {latest ? (latest.armed ? "Armed" : "Disarmed") : "No telemetry"}
-              </span>
-              <span className="dashboard-status-chip">Mode: {latest?.mode ?? "—"}</span>
-              {offboardActive ? (
-                <span className="dashboard-status-chip dashboard-warn">
-                  offboard node in control - manual controls locked
+            {/* flight: everything that arms, lifts, and sets the vehicle down.
+                takeoff and land share one slot instead of two buttons that are
+                never both valid at once - see the airborne derivation above. */}
+            <section className="control-group" aria-labelledby="control-flight-heading">
+              <h3 id="control-flight-heading" className="control-group-heading">
+                Flight
+              </h3>
+              <div className="dashboard-actions">
+                <span title={manualLockTitle}>
+                  <Button onClick={() => runAction(arm.mutate)} disabled={anyPending || offboardActive}>
+                    Arm
+                  </Button>
                 </span>
-              ) : null}
-              {lastCommand ? (
-                <span
-                  className={`dashboard-status-chip ${lastCommand.ok ? "dashboard-ok" : "dashboard-error"}`}
-                  role="status"
-                >
-                  {lastCommand.label}: {lastCommand.detail}
+                <span title={manualLockTitle}>
+                  <Button onClick={() => runAction(disarm.mutate)} disabled={anyPending || offboardActive}>
+                    Disarm
+                  </Button>
                 </span>
+              </div>
+              <label className="dashboard-field" title={altitudeLockedTitle}>
+                Takeoff altitude (m)
+                <input
+                  type="number"
+                  min={1}
+                  max={50}
+                  value={altitude}
+                  onChange={(e) => setAltitude(e.target.value)}
+                  disabled={airborne}
+                />
+              </label>
+              <div className="dashboard-actions">
+                {airborne ? (
+                  <span title={landTitle}>
+                    <Button
+                      className="dashboard-land-button"
+                      onClick={() => runAction(land.mutate)}
+                      disabled={landDisabled}
+                    >
+                      Land
+                    </Button>
+                  </span>
+                ) : (
+                  <span title={takeoffTitle}>
+                    <Button onClick={handleTakeoff} disabled={takeoffDisabled}>
+                      Takeoff
+                    </Button>
+                  </span>
+                )}
+              </div>
+              {actionError ? (
+                <p className="dashboard-error" role="alert">
+                  {actionError}
+                </p>
               ) : null}
-            </div>
+              <div className="dashboard-vehicle-status">
+                <span className="dashboard-status-chip">
+                  <span className={`dashboard-status-dot ${latest?.armed ? "is-armed" : ""}`} />
+                  {latest ? (latest.armed ? "Armed" : "Disarmed") : "No telemetry"}
+                </span>
+                <span className="dashboard-status-chip">Mode: {latest?.mode ?? "—"}</span>
+                {offboardActive ? (
+                  <span className="dashboard-status-chip dashboard-warn">
+                    offboard node in control - manual controls locked
+                  </span>
+                ) : null}
+                {lastCommand ? (
+                  <span
+                    className={`dashboard-status-chip ${lastCommand.ok ? "dashboard-ok" : "dashboard-error"}`}
+                    role="status"
+                  >
+                    {lastCommand.label}: {lastCommand.detail}
+                  </span>
+                ) : null}
+              </div>
+            </section>
+
+            {/* teleop: the d-pad and gamepad hint, walled off from the flight
+                commands above by its own heading and a divider rather than
+                just trailing after them. */}
+            <section className="control-group" aria-labelledby="control-teleop-heading">
+              <h3 id="control-teleop-heading" className="control-group-heading">
+                Teleop
+              </h3>
+              <TeleopPad />
+            </section>
           </div>
         </DashboardPanel>
 
