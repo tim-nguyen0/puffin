@@ -1,24 +1,21 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
-import {
-  actionsForState,
-  lifecycleNodeNames,
-  toneForState,
-  transitionForAction,
-  type LifecycleStateName,
-  type ServiceNodeAction,
-} from "../../components/lifecycle";
+import type { LifecycleStateName } from "../../components/lifecycle";
 import { MissionScene } from "../../components/mission-scene";
 import { StatusTag } from "../../components/status-tag";
 import { api } from "../../lib/api";
 import { useTelemetryStore } from "../../lib/telemetryStore";
 import {
+  EXECUTOR_NAME,
+  flightStatus,
   flightTimeS,
   formatDuration,
   maxAltitudeM,
+  plansMatch,
   preflightChecks,
   rowTone,
   totalDistance,
+  type FlightPlan,
   type MissionStatus,
   type Waypoint,
 } from "./missionMath";
@@ -26,12 +23,6 @@ import "./mission-planner.css";
 
 // contract: MissionRequest.name, ^[a-z][a-z0-9_]{0,30}$
 const NAME_PATTERN = /^[a-z][a-z0-9_]{0,30}$/;
-
-const CONTROL_LABELS: Record<ServiceNodeAction, string> = {
-  arm: "Arm",
-  run: "Run",
-  stop: "Stop",
-};
 
 // the demo square, so the screen opens with a flyable plan
 const DEFAULT_PLAN: Waypoint[] = [
@@ -47,16 +38,17 @@ export function MissionPlannerScreen() {
   const [rateHz, setRateHz] = useState(20);
   const [takeoffZ, setTakeoffZ] = useState(-3);
   const [returnToOrigin, setReturnToOrigin] = useState(true);
-  const [missionName, setMissionName] = useState("mission");
-  const [lastPrimed, setLastPrimed] = useState<string | null>(null);
-  const [forgeName, setForgeName] = useState<string | null>(null);
-  const [selected, setSelected] = useState<string | null>(null);
+  // the forge makes a separate, permanent node - its name has nothing to do
+  // with the mission_planner executor this screen flies
+  const [forgeInput, setForgeInput] = useState("mission");
+  const [forgedName, setForgedName] = useState<string | null>(null);
+  const [lastFlown, setLastFlown] = useState<FlightPlan | null>(null);
   const [showPreflight, setShowPreflight] = useState(false);
   const [announcement, setAnnouncement] = useState("");
 
   const { connected, latest } = useTelemetryStore();
   const telemetryLive = connected && latest !== null;
-  const nameValid = NAME_PATTERN.test(missionName);
+  const forgeNameValid = NAME_PATTERN.test(forgeInput);
 
   const status = useQuery({
     queryKey: ["mission-status"],
@@ -64,82 +56,94 @@ export function MissionPlannerScreen() {
     refetchInterval: 1000,
   });
 
-  const services = useQuery({
-    queryKey: ["ros-services"],
-    queryFn: async () => {
-      const { data, error } = await api.GET("/ros/services");
-      if (error) throw new Error("Failed to fetch services");
-      return data;
-    },
-    refetchInterval: 5000,
-  });
-
-  const nodes = lifecycleNodeNames(services.data ?? []);
-  // prefer an explicit pick, then the mission we most recently primed, then
-  // whatever the discovery list turns up first
-  const preferredNode = lastPrimed ? `/${lastPrimed}` : null;
-  const selectedNode =
-    selected && nodes.includes(selected)
-      ? selected
-      : preferredNode && nodes.includes(preferredNode)
-        ? preferredNode
-        : (nodes[0] ?? null);
-  const pathName = selectedNode ? selectedNode.replace(/^\//, "") : null;
-
   const nodeLifecycle = useQuery({
-    queryKey: ["ros-lifecycle", pathName],
+    queryKey: ["ros-lifecycle", EXECUTOR_NAME],
     queryFn: async () => {
       const { data, error } = await api.GET("/ros/lifecycle/{nodeName}", {
-        params: { path: { nodeName: pathName as string } },
+        params: { path: { nodeName: EXECUTOR_NAME } },
       });
       if (error) throw new Error("Failed to fetch lifecycle state");
       return data;
     },
-    enabled: pathName !== null,
     refetchInterval: 5000,
   });
   const nodeState = nodeLifecycle.data?.state as LifecycleStateName | undefined;
   const flying = nodeState === "active";
+  const { label: statusLabel, tone: statusTone } = flightStatus(nodeState);
 
   // the executor's own status only describes the plan/node it's actually
-  // holding - only trust it when it's talking about what's selected here
-  const statusMatchesSelection =
-    status.data?.node != null &&
-    (status.data.node === pathName || status.data.node === lastPrimed);
-  const activeStatus = statusMatchesSelection ? (status.data as MissionStatus) : undefined;
+  // holding - only trust it when it's talking about mission_planner
+  const activeStatus =
+    status.data?.node === EXECUTOR_NAME ? (status.data as MissionStatus) : undefined;
 
-  const prime = useMutation({
+  const currentPlan: FlightPlan = { waypoints, rateHz, takeoffZ, returnToOrigin };
+  // once mission_planner is flying, only a stop+fly applies further edits -
+  // this just flags that the editor has drifted from what's airborne
+  const editedSinceLaunch = flying && lastFlown !== null && !plansMatch(currentPlan, lastFlown);
+
+  // fly mission: latch the current plan onto mission_planner, arm, then
+  // activate it - one verb standing in for prime -> arm -> activate
+  const fly = useMutation({
     mutationFn: async () => {
-      const res = await api.POST("/mission", {
+      const plan = currentPlan;
+      const mission = await api.POST("/mission", {
         body: {
-          name: missionName,
-          waypoints,
-          rate_hz: rateHz,
-          takeoff_z: takeoffZ,
-          return_to_origin: returnToOrigin,
+          name: EXECUTOR_NAME,
+          waypoints: plan.waypoints,
+          rate_hz: plan.rateHz,
+          takeoff_z: plan.takeoffZ,
+          return_to_origin: plan.returnToOrigin,
         },
       });
-      if (res.error || !res.data?.ok) throw new Error(res.data?.detail ?? "prime failed");
-      return res.data;
+      if (mission.error || !mission.data?.ok) throw new Error(mission.data?.detail ?? "prime failed");
+
+      const arm = await api.POST("/vehicle/arm");
+      if (arm.error || !arm.data.ok) throw new Error(arm.data?.detail ?? "arm failed");
+
+      const activate = await api.POST("/ros/lifecycle/{nodeName}/transition", {
+        params: { path: { nodeName: EXECUTOR_NAME } },
+        body: { transition: "activate" },
+      });
+      if (activate.error || !activate.data.ok) {
+        throw new Error(activate.data?.detail ?? "activate failed");
+      }
+      return { detail: activate.data.detail, plan };
     },
-    onSuccess: (data) => {
-      setAnnouncement(data.detail);
-      setLastPrimed(missionName);
-      // let the freshly primed executor become the control panel's default
-      setSelected(null);
+    onSuccess: ({ detail, plan }) => {
+      setAnnouncement(detail || `${EXECUTOR_NAME} flying`);
+      setLastFlown(plan);
+      void queryClient.invalidateQueries({ queryKey: ["ros-lifecycle", EXECUTOR_NAME] });
       void queryClient.invalidateQueries({ queryKey: ["mission-status"] });
-      void queryClient.invalidateQueries({ queryKey: ["ros-services"] });
     },
-    onError: (err) => setAnnouncement(err instanceof Error ? err.message : "prime failed"),
+    onError: (err) => setAnnouncement(err instanceof Error ? err.message : "fly failed"),
   });
 
-  // same plan body as prime - the forge renders it into a standalone
-  // package + supervised program instead of latching it onto a live node
+  // stop: deactivate mission_planner - px4 holds position, it doesn't land
+  const stop = useMutation({
+    mutationFn: async () => {
+      const res = await api.POST("/ros/lifecycle/{nodeName}/transition", {
+        params: { path: { nodeName: EXECUTOR_NAME } },
+        body: { transition: "deactivate" },
+      });
+      if (res.error || !res.data.ok) throw new Error(res.data?.detail ?? "stop failed");
+      return res.data;
+    },
+    onSuccess: () => {
+      setAnnouncement("px4 holds in loiter");
+      void queryClient.invalidateQueries({ queryKey: ["ros-lifecycle", EXECUTOR_NAME] });
+      void queryClient.invalidateQueries({ queryKey: ["mission-status"] });
+    },
+    onError: (err) => setAnnouncement(err instanceof Error ? err.message : "stop failed"),
+  });
+
+  // the forge renders the same plan into a standalone package + supervised
+  // program instead of latching it onto mission_planner - a separate,
+  // permanent node the pilot names themselves
   const forge = useMutation({
     mutationFn: async () => {
       const res = await api.POST("/mission/forge", {
         body: {
-          name: missionName,
+          name: forgeInput,
           waypoints,
           rate_hz: rateHz,
           takeoff_z: takeoffZ,
@@ -151,22 +155,22 @@ export function MissionPlannerScreen() {
     },
     onSuccess: (data) => {
       setAnnouncement(data.detail);
-      setForgeName(missionName);
-      void queryClient.invalidateQueries({ queryKey: ["mission-forge", missionName] });
+      setForgedName(forgeInput);
+      void queryClient.invalidateQueries({ queryKey: ["mission-forge", forgeInput] });
     },
     onError: (err) => setAnnouncement(err instanceof Error ? err.message : "forge failed"),
   });
 
   const forgeStatus = useQuery({
-    queryKey: ["mission-forge", forgeName],
+    queryKey: ["mission-forge", forgedName],
     queryFn: async () => {
       const { data, error } = await api.GET("/mission/forge/{name}", {
-        params: { path: { name: forgeName as string } },
+        params: { path: { name: forgedName as string } },
       });
       if (error) throw new Error("failed to fetch forge status");
       return data;
     },
-    enabled: forgeName !== null,
+    enabled: forgedName !== null,
     // stop polling once the build has landed somewhere terminal
     refetchInterval: (query) => {
       const state = query.state.data?.state;
@@ -174,11 +178,11 @@ export function MissionPlannerScreen() {
     },
   });
   // state of the most recently forged name - its detail text names the node,
-  // so it stays legible even after the mission-name field is edited further
+  // so it stays legible even after the node-name field is edited further
   const forgeState = forgeStatus.data?.state;
   // true once the typed name has drifted from what was actually forged, so
   // editing the name always re-enables the button even mid-build
-  const forgeStale = forgeName !== null && forgeName !== missionName;
+  const forgeStale = forgedName !== null && forgedName !== forgeInput;
   // covers the gap between a successful POST and the first GET resolving,
   // so a fast double-click can't fire a second forge for the same name
   const forgeInFlight = forgeStatus.isFetching && forgeStatus.data === undefined;
@@ -193,39 +197,14 @@ export function MissionPlannerScreen() {
     }
   }, [forgeState, forgeStatus.data, queryClient]);
 
-  const control = useMutation({
-    mutationFn: async (action: ServiceNodeAction) => {
-      if (!selectedNode || !pathName) throw new Error("no node selected");
-      const transition = transitionForAction(action, nodeState);
-      if (!transition) throw new Error(`${action} not valid from ${nodeState ?? "unknown"}`);
-      if (action === "run") {
-        const arm = await api.POST("/vehicle/arm");
-        if (arm.error || !arm.data.ok) throw new Error(arm.data?.detail ?? "arm failed");
-      }
-      const res = await api.POST("/ros/lifecycle/{nodeName}/transition", {
-        params: { path: { nodeName: pathName } },
-        body: { transition },
-      });
-      if (res.error || !res.data.ok) throw new Error(res.data?.detail ?? `${action} failed`);
-      return { action, detail: res.data.detail };
-    },
-    onSuccess: ({ action, detail }) => {
-      setAnnouncement(action === "stop" ? "px4 holds in loiter" : (detail ?? `${action} accepted`));
-      void queryClient.invalidateQueries({ queryKey: ["ros-lifecycle", pathName] });
-      void queryClient.invalidateQueries({ queryKey: ["ros-services"] });
-      void queryClient.invalidateQueries({ queryKey: ["mission-status"] });
-    },
-    onError: (err) => setAnnouncement(err instanceof Error ? err.message : "action failed"),
-  });
-
   const update = (index: number, patch: Partial<Waypoint>) =>
     setWaypoints((wps) => wps.map((wp, i) => (i === index ? { ...wp, ...patch } : wp)));
 
   const distance = totalDistance(waypoints, takeoffZ, returnToOrigin);
   const time = flightTimeS(waypoints, takeoffZ, returnToOrigin);
   const checks = useMemo(
-    () => preflightChecks(waypoints, takeoffZ, telemetryLive, nodeState, selectedNode),
-    [waypoints, takeoffZ, telemetryLive, nodeState, selectedNode],
+    () => preflightChecks(waypoints, takeoffZ, telemetryLive, nodeState),
+    [waypoints, takeoffZ, telemetryLive, nodeState],
   );
 
   return (
@@ -235,15 +214,9 @@ export function MissionPlannerScreen() {
           <header className="mission-header">
             <div>
               <h1 id="mission-title">Mission Planner</h1>
-              <p>
-                ned waypoints streamed as offboard setpoints
-                {selectedNode ? ` by ${selectedNode}` : ""}
-              </p>
+              <p>ned waypoints streamed as offboard setpoints by {EXECUTOR_NAME}</p>
             </div>
-            <StatusTag
-              status={selectedNode ? toneForState(nodeState) : "stopped"}
-              label={selectedNode ? (nodeState ?? "…") : "no node selected"}
-            />
+            <StatusTag status={statusTone} label={statusLabel} />
           </header>
           <MissionScene
             waypoints={waypoints}
@@ -281,18 +254,9 @@ export function MissionPlannerScreen() {
           <div className="mission-step">
             <header>
               <span className="mission-step-number">1</span>
-              <strong>Prime Mission</strong>
+              <strong>Flight Settings</strong>
             </header>
             <div className="mission-field-row">
-              <label>
-                Mission name
-                <input
-                  type="text"
-                  value={missionName}
-                  aria-invalid={!nameValid}
-                  onChange={(e) => setMissionName(e.target.value)}
-                />
-              </label>
               <label>
                 Setpoint rate (Hz)
                 <input
@@ -313,11 +277,6 @@ export function MissionPlannerScreen() {
                 />
               </label>
             </div>
-            {!nameValid ? (
-              <p className="mission-name-error">
-                lowercase letters, digits, underscore only; must start with a letter (max 31 chars)
-              </p>
-            ) : null}
           </div>
 
           <ol className="mission-wp-list">
@@ -414,47 +373,26 @@ export function MissionPlannerScreen() {
             </ul>
           ) : null}
 
-          <section className="mission-control-panel" aria-labelledby="mission-control-title">
-            <header className="mission-control-header">
-              <h2 id="mission-control-title">Control Panel</h2>
-              {selectedNode ? (
-                <StatusTag status={toneForState(nodeState)} label={nodeState ?? "…"} />
-              ) : null}
-            </header>
-            <label className="mission-control-select-label">
-              Executor node
-              <select
-                className="mission-control-select"
-                value={selectedNode ?? ""}
-                disabled={nodes.length === 0}
-                onChange={(e) => setSelected(e.target.value || null)}
-              >
-                {nodes.length === 0 ? <option value="">no lifecycle nodes found</option> : null}
-                {nodes.map((name) => (
-                  <option key={name} value={name}>
-                    {name}
-                  </option>
-                ))}
-              </select>
+          <div className="mission-forge-name">
+            <label>
+              Node name
+              <input
+                type="text"
+                value={forgeInput}
+                aria-invalid={!forgeNameValid}
+                onChange={(e) => setForgeInput(e.target.value)}
+              />
             </label>
-            <div className="mission-control-actions">
-              {selectedNode ? (
-                actionsForState(nodeState).map((action) => (
-                  <button
-                    key={action}
-                    type="button"
-                    className={`mission-control-button mission-control-${action}`}
-                    disabled={control.isPending}
-                    onClick={() => control.mutate(action)}
-                  >
-                    {CONTROL_LABELS[action]}
-                  </button>
-                ))
-              ) : (
-                <p className="mission-control-empty">select a node to control it</p>
-              )}
-            </div>
-          </section>
+            {!forgeNameValid ? (
+              <p className="mission-name-error">
+                lowercase letters, digits, underscore only; must start with a letter (max 31 chars)
+              </p>
+            ) : null}
+          </div>
+
+          {editedSinceLaunch ? (
+            <p className="mission-edited-hint">edited since launch - stop and fly again to apply</p>
+          ) : null}
 
           <div className="mission-actions">
             <button
@@ -470,35 +408,35 @@ export function MissionPlannerScreen() {
             </button>
             <button
               type="button"
-              className="mission-prime"
-              onClick={() => prime.mutate()}
-              disabled={prime.isPending || waypoints.length === 0 || !nameValid}
-              title={
-                nodes.includes(`/${missionName}`)
-                  ? `rebuilds the /${missionName} executor with this plan`
-                  : `creates a new /${missionName} executor`
-              }
-            >
-              Prime Mission
-            </button>
-            <button
-              type="button"
               className="mission-forge"
               onClick={() => forge.mutate()}
-              disabled={forgeBusy || waypoints.length === 0 || !nameValid}
+              disabled={forgeBusy || waypoints.length === 0 || !forgeNameValid}
               title={
-                !nameValid
+                !forgeNameValid
                   ? "lowercase letters, digits, underscore only; must start with a letter (max 31 chars)"
                   : forgeBusy
-                    ? `/${missionName} forge is ${forgeState ?? "in progress"}`
-                    : `builds /${missionName} into a standalone package + supervised program`
+                    ? `/${forgeInput} forge is ${forgeState ?? "in progress"}`
+                    : `builds /${forgeInput} into a standalone package + supervised program`
               }
             >
               Create Node
             </button>
+            <button
+              type="button"
+              className={flying ? "mission-fly mission-fly-stop" : "mission-fly"}
+              onClick={() => (flying ? stop.mutate() : fly.mutate())}
+              disabled={flying ? stop.isPending : fly.isPending || waypoints.length === 0}
+              title={
+                flying
+                  ? `deactivates ${EXECUTOR_NAME}; px4 holds in loiter`
+                  : `latches this plan onto ${EXECUTOR_NAME}, arms, and activates it`
+              }
+            >
+              {flying ? "Stop" : "Fly mission"}
+            </button>
           </div>
 
-          {forgeName && forgeState ? (
+          {forgedName && forgeState ? (
             <p className={`mission-forge-status mission-forge-tone-${forgeState}`}>
               {forgeStatus.data?.detail}
             </p>

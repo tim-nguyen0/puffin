@@ -22,6 +22,9 @@ let mockMission: Schemas["MissionRequest"] | null = null;
 const mockMissionNodes = new Set<string>();
 const mockForge = new Map<string, Schemas["ForgeStatus"]["state"]>();
 
+// single-vehicle sim: the replace mock swaps this, /sim/status echoes it
+let mockVehicle = "x500";
+
 const processes: Schemas["ProcessInfo"][] = [
   { name: "gz-server", state: "RUNNING", uptime_s: 512 },
   { name: "gz-gui", state: "RUNNING", uptime_s: 510 },
@@ -143,12 +146,25 @@ export const handlers = [
     HttpResponse.json({
       running: true,
       world: "puffin",
+      vehicle: mockVehicle,
       processes,
     } satisfies Schemas["SimStatus"]),
   ),
   http.post("/api/sim/start", () => HttpResponse.json(ack)),
   http.post("/api/sim/stop", () => HttpResponse.json(ack)),
   http.post("/api/sim/reset", () => HttpResponse.json(ack)),
+  http.post("/api/sim/vehicle", async ({ request }) => {
+    const body = (await request.json()) as Schemas["VehicleReplaceRequest"];
+    const previous = mockVehicle;
+    mockVehicle = body.model;
+    return HttpResponse.json(
+      {
+        ok: true,
+        detail: `replaced ${previous} with ${body.model}; px4 respawning`,
+      } satisfies Schemas["Ack"],
+      { status: 202 },
+    );
+  }),
   http.post("/api/sim/vehicle/pose", () => HttpResponse.json(ack)),
   http.get("/api/procs", () => HttpResponse.json(processes)),
   http.post("/api/vehicle/arm", () => HttpResponse.json(ack)),

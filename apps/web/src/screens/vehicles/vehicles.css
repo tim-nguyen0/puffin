@@ -98,7 +98,7 @@
   border-color: var(--color-page-focus);
 }
 
-.vehicles-add {
+.vehicles-replace {
   box-sizing: border-box;
   height: var(--vehicle-control-height);
   padding-inline: var(--space-3);
@@ -112,10 +112,19 @@
 }
 
 /* disabled says why via title; visually parked, not hidden */
-.vehicles-add:disabled {
+.vehicles-replace:disabled {
   background: var(--color-status-stopped-soft);
   color: var(--color-status-stopped);
   cursor: not-allowed;
+}
+
+/* the swap takes seconds of real px4 restart - hold the row's height so the
+   grid below never jumps as the ack lands */
+.vehicles-announcement {
+  min-height: var(--space-3);
+  margin: calc(var(--space-3) * -1) 0 var(--space-3);
+  color: var(--color-page-muted);
+  font-size: var(--text-sm);
 }
 
 .vehicles-empty {

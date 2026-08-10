@@ -1,12 +1,15 @@
 import { describe, expect, it } from "vitest";
 import {
+  flightStatus,
   flightTimeS,
   formatDuration,
   maxAltitudeM,
   missionPath,
+  plansMatch,
   preflightChecks,
   rowTone,
   totalDistance,
+  type FlightPlan,
 } from "./missionMath";
 
 const square = [
@@ -66,25 +69,68 @@ describe("row tones from executor status", () => {
 
 describe("preflight", () => {
   it("flags underground z instead of letting the executor refuse later", () => {
-    const checks = preflightChecks(
-      [{ x: 1, y: 1, z: 2, hold_s: 0 }],
-      -3,
-      true,
-      "inactive",
-      "/mission",
-    );
+    const checks = preflightChecks([{ x: 1, y: 1, z: 2, hold_s: 0 }], -3, true, "inactive");
     expect(checks.find((c) => c.label === "altitudes")?.ok).toBe(false);
   });
 
-  it("passes a sane plan", () => {
-    const checks = preflightChecks(square, -3, true, "inactive", "/mission");
+  it("passes a sane plan once mission_planner is reachable", () => {
+    const checks = preflightChecks(square, -3, true, "inactive");
     expect(checks.every((c) => c.ok)).toBe(true);
   });
 
-  it("flags a missing node selection instead of a stale executor state", () => {
-    const checks = preflightChecks(square, -3, true, undefined, null);
+  it("treats a never-primed (unconfigured) executor as ok, same as inactive", () => {
+    const checks = preflightChecks(square, -3, true, "unconfigured");
+    expect(checks.find((c) => c.label === "executor")?.ok).toBe(true);
+  });
+
+  it("flags mission_planner by name when it can't be reached", () => {
+    const checks = preflightChecks(square, -3, true, undefined);
     const executor = checks.find((c) => c.label === "executor");
     expect(executor?.ok).toBe(false);
-    expect(executor?.detail).toBe("no node selected in the control panel");
+    expect(executor?.detail).toBe("mission_planner not reachable");
+  });
+});
+
+describe("flightStatus", () => {
+  it("reads active as flying, running tone", () => {
+    expect(flightStatus("active")).toEqual({ label: "flying", tone: "running" });
+  });
+
+  it("reads inactive and unconfigured both as ready, armed tone", () => {
+    expect(flightStatus("inactive")).toEqual({ label: "ready", tone: "armed" });
+    expect(flightStatus("unconfigured")).toEqual({ label: "ready", tone: "armed" });
+  });
+
+  it("reads unknown/finalized/undefined as offline, stopped tone", () => {
+    expect(flightStatus("unknown")).toEqual({ label: "offline", tone: "stopped" });
+    expect(flightStatus("finalized")).toEqual({ label: "offline", tone: "stopped" });
+    expect(flightStatus(undefined)).toEqual({ label: "offline", tone: "stopped" });
+  });
+});
+
+describe("plansMatch", () => {
+  const base: FlightPlan = { waypoints: square, rateHz: 20, takeoffZ: -3, returnToOrigin: true };
+
+  it("matches an identical plan by value, not by reference", () => {
+    const clone: FlightPlan = { ...base, waypoints: square.map((wp) => ({ ...wp })) };
+    expect(plansMatch(base, clone)).toBe(true);
+  });
+
+  it("flags a moved waypoint", () => {
+    const edited: FlightPlan = {
+      ...base,
+      waypoints: base.waypoints.map((wp, i) => (i === 0 ? { ...wp, x: wp.x + 1 } : wp)),
+    };
+    expect(plansMatch(base, edited)).toBe(false);
+  });
+
+  it("flags a changed setting even with the same waypoints", () => {
+    expect(plansMatch(base, { ...base, rateHz: 30 })).toBe(false);
+    expect(plansMatch(base, { ...base, takeoffZ: -5 })).toBe(false);
+    expect(plansMatch(base, { ...base, returnToOrigin: false })).toBe(false);
+  });
+
+  it("flags an added or removed waypoint", () => {
+    expect(plansMatch(base, { ...base, waypoints: [...base.waypoints, base.waypoints[0]] })).toBe(false);
   });
 });
