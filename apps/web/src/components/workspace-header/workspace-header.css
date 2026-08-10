@@ -41,6 +41,10 @@
   justify-self: center;
 }
 
+.workspace-command-controls > span {
+  display: inline-flex;
+}
+
 .workspace-top-status {
   justify-self: end;
   gap: var(--space-3);
@@ -82,13 +86,19 @@
   color: var(--color-danger);
 }
 
-.workspace-command-button:hover {
-  border-color: var(--color-page-focus);
+/* pause is permanently disabled and used to look exactly like stop */
+.workspace-command-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
 }
 
 .workspace-command-button:focus-visible {
   outline: var(--graph-control-focus-width) solid var(--color-page-focus);
   outline-offset: var(--graph-control-focus-offset);
+}
+
+.workspace-command-button:hover:not(:disabled) {
+  border-color: var(--color-page-focus);
 }
 
 @media (width <= 72rem) {

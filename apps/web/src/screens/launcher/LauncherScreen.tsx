@@ -41,6 +41,8 @@ export function LauncherScreen() {
             Email
             <input
               type="email"
+              autoComplete="username"
+              autoFocus
               value={email}
               onChange={(event) => setEmail(event.target.value)}
               required
@@ -50,6 +52,7 @@ export function LauncherScreen() {
             Password
             <input
               type="password"
+              autoComplete="current-password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
               required

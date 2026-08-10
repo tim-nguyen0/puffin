@@ -56,6 +56,10 @@
   gap: var(--space-2);
 }
 
+.vehicles-controls > span {
+  display: inline-flex;
+}
+
 .vehicles-search {
   display: flex;
   align-items: center;

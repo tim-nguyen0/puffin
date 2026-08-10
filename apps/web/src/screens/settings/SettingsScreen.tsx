@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { Button } from "../../components/button";
 import { api } from "../../lib/api";
 import { useAuthStore } from "../../lib/authStore";
@@ -33,7 +33,8 @@ export function SettingsScreen() {
     },
   });
 
-  async function handleSave() {
+  async function handleSave(event?: FormEvent) {
+    event?.preventDefault();
     const parsedLimit = Number(draftLimit);
     if (!Number.isFinite(parsedLimit) || parsedLimit < 10 || parsedLimit > 5000) {
       setError("Telemetry history length must be between 10 and 5000 samples.");
@@ -45,7 +46,12 @@ export function SettingsScreen() {
       setSaved(false);
       return;
     }
-    if (!token) return;
+    // saving without a token used to fail silently
+    if (!token) {
+      setError("Your session expired — log in again to save settings.");
+      setSaved(false);
+      return;
+    }
 
     setError(null);
     setSaved(false);
@@ -70,66 +76,77 @@ export function SettingsScreen() {
     <div className="settings-screen">
       <h1>Settings</h1>
 
-      <section className="settings-section">
-        <h2>Display</h2>
-        <label className="settings-field">
-          Units
-          <select
-            value={draftUnits}
-            onChange={(event) => {
-              setDraftUnits(event.target.value as Units);
-              setSaved(false);
-            }}
-          >
-            <option value="metric">Metric (m/s)</option>
-            <option value="imperial">Imperial (ft/s)</option>
-          </select>
-        </label>
-        <label className="settings-field">
-          Telemetry history length
-          <input
-            type="number"
-            value={draftLimit}
-            onChange={(event) => {
-              setDraftLimit(event.target.value);
-              setSaved(false);
-            }}
-          />
-        </label>
-      </section>
+      {/* one form: the fields, their messages and the button that saves them.
+          the read-only system card sits outside it */}
+      <form className="settings-form" onSubmit={handleSave}>
+        <section className="settings-section">
+          <h2>Display</h2>
+          <label className="settings-field">
+            Units
+            <select
+              value={draftUnits}
+              onChange={(event) => {
+                setDraftUnits(event.target.value as Units);
+                setSaved(false);
+              }}
+            >
+              <option value="metric">Metric (m, m/s)</option>
+              <option value="imperial">Imperial (ft, ft/s)</option>
+            </select>
+          </label>
+          <label className="settings-field">
+            Telemetry history length
+            <input
+              type="number"
+              min={10}
+              max={5000}
+              aria-describedby="telemetry-limit-hint"
+              value={draftLimit}
+              onChange={(event) => {
+                setDraftLimit(event.target.value);
+                setSaved(false);
+              }}
+            />
+            {/* the 10-5000 rule only showed up as an error after saving */}
+            <small id="telemetry-limit-hint" className="settings-hint">
+              10–5000 samples kept for the sparklines
+            </small>
+          </label>
+        </section>
 
-      <section className="settings-section">
-        <h2>Connection</h2>
-        <label className="settings-field">
-          Telemetry WebSocket URL
-          <input
-            type="text"
-            value={draftWsUrl}
-            onChange={(event) => {
-              setDraftWsUrl(event.target.value);
-              setSaved(false);
-            }}
-          />
-        </label>
-        <label className="settings-field">
-          API base URL
-          <input
-            type="text"
-            value={draftApiBaseUrl}
-            onChange={(event) => {
-              setDraftApiBaseUrl(event.target.value);
-              setSaved(false);
-            }}
-          />
-        </label>
-      </section>
+        <section className="settings-section">
+          <h2>Connection</h2>
+          <label className="settings-field">
+            Telemetry WebSocket URL
+            <input
+              type="text"
+              value={draftWsUrl}
+              onChange={(event) => {
+                setDraftWsUrl(event.target.value);
+                setSaved(false);
+              }}
+            />
+          </label>
+          <label className="settings-field">
+            API base URL
+            <input
+              type="text"
+              value={draftApiBaseUrl}
+              onChange={(event) => {
+                setDraftApiBaseUrl(event.target.value);
+                setSaved(false);
+              }}
+            />
+          </label>
+        </section>
 
-      {error || loadError ? <p className="settings-error" role="alert">{error ?? loadError}</p> : null}
-      {saved ? <p className="settings-success">Saved.</p> : null}
+        {error || loadError ? <p className="settings-error" role="alert">{error ?? loadError}</p> : null}
+        {saved ? <p className="settings-success" role="status">Saved.</p> : null}
 
-      <Button className="settings-save-button" onClick={handleSave} disabled={loading}>
-        {loading ? "Saving..." : "Save changes"}
-      </Button>
+        <Button type="submit" className="settings-save-button" disabled={loading}>
+          {loading ? "Saving..." : "Save changes"}
+        </Button>
+      </form>
 
       <section className="settings-section settings-system-section">
         <h2>System</h2>
