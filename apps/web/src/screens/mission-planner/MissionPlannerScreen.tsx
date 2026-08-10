@@ -4,7 +4,8 @@ import type { LifecycleStateName } from "../../components/lifecycle";
 import { MissionScene } from "../../components/mission-scene";
 import { StatusTag } from "../../components/status-tag";
 import { api } from "../../lib/api";
-import { useTelemetryStore } from "../../lib/telemetryStore";
+import { isAirborne, runGateTitle } from "../../lib/flightState";
+import { connectTelemetry, disconnectTelemetry, useTelemetryStore } from "../../lib/telemetryStore";
 import {
   EXECUTOR_NAME,
   flightStatus,
@@ -46,8 +47,19 @@ export function MissionPlannerScreen() {
   const [showPreflight, setShowPreflight] = useState(false);
   const [announcement, setAnnouncement] = useState("");
 
+  // the socket is opened per screen and closed on the way out, so the planner
+  // has to open its own: without it the drone marker, the preflight telemetry
+  // check and the airborne gate below all read a store nobody is filling
+  useEffect(() => {
+    connectTelemetry();
+    return () => disconnectTelemetry();
+  }, []);
+
   const { connected, latest } = useTelemetryStore();
   const telemetryLive = connected && latest !== null;
+  // the executor streams offboard setpoints from wherever the vehicle is;
+  // on the ground that is not a mission. see lib/flightState.
+  const airborne = isAirborne(telemetryLive, latest);
   const forgeNameValid = NAME_PATTERN.test(forgeInput);
 
   const status = useQuery({
@@ -81,8 +93,10 @@ export function MissionPlannerScreen() {
   // this just flags that the editor has drifted from what's airborne
   const editedSinceLaunch = flying && lastFlown !== null && !plansMatch(currentPlan, lastFlown);
 
-  // fly mission: latch the current plan onto mission_planner, arm, then
-  // activate it - one verb standing in for prime -> arm -> activate
+  // fly mission: latch the current plan onto mission_planner, then activate
+  // it - prime -> activate. no arm step: the button only unlocks once the
+  // vehicle is already airborne, and getting there took a takeoff, which
+  // took an arm. arming here would only ever be a no-op or a lie.
   const fly = useMutation({
     mutationFn: async () => {
       const plan = currentPlan;
@@ -96,9 +110,6 @@ export function MissionPlannerScreen() {
         },
       });
       if (mission.error || !mission.data?.ok) throw new Error(mission.data?.detail ?? "prime failed");
-
-      const arm = await api.POST("/vehicle/arm");
-      if (arm.error || !arm.data.ok) throw new Error(arm.data?.detail ?? "arm failed");
 
       const activate = await api.POST("/ros/lifecycle/{nodeName}/transition", {
         params: { path: { nodeName: EXECUTOR_NAME } },
@@ -421,19 +432,31 @@ export function MissionPlannerScreen() {
             >
               Create Node
             </button>
-            <button
-              type="button"
-              className={flying ? "mission-fly mission-fly-stop" : "mission-fly"}
-              onClick={() => (flying ? stop.mutate() : fly.mutate())}
-              disabled={flying ? stop.isPending : fly.isPending || waypoints.length === 0}
+            {/* the title sits on the wrapper, not the button: a disabled
+                button swallows hover, so the reason would never show */}
+            <span
+              className="mission-fly-gate"
               title={
                 flying
                   ? `deactivates ${EXECUTOR_NAME}; px4 holds in loiter`
-                  : `latches this plan onto ${EXECUTOR_NAME}, arms, and activates it`
+                  : (runGateTitle(airborne) ??
+                    `latches this plan onto ${EXECUTOR_NAME} and activates it`)
               }
             >
-              {flying ? "Stop" : "Fly mission"}
-            </button>
+              <button
+                type="button"
+                className={flying ? "mission-fly mission-fly-stop" : "mission-fly"}
+                onClick={() => (flying ? stop.mutate() : fly.mutate())}
+                // stop is never gated - it is the way out of a bad flight
+                disabled={
+                  flying
+                    ? stop.isPending
+                    : fly.isPending || waypoints.length === 0 || !airborne
+                }
+              >
+                {flying ? "Stop" : "Fly mission"}
+              </button>
+            </span>
           </div>
 
           {forgedName && forgeState ? (

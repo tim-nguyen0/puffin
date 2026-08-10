@@ -8,6 +8,7 @@ import { DashboardPanel } from "../../components/dashboard-panel";
 import {
   actionsForState,
   lifecycleNodeNames,
+  replayTarget,
   toneForState,
   transitionForAction,
   type LifecycleStateName,
@@ -20,10 +21,10 @@ import { SimViewport } from "../../components/sim-viewport";
 import { StatusTag } from "../../components/status-tag";
 import { TeleopPad } from "../../components/teleop";
 import { api } from "../../lib/api";
+import { isAirborne, runGateTitle } from "../../lib/flightState";
 import { climbRate, nedToLatLon } from "../../lib/geo";
 import { useSettingsStore } from "../../lib/settingsStore";
 import { connectTelemetry, disconnectTelemetry, useTelemetryStore } from "../../lib/telemetryStore";
-import { isAirborne } from "./flightState";
 import { describeNode, healthSummary, isForgeCandidate } from "./nodeCards";
 import "./dashboard.css";
 
@@ -91,7 +92,13 @@ function GpsHud({ altitude, climb, fix, live }: GpsHudProps) {
   );
 }
 
-function LifecycleNodeCards() {
+function LifecycleNodeCards({
+  airborne,
+  processes,
+}: {
+  airborne: boolean;
+  processes: readonly ProcessInfo[];
+}) {
   const services = useQuery({
     queryKey: ["ros-services"],
     queryFn: async () => {
@@ -113,15 +120,24 @@ function LifecycleNodeCards() {
   return (
     <div className="node-card-grid">
       {nodes.map((name) => (
-        <NodeCard key={name} nodeName={name} />
+        <NodeCard key={name} nodeName={name} airborne={airborne} processes={processes} />
       ))}
     </div>
   );
 }
 
-function NodeCard({ nodeName }: { nodeName: string }) {
+function NodeCard({
+  nodeName,
+  airborne,
+  processes,
+}: {
+  nodeName: string;
+  airborne: boolean;
+  processes: readonly ProcessInfo[];
+}) {
   const queryClient = useQueryClient();
   const [actionError, setActionError] = useState<string | null>(null);
+  const [note, setNote] = useState<string | null>(null);
   const pathName = nodeName.replace(/^\//, "");
 
   const lifecycle = useQuery({
@@ -165,8 +181,32 @@ function NodeCard({ nodeName }: { nodeName: string }) {
     onError: (err) => setActionError(err instanceof Error ? err.message : "Transition failed"),
   });
 
+  // replay starts the supervised program again; the node boots itself back to
+  // inactive and the existing polls pick the card back up from there
+  const replay = useMutation({
+    mutationFn: async (program: string) => {
+      const { data, error } = await api.POST("/procs/{name}/start", {
+        params: { path: { name: program } },
+      });
+      if (error || !data.ok) throw new Error(data?.detail ?? "Replay failed");
+      return data;
+    },
+    onSuccess: (data) => {
+      setNote(data.detail);
+      void queryClient.invalidateQueries({ queryKey: ["ros-lifecycle", pathName] });
+      void queryClient.invalidateQueries({ queryKey: ["ros-services"] });
+      void queryClient.invalidateQueries({ queryKey: ["sim-status"] });
+    },
+    onError: (err) => setActionError(err instanceof Error ? err.message : "Replay failed"),
+  });
+
   const state = lifecycle.data?.state as LifecycleStateName | undefined;
   const actions = actionsForState(state);
+  // the node is gone, not merely idle: either its lifecycle service stopped
+  // answering or it answered "unknown"
+  const nodeDown = lifecycle.isError || state === "unknown";
+  const stopped = replayTarget(nodeName, nodeDown, processes);
+  const gateTitle = runGateTitle(airborne);
 
   return (
     <article className="node-card">
@@ -174,35 +214,65 @@ function NodeCard({ nodeName }: { nodeName: string }) {
         <code>{nodeName}</code>
         <StatusTag
           status={toneForState(state)}
-          label={lifecycle.isError ? "unreachable" : (state ?? "…")}
+          label={
+            stopped
+              ? stopped.completed
+                ? "completed"
+                : "stopped"
+              : lifecycle.isError
+                ? "unreachable"
+                : (state ?? "…")
+          }
         />
       </header>
       <p className="node-card-desc">{describeNode(nodeName, forge.data?.state).description}</p>
       <div className="node-card-actions">
-        {actions.length === 0 ? (
+        {stopped ? (
+          <button
+            type="button"
+            className="node-card-button node-card-replay"
+            aria-label={`Replay ${nodeName}`}
+            disabled={replay.isPending}
+            onClick={() => {
+              setActionError(null);
+              replay.mutate(stopped.program);
+            }}
+            title={`starts the ${stopped.program} program again`}
+          >
+            Replay
+          </button>
+        ) : actions.length === 0 ? (
           <span className="node-card-idle">no transition from {state ?? "unknown"}</span>
         ) : (
           actions.map((action) => {
             const next = transitionForAction(action, state);
+            // only activation waits on the vehicle being up; stop never does
+            const gated = action === "run" && !airborne;
             return (
-              <button
-                key={action}
-                type="button"
-                className={`node-card-button node-card-${action}`}
-                aria-label={`${NODE_ACTION_LABELS[action]} ${nodeName}`}
-                disabled={next === null || transition.isPending}
-                onClick={() => {
-                  if (!next) return;
-                  setActionError(null);
-                  transition.mutate(next);
-                }}
-              >
-                {NODE_ACTION_LABELS[action]}
-              </button>
+              <span key={action} className="node-card-gate" title={gated ? gateTitle : undefined}>
+                <button
+                  type="button"
+                  className={`node-card-button node-card-${action}`}
+                  aria-label={`${NODE_ACTION_LABELS[action]} ${nodeName}`}
+                  disabled={next === null || transition.isPending || gated}
+                  onClick={() => {
+                    if (!next) return;
+                    setActionError(null);
+                    transition.mutate(next);
+                  }}
+                >
+                  {NODE_ACTION_LABELS[action]}
+                </button>
+              </span>
             );
           })
         )}
       </div>
+      {note ? (
+        <p className="node-card-note" role="status">
+          {note}
+        </p>
+      ) : null}
       {actionError ? (
         <p className="node-card-error" role="alert">
           {actionError}
@@ -290,6 +360,25 @@ export function DashboardScreen() {
       return data;
     },
     onSuccess: invalidateSimStatus,
+    onError: onCommandError,
+  });
+
+  // a forged one-shot that already flew is EXITED, and once ros has dropped
+  // its services it has no node card left to replay from - the process table
+  // is the one place it is still visible, so the handle lives here too
+  const startProc = useMutation({
+    mutationFn: async (name: string) => {
+      const { data, error } = await api.POST("/procs/{name}/start", {
+        params: { path: { name } },
+      });
+      if (error || !data.ok) throw new Error(data?.detail ?? "Start failed");
+      return data;
+    },
+    onSuccess: (data, name) => {
+      setLastCommand({ label: `start ${name}`, ok: true, detail: data.detail });
+      invalidateSimStatus();
+      void queryClient.invalidateQueries({ queryKey: ["ros-services"] });
+    },
     onError: onCommandError,
   });
 
@@ -618,6 +707,18 @@ export function DashboardScreen() {
                           status={proc.state === "RUNNING" ? "running" : "stopped"}
                           label={proc.state}
                         />
+                        {proc.state === "RUNNING" || proc.state === "STARTING" ? null : (
+                          <button
+                            type="button"
+                            className="dashboard-process-start"
+                            aria-label={`Start ${proc.name}`}
+                            disabled={startProc.isPending}
+                            onClick={() => runAction(() => startProc.mutate(proc.name))}
+                            title={`supervisorctl start ${proc.name}`}
+                          >
+                            Start
+                          </button>
+                        )}
                       </li>
                     ))}
                   </ul>
@@ -644,7 +745,10 @@ export function DashboardScreen() {
           icon={<AppIcon name="sensors" />}
         >
           <div className="panel-pad">
-            <LifecycleNodeCards />
+            <LifecycleNodeCards
+              airborne={airborne}
+              processes={simStatus.data?.processes ?? []}
+            />
           </div>
         </DashboardPanel>
 

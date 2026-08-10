@@ -127,3 +127,18 @@ def get_procs(supervisor: Supervisor) -> list[ProcessInfo]:
     if not result.ok:
         return []
     return [ProcessInfo(**proc) for proc in result.data]
+
+
+@router.post("/procs/{name}/start")
+def start_proc(name: str, supervisor: Supervisor) -> Ack:
+    # a forged mission node exits 0 once its flight is done and parks at
+    # EXITED; starting the program is the only way to fly it again. the name
+    # is checked against supervisor's own roster first, so an unknown one
+    # answers with a clean detail instead of an xml-rpc fault.
+    listed = supervisor.list_processes()
+    if not listed.ok:
+        return Ack(ok=False, detail=listed.detail)
+    if name not in {proc["name"] for proc in listed.data}:
+        return Ack(ok=False, detail=f"no supervised program named {name}")
+    result = supervisor.start_program(name)
+    return Ack(ok=result.ok, detail=result.detail)

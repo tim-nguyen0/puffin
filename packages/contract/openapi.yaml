@@ -178,6 +178,25 @@ paths:
                 items:
                   $ref: "#/components/schemas/ProcessInfo"
 
+  # a forged mission node is a one-shot: it exits 0 when its flight finishes
+  # and its lifecycle services go with it, so there is nothing left to
+  # transition. starting the program again is the only way to replay it.
+  /procs/{name}/start:
+    post:
+      parameters:
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Ack"
+
   /vehicle/arm:
     post:
       responses:

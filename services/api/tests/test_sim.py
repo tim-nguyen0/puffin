@@ -32,6 +32,41 @@ def test_procs_lists_process_table(client: TestClient) -> None:
     assert body[0] == {"name": "gz-server", "state": "RUNNING", "uptime_s": 120}
 
 
+def test_start_proc_starts_a_known_program(
+    client: TestClient, fake_supervisor: FakeSupervisor
+) -> None:
+    fake_supervisor.procs.append({"name": "patrol_demo", "state": "EXITED", "uptime_s": 0})
+    body = client.post("/api/procs/patrol_demo/start").json()
+    assert body == {"ok": True, "detail": "started: patrol_demo"}
+    assert fake_supervisor.trace == ["start patrol_demo"]
+
+
+def test_start_proc_refuses_a_name_supervisor_does_not_know(
+    client: TestClient, fake_supervisor: FakeSupervisor
+) -> None:
+    body = client.post("/api/procs/rm -rf/start").json()
+    assert body["ok"] is False
+    assert body["detail"] == "no supervised program named rm -rf"
+    # nothing reached supervisor: the roster check runs before the start
+    assert fake_supervisor.trace == []
+
+
+def test_start_proc_reports_a_failed_start(
+    client: TestClient, fake_supervisor: FakeSupervisor
+) -> None:
+    fake_supervisor.start_error = "px4: SPAWN_ERROR"
+    body = client.post("/api/procs/px4/start").json()
+    assert body == {"ok": False, "detail": "px4: SPAWN_ERROR"}
+
+
+def test_start_proc_reports_an_unreachable_supervisor(
+    client: TestClient, fake_supervisor: FakeSupervisor
+) -> None:
+    fake_supervisor.list_error = "supervisor unreachable: boom"
+    body = client.post("/api/procs/px4/start").json()
+    assert body == {"ok": False, "detail": "supervisor unreachable: boom"}
+
+
 def test_reset_hits_gz(client: TestClient, fake_gz: FakeGz) -> None:
     assert client.post("/api/sim/reset").json()["ok"] is True
     assert fake_gz.resets == 1

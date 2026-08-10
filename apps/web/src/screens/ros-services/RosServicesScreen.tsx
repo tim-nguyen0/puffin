@@ -1,3 +1,4 @@
+import type { components } from "@puffin/api-types";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useState } from "react";
 import { Button } from "../../components/button";
@@ -6,6 +7,7 @@ import {
   forgedNodeMeta,
   lifecycleNodeNames,
   metaForNode,
+  replayTarget,
   toneForState,
   transitionForAction,
   type LifecycleStateName,
@@ -16,6 +18,8 @@ import { StatusIndicator } from "../../components/status-indicator";
 import { StatusTag } from "../../components/status-tag";
 import { api } from "../../lib/api";
 import "./ros-services.css";
+
+type ProcessInfo = components["schemas"]["ProcessInfo"];
 
 const ACTION_LABELS: Record<ServiceNodeAction, string> = {
   arm: "Arm",
@@ -71,6 +75,40 @@ function useNodeMeta(nodeName: string): { meta: ServiceNodeMeta; isForged: boole
   return { meta: isForged ? forgedNodeMeta(nodeName) : knownMeta, isForged };
 }
 
+// supervisord's roster, so a node that has exited can still be started again
+// from here - see replayTarget for why the process outlives the node
+function useProcesses() {
+  return useQuery({
+    queryKey: ["procs"],
+    queryFn: async () => {
+      const { data, error } = await api.GET("/procs");
+      if (error) throw new Error("Failed to fetch processes");
+      return data;
+    },
+    refetchInterval: 5000,
+  });
+}
+
+function useReplay(onDone: (message: string) => void) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (program: string) => {
+      const { data, error } = await api.POST("/procs/{name}/start", {
+        params: { path: { name: program } },
+      });
+      if (error || !data.ok) throw new Error(data?.detail ?? "Replay failed");
+      return data;
+    },
+    onSuccess: (data) => {
+      void queryClient.invalidateQueries({ queryKey: ["procs"] });
+      void queryClient.invalidateQueries({ queryKey: ["ros-services"] });
+      void queryClient.invalidateQueries({ queryKey: ["ros-lifecycle"] });
+      onDone(data.detail);
+    },
+    onError: (err) => onDone(err instanceof Error ? err.message : "Replay failed"),
+  });
+}
+
 function useTransition(onDone: (message: string) => void) {
   const queryClient = useQueryClient();
   return useMutation({
@@ -104,21 +142,29 @@ interface ServiceNodeRowProps {
   isSelected: boolean;
   nodeName: string;
   onAction: (action: ServiceNodeAction, state: LifecycleStateName | undefined) => void;
+  onReplay: (program: string) => void;
   onSelect: () => void;
   onState: (name: string, state: LifecycleStateName | undefined) => void;
+  processes: readonly ProcessInfo[];
+  replayPending: boolean;
 }
 
 function ServiceNodeRow({
   isSelected,
   nodeName,
   onAction,
+  onReplay,
   onSelect,
   onState,
+  processes,
+  replayPending,
 }: ServiceNodeRowProps) {
   const lifecycle = useNodeState(nodeName);
   const state = lifecycle.data?.state as LifecycleStateName | undefined;
   const tone = toneForState(state);
   const { meta } = useNodeMeta(nodeName);
+  // a one-shot that finished leaves an unknown node and a stopped program
+  const stopped = replayTarget(nodeName, lifecycle.isError || state === "unknown", processes);
 
   useEffect(() => {
     onState(nodeName, state);
@@ -140,17 +186,31 @@ function ServiceNodeRow({
       </button>
 
       <div className="service-node-controls">
-        <StatusTag status={tone} label={state ?? "…"} />
-        {actionsForState(state).map((action) => (
+        <StatusTag
+          status={tone}
+          label={stopped ? (stopped.completed ? "completed" : "stopped") : (state ?? "…")}
+        />
+        {stopped ? (
           <Button
-            key={action}
-            className={`service-action-button service-action-${action}`}
-            aria-label={`${ACTION_LABELS[action]} ${nodeName}`}
-            onClick={() => onAction(action, state)}
+            className="service-action-button service-action-replay"
+            aria-label={`Replay ${nodeName}`}
+            disabled={replayPending}
+            onClick={() => onReplay(stopped.program)}
           >
-            {ACTION_LABELS[action]}
+            Replay
           </Button>
-        ))}
+        ) : (
+          actionsForState(state).map((action) => (
+            <Button
+              key={action}
+              className={`service-action-button service-action-${action}`}
+              aria-label={`${ACTION_LABELS[action]} ${nodeName}`}
+              onClick={() => onAction(action, state)}
+            >
+              {ACTION_LABELS[action]}
+            </Button>
+          ))
+        )}
       </div>
     </li>
   );
@@ -297,6 +357,8 @@ export function RosServicesScreen() {
   });
 
   const transition = useTransition(setAnnouncement);
+  const processes = useProcesses();
+  const replay = useReplay(setAnnouncement);
 
   const nodes = lifecycleNodeNames(services.data ?? []);
   const selectedNode = selected && nodes.includes(selected) ? selected : (nodes[0] ?? null);
@@ -365,7 +427,13 @@ export function RosServicesScreen() {
                 isSelected={name === selectedNode}
                 onSelect={() => setSelected(name)}
                 onAction={(action, state) => handleAction(name, action, state)}
+                onReplay={(program) => {
+                  setSelected(name);
+                  replay.mutate(program);
+                }}
                 onState={recordState}
+                processes={processes.data ?? []}
+                replayPending={replay.isPending}
               />
             ))}
           </ul>

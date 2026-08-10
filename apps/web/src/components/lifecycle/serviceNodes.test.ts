@@ -1,11 +1,15 @@
+import type { components } from "@puffin/api-types";
 import { describe, expect, it } from "vitest";
 import {
   actionsForState,
   forgedNodeMeta,
   metaForNode,
+  replayTarget,
   toneForState,
   transitionForAction,
 } from "./serviceNodes";
+
+type ProcessInfo = components["schemas"]["ProcessInfo"];
 
 describe("service node mapping", () => {
   it("maps lifecycle states onto the design's tones", () => {
@@ -61,5 +65,43 @@ describe("service node mapping", () => {
       publishes: "—",
       subscribes: "—",
     });
+  });
+});
+
+describe("replayTarget", () => {
+  const procs = (state: ProcessInfo["state"]): ProcessInfo[] => [
+    { name: "px4", state: "RUNNING", uptime_s: 9 },
+    { name: "patrol_demo", state, uptime_s: 0 },
+  ];
+
+  it("offers a replay for a one-shot that finished its flight", () => {
+    expect(replayTarget("/patrol_demo", true, procs("EXITED"))).toEqual({
+      program: "patrol_demo",
+      completed: true,
+    });
+  });
+
+  it("offers a replay for a program stopped some other way, without calling it done", () => {
+    expect(replayTarget("/patrol_demo", true, procs("FATAL"))).toEqual({
+      program: "patrol_demo",
+      completed: false,
+    });
+  });
+
+  it("stays out of the way while the node is still answering", () => {
+    expect(replayTarget("/patrol_demo", false, procs("EXITED"))).toBeNull();
+  });
+
+  it("does not offer a replay for a process that is up or coming up", () => {
+    expect(replayTarget("/patrol_demo", true, procs("RUNNING"))).toBeNull();
+    expect(replayTarget("/patrol_demo", true, procs("STARTING"))).toBeNull();
+  });
+
+  it("has no handle for a node with no supervised program of its name", () => {
+    // the node names /offboard_demo, the program names offboard-demo - a
+    // near-miss must not be treated as a match
+    expect(replayTarget("/offboard_demo", true, [
+      { name: "offboard-demo", state: "EXITED", uptime_s: 0 },
+    ])).toBeNull();
   });
 });

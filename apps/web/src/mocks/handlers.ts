@@ -22,14 +22,23 @@ let mockMission: Schemas["MissionRequest"] | null = null;
 const mockMissionNodes = new Set<string>();
 const mockForge = new Map<string, Schemas["ForgeStatus"]["state"]>();
 
+// a forged node that already flew: ros still lists its service for a while
+// after the process exits, so the card is there reading "unknown" - the case
+// the completed/replay treatment is for
+mockMissionNodes.add("patrol_demo");
+lifecycleStates.set("patrol_demo", "unknown");
+
 // single-vehicle sim: the replace mock swaps this, /sim/status echoes it
 let mockVehicle = "x500";
 
+// patrol_demo sits EXITED on purpose: a forged one-shot that already flew is
+// the state the replay control exists for, and dev needs to see it
 const processes: Schemas["ProcessInfo"][] = [
   { name: "gz-server", state: "RUNNING", uptime_s: 512 },
   { name: "gz-gui", state: "RUNNING", uptime_s: 510 },
   { name: "xrce-agent", state: "RUNNING", uptime_s: 509 },
   { name: "px4", state: "RUNNING", uptime_s: 507 },
+  { name: "patrol_demo", state: "EXITED", uptime_s: 0 },
 ];
 
 type MockAccount = {
@@ -167,6 +176,22 @@ export const handlers = [
   }),
   http.post("/api/sim/vehicle/pose", () => HttpResponse.json(ack)),
   http.get("/api/procs", () => HttpResponse.json(processes)),
+  // replaying a forged one-shot: supervisord starts the program again and the
+  // node boots back to inactive, so the mock revives both halves
+  http.post("/api/procs/:name/start", ({ params }) => {
+    const name = String(params.name);
+    const proc = processes.find((entry) => entry.name === name);
+    if (!proc) {
+      return HttpResponse.json(
+        { ok: false, detail: `no supervised program named ${name}` } satisfies Schemas["Ack"],
+      );
+    }
+    proc.state = "RUNNING";
+    proc.uptime_s = 0;
+    lifecycleStates.set(name, "inactive");
+    mockMissionNodes.add(name);
+    return HttpResponse.json({ ok: true, detail: `started: ${name}` } satisfies Schemas["Ack"]);
+  }),
   http.post("/api/vehicle/arm", () => HttpResponse.json(ack)),
   http.post("/api/vehicle/disarm", () => HttpResponse.json(ack)),
   http.post("/api/vehicle/takeoff", () => HttpResponse.json(ack)),

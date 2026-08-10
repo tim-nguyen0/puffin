@@ -22,9 +22,13 @@ class FakeSupervisor:
         self.calls: list[str] = []
         self.trace = trace if trace is not None else []
         self.stop_error: str | None = None
+        self.start_error: str | None = None
+        self.list_error: str | None = None
         self.restart_errors: dict[str, str] = {}
 
     def list_processes(self) -> AdapterResult:
+        if self.list_error is not None:
+            return AdapterResult(ok=False, detail=self.list_error)
         return AdapterResult(ok=True, data=self.procs)
 
     def start_sim(self) -> AdapterResult:
@@ -37,6 +41,8 @@ class FakeSupervisor:
 
     def start_program(self, name: str) -> AdapterResult:
         self.trace.append(f"start {name}")
+        if self.start_error is not None:
+            return AdapterResult(ok=False, detail=self.start_error)
         return AdapterResult(ok=True, detail=f"started: {name}")
 
     def stop_program(self, name: str) -> AdapterResult:

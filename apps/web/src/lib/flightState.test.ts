@@ -1,6 +1,6 @@
 import type { components } from "@puffin/api-types";
 import { describe, expect, it } from "vitest";
-import { isAirborne } from "./flightState";
+import { isAirborne, runGateTitle } from "./flightState";
 
 type TelemetrySample = components["schemas"]["TelemetrySample"];
 
@@ -39,5 +39,12 @@ describe("isAirborne", () => {
     expect(isAirborne(false, null)).toBe(false);
     expect(isAirborne(false, sample({ landed: false }))).toBe(false);
     expect(isAirborne(true, null)).toBe(false);
+  });
+});
+
+describe("runGateTitle", () => {
+  it("explains the gate on the ground and says nothing in the air", () => {
+    expect(runGateTitle(false)).toBe("take off first - the vehicle is on the ground");
+    expect(runGateTitle(true)).toBeUndefined();
   });
 });
