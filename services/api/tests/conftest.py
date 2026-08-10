@@ -22,6 +22,7 @@ class FakeSupervisor:
         self.calls: list[str] = []
         self.trace = trace if trace is not None else []
         self.stop_error: str | None = None
+        self.restart_errors: dict[str, str] = {}
 
     def list_processes(self) -> AdapterResult:
         return AdapterResult(ok=True, data=self.procs)
@@ -43,6 +44,12 @@ class FakeSupervisor:
         if self.stop_error is not None:
             return AdapterResult(ok=False, detail=self.stop_error)
         return AdapterResult(ok=True, detail=f"stopped: {name}")
+
+    def restart_program(self, name: str) -> AdapterResult:
+        self.trace.append(f"restart {name}")
+        if name in self.restart_errors:
+            return AdapterResult(ok=False, detail=self.restart_errors[name])
+        return AdapterResult(ok=True, detail=f"restarted: {name}")
 
 
 class FakeRos:
@@ -137,10 +144,17 @@ class FakeGz:
         self.removed: list[str] = []
         self.trace = trace if trace is not None else []
         self.remove_error: str | None = None
+        self.world_ready_error: str | None = None
 
     def reset_world(self) -> AdapterResult:
         self.resets += 1
         return AdapterResult(ok=True, detail="world puffin reset")
+
+    def world_ready(self, timeout_s: float = 20.0) -> AdapterResult:
+        self.trace.append("await world")
+        if self.world_ready_error is not None:
+            return AdapterResult(ok=False, detail=self.world_ready_error)
+        return AdapterResult(ok=True, detail="world puffin is up")
 
     def remove_entity(self, name: str) -> AdapterResult:
         self.trace.append(f"remove {name}")

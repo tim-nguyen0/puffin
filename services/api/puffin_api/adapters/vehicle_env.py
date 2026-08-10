@@ -33,6 +33,18 @@ AIRFRAMES = {
 # what [program:px4] boots with when no override file exists
 BOOT_MODEL = "x500"
 
+# models carrying a depth camera (x500_depth pulls in OakD-Lite's StereoOV7251).
+# gz-rendering's ogre2 backend can only build one per `gz sim -s` process:
+# destroying it leaves an ogre-next datablock with live renderables, and the
+# next Ogre2DepthCamera::CreateWorkspaceInstance trips an assert that SIGABRTs
+# the whole server. swapping into or out of one needs a fresh server, not a
+# spawn into the running world.
+DEPTH_CAMERA_MODELS = frozenset({"x500_depth"})
+
+
+def needs_fresh_world(*models: str) -> bool:
+    return any(model in DEPTH_CAMERA_MODELS for model in models)
+
 
 class VehicleEnvAdapter:
     def __init__(self, path: str | None = None) -> None:

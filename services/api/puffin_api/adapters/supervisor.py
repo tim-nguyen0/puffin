@@ -54,6 +54,15 @@ class SupervisorAdapter:
     def stop_program(self, name: str) -> AdapterResult:
         return self._one("stopProcess", name, "stopped")
 
+    def restart_program(self, name: str) -> AdapterResult:
+        stopped = self._one("stopProcess", name, "stopped")
+        if not stopped.ok:
+            return stopped
+        started = self._one("startProcess", name, "started")
+        if not started.ok:
+            return started
+        return AdapterResult(ok=True, detail=f"restarted: {name}")
+
     def _one(self, method: str, name: str, verb: str) -> AdapterResult:
         # supervisor's start/stopProcess block until the program settles, which
         # is what makes a stop -> gz work -> start sequence safe to write inline
