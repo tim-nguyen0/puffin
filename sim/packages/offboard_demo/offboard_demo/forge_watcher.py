@@ -75,9 +75,10 @@ def tail(text: str, lines: int = TAIL_LINES) -> str:
 
 
 def deactivate_command(name: str) -> str:
-    # best effort before a re-forged node is restarted: on_deactivate hands
+    # best effort before a re-forged node is relaunched: on_deactivate hands
     # px4 back to AUTO.LOITER, where dropping the process only loses the
-    # setpoint stream px4 has already stopped needing
+    # setpoint stream px4 has already stopped needing. a node that already
+    # finished its mission has exited on its own and this just fails.
     return f"source /ros_ws/install/setup.bash && ros2 lifecycle set /{name} deactivate"
 
 
@@ -178,12 +179,17 @@ def forge(spec: Path, name: str) -> None:
             return
 
     if relaunch:
+        # stop-then-start, not restart: a forged node is a one-shot, so by now
+        # it may be RUNNING (loiter it first), EXITED after a completed
+        # mission, or STOPPED. `restart` errors on the ones that aren't up,
+        # while `stop` on an already-dead program is a harmless no-op.
         run(["bash", "-lc", deactivate_command(name)], CTL_TIMEOUT_S)
+        run(["supervisorctl", "-c", SUPERVISORD_CONF, "stop", name], CTL_TIMEOUT_S)
         ok, output = run(
-            ["supervisorctl", "-c", SUPERVISORD_CONF, "restart", name], CTL_TIMEOUT_S
+            ["supervisorctl", "-c", SUPERVISORD_CONF, "start", name], CTL_TIMEOUT_S
         )
         if not ok:
-            write_result(name, "failed", f"restart failed: {tail(output)}")
+            write_result(name, "failed", f"start failed: {tail(output)}")
             return
 
     total = len(plan["waypoints"])

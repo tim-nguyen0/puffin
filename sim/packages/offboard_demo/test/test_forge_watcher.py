@@ -96,10 +96,63 @@ def test_build_only_sources_the_base_ros_env() -> None:
     assert "/ros_ws/install/setup.bash" not in command
 
 
-def test_a_re_forged_node_is_asked_to_loiter_before_it_is_restarted() -> None:
+def test_a_re_forged_node_is_asked_to_loiter_before_it_is_relaunched() -> None:
     command = forge_watcher.deactivate_command("survey")
     assert "ros2 lifecycle set /survey deactivate" in command
     assert "source /ros_ws/install/setup.bash" in command
+
+
+# the build and supervisorctl legs only exist in the container, so these stub
+# them out and check the sequence forge() asks for.
+def stub_container(monkeypatch, tmp_path) -> list[list[str]]:
+    calls: list[list[str]] = []
+
+    def record(argv, timeout):
+        calls.append(argv)
+        return True, ""
+
+    monkeypatch.setattr(forge_watcher, "run", record)
+    monkeypatch.setattr(forge_watcher, "WORKSPACE", tmp_path / "ros_ws")
+    monkeypatch.setattr(forge_watcher, "CONF_DIR", tmp_path / "conf.d")
+    # no bind mount in a bare test run
+    monkeypatch.setattr(forge_watcher, "PERSIST_DIR", tmp_path / "absent")
+    return calls
+
+
+def ctl_verbs(calls: list[list[str]]) -> list[str]:
+    return [argv[3] for argv in calls if argv[0] == "supervisorctl"]
+
+
+def good_plan(name: str = "survey") -> dict:
+    return {"name": name, "waypoints": [{"x": 1, "y": 2, "z": -5}]}
+
+
+def test_a_first_forge_leaves_the_launch_to_autostart(forge_dir, tmp_path, monkeypatch):
+    calls = stub_container(monkeypatch, tmp_path)
+    spec = write_spec(forge_dir, "survey", good_plan())
+    forge_watcher.forge(spec, "survey")
+
+    assert result(forge_dir, "survey")["state"] == "done"
+    # the new program block carries autostart = true, so update starts it
+    assert ctl_verbs(calls) == ["reread", "update"]
+
+
+def test_a_re_forge_stops_the_old_node_before_starting_the_new_build(
+    forge_dir, tmp_path, monkeypatch
+):
+    calls = stub_container(monkeypatch, tmp_path)
+    conf_dir = tmp_path / "conf.d"
+    conf_dir.mkdir()
+    # an existing block means supervisord already runs this name
+    (conf_dir / "survey.conf").write_text("[program:survey]\n")
+    spec = write_spec(forge_dir, "survey", good_plan())
+    forge_watcher.forge(spec, "survey")
+
+    assert result(forge_dir, "survey")["state"] == "done"
+    # restart would error on a one-shot that already exited itself; stop then
+    # start relaunches whatever state it was left in
+    assert ctl_verbs(calls) == ["reread", "update", "stop", "start"]
+    assert "restart" not in ctl_verbs(calls)
 
 
 def test_write_tree_drops_the_previous_render(tmp_path) -> None:
