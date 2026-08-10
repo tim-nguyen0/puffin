@@ -396,6 +396,24 @@
   font-family: var(--font-mono);
 }
 
+/* -- control panel groups (flight / teleop) ------------------------------ */
+
+/* each group is its own heading + content; the divider is a top border on
+   every group after the first rather than a standalone hr element */
+.control-group + .control-group {
+  margin-top: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: var(--graph-border-width) solid var(--color-page-border);
+}
+
+.control-group-heading {
+  margin: 0;
+  color: var(--color-page-muted);
+  font-size: var(--text-graph-micro);
+  letter-spacing: var(--services-kicker-letter-spacing);
+  text-transform: uppercase;
+}
+
 .dashboard-actions {
   display: flex;
   flex-wrap: wrap;
@@ -426,6 +444,29 @@
   border-radius: var(--radius-1);
   color: var(--color-page-text);
   font-size: var(--text-md);
+}
+
+/* greyed while airborne - the wrapping label carries the "why" title since
+   a disabled input never fires the hover that would show its own */
+.dashboard-field input:disabled {
+  background: var(--color-page-surface);
+  color: var(--color-page-muted);
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+/* land takes over the takeoff slot once airborne - filled danger like the
+   ros-services stop button, not just an outlined warning */
+.control-panel .dashboard-land-button {
+  background-color: var(--color-danger-strong);
+}
+
+.control-panel .dashboard-land-button:hover:not(:disabled) {
+  background-color: var(--color-danger-strong-hover);
+}
+
+.control-panel .dashboard-land-button:active:not(:disabled) {
+  background-color: var(--color-danger-strong-hover);
 }
 
 .dashboard-vehicle-status {
