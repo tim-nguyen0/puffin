@@ -11,6 +11,7 @@ long-lived anyway: DDS discovery is gossip, and a fresh node knows nothing.
 import json
 import os
 import threading
+import time
 from typing import Any
 
 from . import AdapterResult
@@ -33,7 +34,14 @@ VEHICLE_CMD_RESULTS = {
 ACK_TIMEOUT_S = 1.5
 
 LIFECYCLE_CALL_TIMEOUT_S = 3.0
+LIFECYCLE_SERVICE_WAIT_S = 1.0
 LIFECYCLE_STATE_LABELS = {"unconfigured", "inactive", "active", "finalized"}
+
+# a /fmu/out sample older than this is not telemetry, it is a memory: px4
+# publishes vehicle_status at ~2 Hz, so nothing live is ever this old. px4
+# restarts (a vehicle swap) would otherwise stream the dead airframe's last
+# words on as if they were the new one's.
+TELEMETRY_STALE_S = 3.0
 
 
 def fmu_out_qos() -> Any:
@@ -86,8 +94,10 @@ class RosAdapter:
         self._node: Any = None
         self._executor: Any = None
         self._cmd_pub: Any = None
-        self._clients: dict[str, Any] = {}
+        self._pubs: dict[str, Any] = {}
+        self._lifecycle_clients: dict[str, Any] = {}
         self._latest: dict[str, Any] = {}
+        self._received_at: dict[str, float] = {}
         self._nav_states: dict[int, str] = {}
         self._telemetry_ready = False
         self._mission_ready = False
@@ -123,18 +133,56 @@ class RosAdapter:
             raise TimeoutError(f"service call timed out after {timeout_s}s")
         return future.result()
 
-    def _lifecycle_client(self, node_name: str, service: str) -> Any:
+    def _lifecycle_client(self, service_name: str, service: str) -> Any:
         from lifecycle_msgs.srv import ChangeState, GetState
 
         node = self._ensure_node()
-        service_name = f"/{node_name.strip('/')}/{service}"
         with self._init_lock:
-            client = self._clients.get(service_name)
+            client = self._lifecycle_clients.get(service_name)
             if client is None:
                 srv_type = GetState if service == "get_state" else ChangeState
                 client = node.create_client(srv_type, service_name)
-                self._clients[service_name] = client
+                self._lifecycle_clients[service_name] = client
         return client
+
+    def _drop_lifecycle_client(self, service_name: str) -> None:
+        """Forget a lifecycle client and free its endpoints.
+
+        Forged nodes are one-shot processes: the one that answered this name
+        is gone after its mission, and the next `supervisorctl start` is a
+        different process re-registering the same service. Keeping a client
+        past a failed call leaves that many dead endpoints on the graph and
+        bets the ui's state on a binding nothing owns - the next call builds
+        a fresh client against whoever holds the name then.
+        """
+        with self._init_lock:
+            client = self._lifecycle_clients.pop(service_name, None)
+        if client is None:
+            return
+        try:
+            self._node.destroy_client(client)
+        except Exception:  # noqa: BLE001 - a client we are discarding anyway
+            pass
+
+    def _lifecycle_call(self, node_name: str, service: str, request: Any) -> AdapterResult:
+        """One lifecycle round trip; data is the raw response on success.
+
+        Both failure paths mean the same thing to the ui - nobody is home -
+        so both read as "not available" and both drop the client.
+        """
+        service_name = f"/{node_name.strip('/')}/{service}"
+        client = self._lifecycle_client(service_name, service)
+        if not client.wait_for_service(timeout_sec=LIFECYCLE_SERVICE_WAIT_S):
+            self._drop_lifecycle_client(service_name)
+            return AdapterResult(ok=False, detail=f"{service_name} not available")
+        try:
+            response = self._call(client, request)
+        except Exception as exc:  # noqa: BLE001 - clean {ok, detail} at the boundary
+            # discovery said the service was there and nobody answered: the
+            # node died between the two. it is gone, not slow.
+            self._drop_lifecycle_client(service_name)
+            return AdapterResult(ok=False, detail=f"{service_name} not available: {exc}")
+        return AdapterResult(ok=True, data=response)
 
     def warmup(self) -> None:
         # pre-create pubs/subs at startup so dds discovery has converged
@@ -201,13 +249,12 @@ class RosAdapter:
         try:
             from lifecycle_msgs.srv import GetState
 
-            client = self._lifecycle_client(node_name, "get_state")
-            if not client.wait_for_service(timeout_sec=1.0):
-                return AdapterResult(ok=False, detail=f"/{node_name}/get_state not available")
-            response = self._call(client, GetState.Request())
+            result = self._lifecycle_call(node_name, "get_state", GetState.Request())
         except Exception as exc:  # noqa: BLE001 - clean {ok, detail} at the boundary
             return AdapterResult(ok=False, detail=f"get_state failed: {exc}")
-        label = response.current_state.label
+        if not result.ok:
+            return result
+        label = result.data.current_state.label
         if label not in LIFECYCLE_STATE_LABELS:
             label = "unknown"
         return AdapterResult(ok=True, data=label)
@@ -217,9 +264,6 @@ class RosAdapter:
             from lifecycle_msgs.msg import Transition
             from lifecycle_msgs.srv import ChangeState
 
-            client = self._lifecycle_client(node_name, "change_state")
-            if not client.wait_for_service(timeout_sec=1.0):
-                return AdapterResult(ok=False, detail=f"/{node_name}/change_state not available")
             transition_ids = {
                 "configure": Transition.TRANSITION_CONFIGURE,
                 "cleanup": Transition.TRANSITION_CLEANUP,
@@ -244,10 +288,12 @@ class RosAdapter:
                 return AdapterResult(ok=False, detail=f"unknown transition {transition!r}")
             request = ChangeState.Request()
             request.transition.id = transition_id
-            response = self._call(client, request)
+            result = self._lifecycle_call(node_name, "change_state", request)
         except Exception as exc:  # noqa: BLE001 - clean {ok, detail} at the boundary
             return AdapterResult(ok=False, detail=f"change_state failed: {exc}")
-        if not response.success:
+        if not result.ok:
+            return result
+        if not result.data.success:
             return AdapterResult(ok=False, detail=f"{node_name}: {transition} rejected")
         return AdapterResult(ok=True, detail=f"{node_name}: {transition} accepted")
 
@@ -333,8 +379,9 @@ class RosAdapter:
         # reference altitude instead.
         try:
             self._ensure_telemetry()
-            with self._data_lock:
-                local_position = self._latest.get("local_position")
+            # freshness matters here: a pre-restart ref_alt resolves the
+            # takeoff to an altitude the new px4 never agreed to
+            local_position, _ = self._sample("local_position")
             if local_position is None:
                 return AdapterResult(
                     ok=False, detail="no local position yet; cannot resolve takeoff altitude"
@@ -360,8 +407,8 @@ class RosAdapter:
 
             node = self._ensure_node()
             with self._init_lock:
-                if "teleop" not in self._clients:
-                    self._clients["teleop"] = node.create_publisher(
+                if "teleop" not in self._pubs:
+                    self._pubs["teleop"] = node.create_publisher(
                         Twist, "/puffin/teleop/cmd_vel", 10
                     )
             msg = Twist()
@@ -369,7 +416,7 @@ class RosAdapter:
             msg.linear.y = float(vy)
             msg.linear.z = float(vz)
             msg.angular.z = float(yaw_rate)
-            self._clients["teleop"].publish(msg)
+            self._pubs["teleop"].publish(msg)
         except Exception as exc:  # noqa: BLE001 - clean {ok, detail} at the boundary
             return AdapterResult(ok=False, detail=f"teleop publish failed: {exc}")
         return AdapterResult(ok=True)
@@ -410,7 +457,7 @@ class RosAdapter:
                     self._latest["mission_status"] = parsed
 
             node.create_subscription(String, "/puffin/mission/status", store, latched_qos())
-            self._clients["mission"] = node.create_publisher(
+            self._pubs["mission"] = node.create_publisher(
                 String, "/puffin/mission", latched_qos()
             )
             self._mission_ready = True
@@ -422,7 +469,7 @@ class RosAdapter:
             self._ensure_mission()
             msg = String()
             msg.data = mission_json
-            self._clients["mission"].publish(msg)
+            self._pubs["mission"].publish(msg)
         except Exception as exc:  # noqa: BLE001 - clean {ok, detail} at the boundary
             return AdapterResult(ok=False, detail=f"mission publish failed: {exc}")
         return AdapterResult(ok=True, detail="mission latched; activate mission_node to fly")
@@ -471,6 +518,9 @@ class RosAdapter:
                 def store(msg: Any, kind: str = kind) -> None:
                     with self._data_lock:
                         self._latest[kind] = msg
+                        # arrival time, not msg.timestamp: the px4 clock
+                        # restarts with px4, ours does not
+                        self._received_at[kind] = time.monotonic()
 
                 # PX4 assigns versions some topics  and the set grows across releases
                 # subscribe to all releases only one topic publishes
@@ -483,18 +533,34 @@ class RosAdapter:
             subscribe("attitude", VehicleAttitude, "vehicle_attitude")
             self._telemetry_ready = True
 
+    def _sample(self, kind: str) -> tuple[Any, float | None]:
+        """The last sample of `kind` with its age, or (None, None) if none ever
+        arrived. Older than the stale window comes back as (None, age): px4 is
+        down or restarting, and its last words are not the vehicle's state."""
+        with self._data_lock:
+            sample = self._latest.get(kind)
+            received = self._received_at.get(kind)
+        if sample is None or received is None:
+            return None, None
+        age = time.monotonic() - received
+        return (None if age > TELEMETRY_STALE_S else sample), age
+
     def latest_telemetry(self) -> AdapterResult:
         try:
             from px4_msgs.msg import VehicleStatus
 
             self._ensure_telemetry()
-            with self._data_lock:
-                status = self._latest.get("status")
-                local_position = self._latest.get("local_position")
-                battery = self._latest.get("battery")
-                attitude = self._latest.get("attitude")
+            status, age = self._sample("status")
+            local_position, _ = self._sample("local_position")
+            battery, _ = self._sample("battery")
+            attitude, _ = self._sample("attitude")
             if status is None:
-                return AdapterResult(ok=False, detail="no telemetry received yet")
+                if age is None:
+                    return AdapterResult(ok=False, detail="no telemetry received yet")
+                return AdapterResult(
+                    ok=False,
+                    detail=f"telemetry stale: no vehicle_status for {age:.1f}s",
+                )
             sample = {
                 "t_us": int(status.timestamp),
                 "armed": bool(status.arming_state == VehicleStatus.ARMING_STATE_ARMED),
