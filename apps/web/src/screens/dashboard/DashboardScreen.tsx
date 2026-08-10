@@ -376,6 +376,19 @@ export function DashboardScreen() {
   const landDisabled = anyPending;
   const altitudeLockedTitle = airborne ? "vehicle is airborne - land to change altitude" : undefined;
 
+  // arm and disarm collapse into one toggle - only one of the two verbs is
+  // ever valid for the current state. locked airborne: disarming mid-flight
+  // drops the vehicle, and the disarmed-but-airborne case (motors already
+  // cut) has no business re-arming until it's back on the ground either.
+  const armToggleTitle = offboardActive
+    ? manualLockTitle
+    : airborne
+      ? armed
+        ? "disarming mid-air drops the vehicle - land first"
+        : "vehicle is airborne - land before arming"
+      : undefined;
+  const armToggleDisabled = anyPending || offboardActive || airborne;
+
   return (
     <div className="dashboard-screen">
       <div className="dashboard-grid">
@@ -463,14 +476,13 @@ export function DashboardScreen() {
                 Flight
               </h3>
               <div className="dashboard-actions">
-                <span title={manualLockTitle}>
-                  <Button onClick={() => runAction(arm.mutate)} disabled={anyPending || offboardActive}>
-                    Arm
-                  </Button>
-                </span>
-                <span title={manualLockTitle}>
-                  <Button onClick={() => runAction(disarm.mutate)} disabled={anyPending || offboardActive}>
-                    Disarm
+                <span title={armToggleTitle}>
+                  <Button
+                    className={armed ? "dashboard-armed-button" : undefined}
+                    onClick={() => runAction(armed ? disarm.mutate : arm.mutate)}
+                    disabled={armToggleDisabled}
+                  >
+                    {armed ? "Disarm" : "Arm"}
                   </Button>
                 </span>
               </div>
@@ -510,9 +522,9 @@ export function DashboardScreen() {
                 </p>
               ) : null}
               <div className="dashboard-vehicle-status">
-                <span className="dashboard-status-chip">
-                  <span className={`dashboard-status-dot ${latest?.armed ? "is-armed" : ""}`} />
-                  {latest ? (latest.armed ? "Armed" : "Disarmed") : "No telemetry"}
+                <span className={`dashboard-status-chip${armed ? " is-armed" : ""}`}>
+                  <span className={`dashboard-status-dot${armed ? " is-armed" : ""}`} />
+                  {latest ? (armed ? "Armed" : "Disarmed") : "No telemetry"}
                 </span>
                 <span className="dashboard-status-chip">Mode: {latest?.mode ?? "—"}</span>
                 {offboardActive ? (
